@@ -29,7 +29,7 @@ Before you begin, ensure you have the following installed on your PC:
 3. **Install JavaScript Dependencies**
    Run NPM to install React, Inertia, Tailwind, and other frontend dependencies:
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 4. **Set Up the Environment File**
