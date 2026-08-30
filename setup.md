@@ -74,16 +74,6 @@ Before you begin, ensure you have the following installed on your PC:
 
 ---
 
-## Should You Run `php artisan install:api`?
-
-**Short Answer:** No, your team members should not run this on their individual PCs if it's already been done.
-
-**Detailed Explanation:**
-In Laravel 11 and later, API routing (`routes/api.php`) is opt-in. The command `php artisan install:api` sets up Laravel Sanctum, creates the `routes/api.php` file, and updates `bootstrap/app.php` to register the API routes. 
-
-**This command only needs to be run ONCE per project.** 
-The lead developer (or whoever needs to build the API first) should run this command, commit the resulting changes (`routes/api.php`, migrations, and modifications to `bootstrap/app.php`), and push them to the repository. Once pushed, other team members will automatically get the API setup when they pull the code and run `php artisan migrate`.
-
 ---
 
 ## Project Structure Overview
