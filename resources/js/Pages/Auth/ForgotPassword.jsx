@@ -65,7 +65,6 @@ export default function ForgotPassword({ status }) {
                     </form>
                 </div>
             </div>
-
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap');
                 .courtsync { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
