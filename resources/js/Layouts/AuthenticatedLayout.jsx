@@ -33,7 +33,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex min-h-screen flex-col"
             >
                 {header && (
-                    <header className="sticky top-0 z-10 flex h-16 items-center border-b border-[#10221C]/10 bg-[#F5F2EA]/80 px-6 backdrop-blur-sm">
+                    <header className="sticky top-0 z-20">
                         {header}
                     </header>
                 )}

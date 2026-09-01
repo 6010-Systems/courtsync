@@ -31,24 +31,14 @@ const LogoMark = () => (
 );
 
 // ── Nav data ──────────────────────────────────────────────────────────────────
-const navSections = [
-    {
-        label: 'Main',
-        items: [
-            { name: 'Dashboard', href: 'dashboard', icon: LayoutGrid, badge: null },
-            { name: 'Bookings',  href: '#',         icon: Clock,      badge: 3    },
-            { name: 'Calendar',  href: '#',         icon: Calendar,   badge: null },
-            { name: 'Courts',    href: '#',         icon: CourtIcon,  badge: null },
-        ],
-    },
-    {
-        label: 'Management',
-        items: [
-            { name: 'Customers', href: '#',         icon: Users,         badge: null },
-            { name: 'Reports',   href: '#',         icon: BarChart2,     badge: null },
-            { name: 'Messages',  href: '#',         icon: MessageSquare, badge: 5    },
-        ],
-    },
+const navItems = [
+    { name: 'Dashboard', href: 'dashboard', icon: LayoutGrid, badge: null },
+    { name: 'Bookings',  href: '#',         icon: Clock,      badge: 3    },
+    { name: 'Calendar',  href: '#',         icon: Calendar,   badge: null },
+    { name: 'Courts',    href: '#',         icon: CourtIcon,  badge: null },
+    { name: 'Customers', href: '#',         icon: Users,         badge: null },
+    { name: 'Reports',   href: '#',         icon: BarChart2,     badge: null },
+    { name: 'Messages',  href: '#',         icon: MessageSquare, badge: 5    },
 ];
 
 // ── Fade-slide wrapper: always rendered, transitions opacity + translateX ─────
@@ -451,41 +441,9 @@ export default function Sidebar({ collapsed, onToggle }) {
 
                 {/* ── Navigation ───────────────────────────────────── */}
                 <nav className="flex flex-1 flex-col overflow-hidden px-3 py-4">
-                    <div className="flex flex-col gap-6">
-                        {navSections.map((section, sIdx) => (
-                            <div key={sIdx}>
-                                {/* Section heading row — label fades, divider fades opposite */}
-                                <div className="relative mb-2 h-4 overflow-hidden">
-                                    {/* Text label (visible when expanded) */}
-                                    <span
-                                        className="absolute left-3 top-0 text-[10px] font-semibold uppercase tracking-widest text-[#F5F2EA]/25"
-                                        style={{
-                                            opacity: collapsed ? 0 : 1,
-                                            transform: collapsed ? 'translateY(-4px)' : 'translateY(0)',
-                                            transition: 'opacity 200ms ease, transform 250ms cubic-bezier(0.4,0,0.2,1)',
-                                            whiteSpace: 'nowrap',
-                                        }}
-                                    >
-                                        {section.label}
-                                    </span>
-                                    {/* Divider line (visible when collapsed, only for sections after first) */}
-                                    {sIdx > 0 && (
-                                        <span
-                                            className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-[#F5F2EA]/10"
-                                            style={{
-                                                opacity: collapsed ? 1 : 0,
-                                                transition: 'opacity 200ms ease 100ms',
-                                            }}
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="flex flex-col gap-0.5">
-                                    {section.items.map(item => (
-                                        <NavItem key={item.name} item={item} collapsed={collapsed} />
-                                    ))}
-                                </div>
-                            </div>
+                    <div className="flex flex-col gap-1">
+                        {navItems.map(item => (
+                            <NavItem key={item.name} item={item} collapsed={collapsed} />
                         ))}
                     </div>
                 </nav>
