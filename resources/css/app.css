@@ -1,3 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        /* Brand — change these to retheme the entire app */
+        --cs-primary: #d6ff3f;
+        --cs-primary-hover: #c2ea2e;
+        --cs-primary-foreground: #101f1a;
+        --cs-primary-muted: rgba(214, 255, 63, 0.2);
+
+        --cs-dark: #101f1a;
+        --cs-dark-muted: #10221c;
+        --cs-dark-elevated: #1a2b24;
+        --cs-cream: #f5f2ea;
+
+        --cs-accent: #ff5a36;
+        --cs-accent-muted: #b8391d;
+        --cs-accent-surface: rgba(255, 90, 54, 0.12);
+
+        /* Surfaces */
+        --cs-surface: #ffffff;
+        --cs-surface-muted: #f8f9fa;
+        --cs-surface-subtle: #f3f4f6;
+        --cs-canvas: #ebe7f3;
+
+        /* Text */
+        --cs-text: #10221c;
+        --cs-text-muted: #6b7280;
+        --cs-text-subtle: #9ca3af;
+        --cs-text-on-dark: #f5f2ea;
+        --cs-text-on-dark-muted: rgba(245, 242, 234, 0.65);
+
+        /* Borders */
+        --cs-border: #e5e7eb;
+        --cs-border-subtle: #f3f4f6;
+        --cs-border-dark: rgba(245, 242, 234, 0.08);
+
+        /* Sidebar */
+        --cs-sidebar-width: 15.5rem;
+    }
+
+    body {
+        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        color: var(--cs-text);
+        background-color: var(--cs-surface);
+    }
+}
+
+@layer utilities {
+    .font-display {
+        font-family: 'Anton', ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+}
