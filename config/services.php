@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'google_staff' => [
+        'client_id' => env('GOOGLE_STAFF_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_STAFF_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_STAFF_REDIRECT_URI', '/auth/google/staff/callback'),
+    ],
+
+    'google_owner' => [
+        'client_id' => env('GOOGLE_OWNER_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_OWNER_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_OWNER_REDIRECT_URI', '/auth/google/owner/callback'),
+    ],
+
 ];
