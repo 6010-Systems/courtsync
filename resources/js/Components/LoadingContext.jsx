@@ -13,6 +13,7 @@ function Spinner({ size = 40, color = '#D6FF3F' }) {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
+            className="animate-spin"
         >
             {/* Track ring */}
             <circle
@@ -29,14 +30,7 @@ function Spinner({ size = 40, color = '#D6FF3F' }) {
                 strokeLinecap="round"
                 strokeDasharray="62"
                 strokeDashoffset="46"
-                style={{ transformOrigin: '20px 20px', animation: 'cs-spin 0.8s linear infinite' }}
             />
-            <style>{`
-                @keyframes cs-spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                }
-            `}</style>
         </svg>
     );
 }
@@ -90,7 +84,7 @@ export function useLoading() {
 }
 
 // ── Inline button spinner (reusable, exported separately) ─────────────────────
-export function ButtonSpinner({ size = 18, color = 'currentColor' }) {
+export function ButtonSpinner({ size = 16, color = 'currentColor' }) {
     return (
         <svg
             width={size}
@@ -99,7 +93,7 @@ export function ButtonSpinner({ size = 18, color = 'currentColor' }) {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
-            style={{ flexShrink: 0 }}
+            className="animate-spin shrink-0"
         >
             <circle
                 cx="12" cy="12" r="9"
@@ -114,7 +108,6 @@ export function ButtonSpinner({ size = 18, color = 'currentColor' }) {
                 strokeLinecap="round"
                 strokeDasharray="37"
                 strokeDashoffset="28"
-                style={{ transformOrigin: '12px 12px', animation: 'cs-spin 0.75s linear infinite' }}
             />
         </svg>
     );

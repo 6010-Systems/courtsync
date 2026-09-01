@@ -1,6 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
+import { ConfirmProvider } from '@/Components/ConfirmContext';
 import { LoadingProvider } from '@/Components/LoadingContext';
 import { ToastProvider } from '@/Components/ToastContext';
 import { createInertiaApp } from '@inertiajs/react';
@@ -22,7 +23,9 @@ createInertiaApp({
         root.render(
             <LoadingProvider>
                 <ToastProvider>
-                    <App {...props} />
+                    <ConfirmProvider>
+                        <App {...props} />
+                    </ConfirmProvider>
                 </ToastProvider>
             </LoadingProvider>
         );

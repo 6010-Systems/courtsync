@@ -1,3 +1,4 @@
+import { useConfirm } from '@/Components/ConfirmContext';
 import InputError from '@/Components/InputError';
 import { ButtonSpinner } from '@/Components/LoadingContext';
 import { useToast } from '@/Components/ToastContext';
@@ -9,6 +10,7 @@ export default function UpdatePasswordForm({ className = '' }) {
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
     const { addToast } = useToast();
+    const { confirm } = useConfirm();
 
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
@@ -27,8 +29,17 @@ export default function UpdatePasswordForm({ className = '' }) {
         password_confirmation: '',
     });
 
-    const updatePassword = (e) => {
+    const updatePassword = async (e) => {
         e.preventDefault();
+
+        const ok = await confirm({
+            title: 'Change Password?',
+            message: 'Are you sure you want to update your security password? You will need to use your new credentials for future logins.',
+            confirmText: 'Update Password',
+            cancelText: 'Cancel',
+            type: 'warning',
+        });
+        if (!ok) return;
 
         put(route('password.update'), {
             preserveScroll: true,

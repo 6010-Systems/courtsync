@@ -1,3 +1,4 @@
+import { useConfirm } from '@/Components/ConfirmContext';
 import InputError from '@/Components/InputError';
 import { ButtonSpinner } from '@/Components/LoadingContext';
 import { useToast } from '@/Components/ToastContext';
@@ -11,6 +12,7 @@ export default function UpdateProfileInformation({
 }) {
     const user = usePage().props.auth.user;
     const { addToast } = useToast();
+    const { confirm } = useConfirm();
 
     const { data, setData, patch, errors, processing } = useForm({
         name: user.name,
@@ -21,8 +23,20 @@ export default function UpdateProfileInformation({
         ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
         : 'U';
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
+
+        // If email was modified, ask for confirmation
+        if (data.email !== user.email) {
+            const ok = await confirm({
+                title: 'Change Account Email?',
+                message: `Are you sure you want to update your account email to "${data.email}"? Verification may be required.`,
+                confirmText: 'Update Email',
+                cancelText: 'Cancel',
+                type: 'warning',
+            });
+            if (!ok) return;
+        }
 
         patch(route('profile.update'), {
             preserveScroll: true,
