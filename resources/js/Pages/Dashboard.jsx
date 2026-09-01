@@ -1,15 +1,17 @@
 import PageHeader from '@/Components/PageHeader';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 
 export default function Dashboard() {
+    const { auth } = usePage().props;
+    const userName = auth?.user?.name ?? 'User';
+
     return (
         <AuthenticatedLayout
             header={
                 <PageHeader
                     title="Dashboard"
-                    subtitle="Real-time venue availability & daily schedule"
-                    badge="4 of 6 Courts Active"
+                    subtitle={`Welcome back, ${userName}`}
                 />
             }
         >
