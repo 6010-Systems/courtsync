@@ -5,21 +5,19 @@ export default function Dashboard() {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Dashboard
-                </h2>
+                <div className="flex items-center justify-between w-full">
+                    <div>
+                        <h1 className="text-xl font-bold tracking-tight text-[#0D0F12]">Dashboard</h1>
+                        <p className="text-xs text-[#6B7280] mt-0.5">Welcome back to CourtSync</p>
+                    </div>
+                </div>
             }
         >
             <Head title="Dashboard" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            You're logged in!
-                        </div>
-                    </div>
-                </div>
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8 shadow-sm">
+                <p className="text-[#374151] font-medium">You're logged in! 🎉</p>
+                <p className="text-sm text-[#9CA3AF] mt-1">Your CourtSync dashboard will appear here.</p>
             </div>
         </AuthenticatedLayout>
     );
