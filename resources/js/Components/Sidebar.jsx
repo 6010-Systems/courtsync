@@ -124,7 +124,7 @@ function NavItem({ item, collapsed }) {
                     }
                 }}
                 className={[
-                    'group relative flex h-10 w-full items-center rounded-lg text-sm font-medium transition-all duration-200 hover-lift',
+                    'group relative flex h-10 w-full items-center rounded-lg text-sm font-medium transition-colors duration-150',
                     collapsed ? 'justify-center p-0' : 'pr-3',
                     isActive
                         ? 'badge-volt glow-volt-sm shadow-sm'
@@ -292,10 +292,10 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                         onClick={toggleCard}
                         title={collapsed ? (user?.name ?? 'User profile') : undefined}
                         className={[
-                            'group flex min-w-0 flex-1 items-center rounded-lg text-left transition-all duration-200 focus:outline-none',
+                            'group flex min-w-0 flex-1 items-center rounded-lg text-left transition-colors duration-150 focus:outline-none cursor-pointer',
                             open
                                 ? 'bg-[#F5F2EA]/10'
-                                : 'hover:bg-[#F5F2EA]/[0.06] active:scale-[0.98]',
+                                : 'hover:bg-[#F5F2EA]/[0.06]',
                         ].join(' ')}
                         aria-haspopup="true"
                         aria-expanded={open}
@@ -322,7 +322,7 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                             onClick={onToggle}
                             aria-label="Collapse sidebar"
                             title="Collapse sidebar"
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/40 transition-all hover:bg-[#F5F2EA]/[0.08] hover:text-[#D6FF3F] focus-ring-volt press-scale mr-1"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/40 transition-colors duration-150 hover:bg-[#F5F2EA]/[0.08] hover:text-[#D6FF3F] focus-ring-volt mr-1 cursor-pointer"
                         >
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="1.5" y="1.5" width="17" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.6" />

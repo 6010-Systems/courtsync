@@ -86,7 +86,7 @@ export default function PageHeader({
     return (
         <div
             className={[
-                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/85 px-6 backdrop-blur-md shadow-card transition-all duration-200',
+                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/85 px-6 backdrop-blur-md shadow-card transition-colors duration-200',
                 className,
             ].join(' ')}
         >
@@ -115,7 +115,7 @@ export default function PageHeader({
                         <input
                             type="text"
                             placeholder="Search courts, bookings..."
-                            className="h-8 w-64 md:w-80 lg:w-96 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-all focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
+                            className="h-8 w-64 md:w-80 lg:w-96 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-colors focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
                         />
                         <div className="pointer-events-none absolute right-1.5 flex items-center">
                             <kbd className="rounded border border-[#101F1A]/15 bg-[#F5F2EA] px-1 py-0.5 text-[9px] font-bold text-[#101F1A]/50 leading-none">
@@ -133,10 +133,10 @@ export default function PageHeader({
                             onClick={() => setNotifOpen(prev => !prev)}
                             aria-label="Notifications"
                             className={[
-                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 focus:outline-none focus-ring-volt hover-lift press-scale shadow-subtle',
+                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-colors duration-150 focus:outline-none focus-ring-volt shadow-subtle cursor-pointer',
                                 notifOpen
                                     ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F] glow-volt-sm'
-                                    : 'border-[#101F1A]/10 bg-white/90 text-[#101F1A] hover:bg-white',
+                                    : 'border-[#101F1A]/10 bg-white/90 text-[#101F1A] hover:bg-white hover:border-[#101F1A]/25',
                             ].join(' ')}
                         >
                             <Bell size={14} />
@@ -165,7 +165,7 @@ export default function PageHeader({
                                         <button
                                             type="button"
                                             onClick={markAllRead}
-                                            className="text-[11px] font-semibold text-[#101F1A]/60 transition-colors hover:text-[#101F1A]"
+                                            className="text-[11px] font-semibold text-[#101F1A]/60 transition-colors hover:text-[#101F1A] cursor-pointer"
                                         >
                                             Mark all read
                                         </button>
@@ -211,7 +211,7 @@ export default function PageHeader({
                                     <button
                                         type="button"
                                         onClick={() => setNotifOpen(false)}
-                                        className="w-full rounded-lg py-1.5 text-center text-xs font-semibold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A]"
+                                        className="w-full rounded-lg py-1.5 text-center text-xs font-semibold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A] cursor-pointer"
                                     >
                                         View all activity
                                     </button>
@@ -227,7 +227,7 @@ export default function PageHeader({
                 ) : (
                     <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all hover:bg-[#101F1A]/90 hover-lift press-scale glow-volt-sm focus-ring-volt"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-colors hover:bg-[#101F1A]/90 glow-volt-sm focus-ring-volt cursor-pointer"
                     >
                         <Plus size={14} strokeWidth={2.5} />
                         <span>Book Court</span>
