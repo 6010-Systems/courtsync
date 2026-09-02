@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Facility;
 use App\Models\FacilityVerification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class FacilityController extends Controller
 {
@@ -81,10 +84,10 @@ class FacilityController extends Controller
             abort(403, 'You must have a facility to invite staff.');
         }
 
-        \App\Models\User::create([
+        User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt(\Illuminate\Support\Str::password(24)),
+            'password' => bcrypt(Str::password(24)),
             'role' => 'FACILITY_STAFF',
             'status' => 'VERIFIED',
             'facility_id' => $facility->id,

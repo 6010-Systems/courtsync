@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Facility;
 use App\Models\FacilityVerification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -39,7 +40,7 @@ class AdminController extends Controller
     public function staff()
     {
         $users = User::with('workFacility.owner')->where('role', 'FACILITY_STAFF')->latest()->get();
-        $facilities = \App\Models\Facility::all();
+        $facilities = Facility::all();
         
         return Inertia::render('Admin/Staff', [
             'users' => $users,
@@ -107,7 +108,7 @@ class AdminController extends Controller
     }
     public function approveVerification($facility_id)
     {
-        $facility = \App\Models\Facility::findOrFail($facility_id);
+        $facility = Facility::findOrFail($facility_id);
         
         $facility->update(['verification_status' => 'VERIFIED']);
         
