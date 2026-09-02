@@ -1,12 +1,16 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     BarChart2,
+    Building2,
     Calendar,
-    Clock,
+    CalendarCheck,
+    ClipboardList,
+    CreditCard,
     LayoutGrid,
     LogOut,
-    MessageSquare,
     Settings,
+    ShieldCheck,
+    UserCheck,
     Users,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -30,18 +34,42 @@ const LogoMark = () => (
     </svg>
 );
 
-// ── Nav data ──────────────────────────────────────────────────────────────────
-const navItems = [
-    { name: 'Dashboard', href: 'dashboard', icon: LayoutGrid, badge: null },
-    { name: 'Bookings',  href: '#',         icon: Clock,      badge: 3    },
-    { name: 'Calendar',  href: '#',         icon: Calendar,   badge: null },
-    { name: 'Courts',    href: '#',         icon: CourtIcon,  badge: null },
-    { name: 'Customers', href: '#',         icon: Users,         badge: null },
-    { name: 'Reports',   href: '#',         icon: BarChart2,     badge: null },
-    { name: 'Messages',  href: '#',         icon: MessageSquare, badge: 5    },
+// ── Nav data matching extracted design ────────────────────────────────────────
+const navSections = [
+    {
+        title: 'Main',
+        items: [
+            { name: 'Dashboard',    href: 'dashboard',    icon: LayoutGrid,    badge: null },
+        ],
+    },
+    {
+        title: 'Management',
+        items: [
+            { name: 'Bookings',     href: '#',            icon: CalendarCheck, badge: 3    },
+            { name: 'Calendar',     href: '#',            icon: Calendar,      badge: null },
+            { name: 'Facilities',   href: '#',            icon: Building2,     badge: null },
+            { name: 'Courts',       href: '#',            icon: ClipboardList, badge: null },
+        ],
+    },
+    {
+        title: 'People & Finance',
+        items: [
+            { name: 'Customers',    href: '#',            icon: Users,         badge: null },
+            { name: 'Staff',        href: '#',            icon: UserCheck,     badge: null },
+            { name: 'Payments',     href: '#',            icon: CreditCard,    badge: null },
+        ],
+    },
+    {
+        title: 'System',
+        items: [
+            { name: 'Reports',      href: '#',            icon: BarChart2,     badge: null },
+            { name: 'Verification', href: '#',            icon: ShieldCheck,   badge: null },
+            { name: 'Settings',     href: 'profile.edit', icon: Settings,      badge: null },
+        ],
+    },
 ];
 
-// ── Fade-slide wrapper: always rendered, transitions opacity + translateX ─────
+// ── Fade wrapper: simple instant fade-out on collapse, smooth glide-in on expand ─
 function Fade({ show, children, className = '', delay = 0 }) {
     return (
         <span
@@ -50,17 +78,19 @@ function Fade({ show, children, className = '', delay = 0 }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 overflow: 'hidden',
-                maxWidth: show ? '200px' : '0px',
+                maxWidth: show ? '240px' : '0px',
                 opacity: show ? 1 : 0,
-                transform: show ? 'translateX(0)' : 'translateX(-6px)',
+                transform: show ? 'translateX(0)' : 'none',
                 marginLeft: show ? undefined : 0,
                 marginRight: show ? undefined : 0,
                 paddingLeft: show ? undefined : 0,
                 paddingRight: show ? undefined : 0,
-                transition: `max-width 300ms cubic-bezier(0.4,0,0.2,1) ${delay}ms,
-                             margin 300ms cubic-bezier(0.4,0,0.2,1) ${delay}ms,
-                             opacity 200ms ease ${show ? delay + 60 : delay}ms,
-                             transform 300ms cubic-bezier(0.4,0,0.2,1) ${delay}ms`,
+                transition: show
+                    ? `opacity 220ms cubic-bezier(0.16, 1, 0.3, 1) ${delay + 70}ms,
+                       transform 220ms cubic-bezier(0.16, 1, 0.3, 1) ${delay + 50}ms,
+                       max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)`
+                    : `opacity 75ms ease,
+                       max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)`,
                 whiteSpace: 'nowrap',
                 pointerEvents: show ? 'auto' : 'none',
                 flexShrink: 0,
@@ -95,7 +125,8 @@ function NavItem({ item, collapsed }) {
                     }
                 }}
                 className={[
-                    'group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 px-3.5 py-2.5 hover-lift',
+                    'group relative flex h-10 w-full items-center rounded-lg text-sm font-medium transition-all duration-200 hover-lift',
+                    collapsed ? 'justify-center p-0' : 'pr-3',
                     isActive
                         ? 'badge-volt glow-volt-sm shadow-sm'
                         : 'text-[#F5F2EA]/70 hover:bg-[#F5F2EA]/[0.08] hover:text-[#F5F2EA]',
@@ -106,20 +137,20 @@ function NavItem({ item, collapsed }) {
                 } : undefined}
                 onMouseLeave={collapsed ? () => setTooltipY(null) : undefined}
             >
-                {/* Icon — locked in position across all width states */}
+                {/* Fixed Icon Slot (h-10 w-14) — centered at x=36px */}
                 <span
                     className={[
-                        'relative flex h-5 w-5 shrink-0 items-center justify-center transition-colors duration-200',
+                        'relative flex h-10 w-14 shrink-0 items-center justify-center transition-colors duration-200',
                         isActive ? 'text-[#101F1A]' : 'text-[#F5F2EA]/40 group-hover:text-[#F5F2EA]',
                     ].join(' ')}
                 >
                     <IconComponent size={18} strokeWidth={2} />
 
-                    {/* Collapsed badge dot — anchored directly to the icon */}
+                    {/* Collapsed badge dot */}
                     {item.badge !== null && (
                         <span
                             className={[
-                                'absolute -right-1 -top-1 h-2 w-2 rounded-full ring-2',
+                                'absolute right-4 top-2 h-2 w-2 rounded-full ring-2',
                                 isActive
                                     ? 'bg-[#101F1A] ring-[#D6FF3F]'
                                     : 'bg-[#D6FF3F] ring-[#101F1A]',
@@ -133,12 +164,12 @@ function NavItem({ item, collapsed }) {
                     )}
                 </span>
 
-                {/* Label — fades and slides out smoothly when collapsing */}
-                <Fade show={!collapsed} className="ml-3 flex-1">
+                {/* Label — fades and slides smoothly */}
+                <Fade show={!collapsed} className="flex-1">
                     <span className="truncate leading-none">{item.name}</span>
                 </Fade>
 
-                {/* Badge — fades alongside label */}
+                {/* Badge */}
                 {item.badge !== null && (
                     <Fade show={!collapsed}>
                         <span
@@ -252,8 +283,8 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
 
     return (
         <>
-            <div className="shrink-0 border-t border-[#F5F2EA]/10 p-2.5">
-                <div className="flex items-center gap-1.5 rounded-lg">
+            <div className="shrink-0 border-t border-[#F5F2EA]/10 p-2">
+                <div className="flex items-center rounded-lg">
 
                     {/* Clickable trigger: avatar + name */}
                     <button
@@ -262,8 +293,7 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                         onClick={toggleCard}
                         title={collapsed ? (user?.name ?? 'User profile') : undefined}
                         className={[
-                            'group flex min-w-0 flex-1 items-center rounded-lg p-1.5 text-left transition-all duration-200 focus:outline-none',
-                            collapsed ? 'justify-center' : 'gap-2.5',
+                            'group flex min-w-0 flex-1 items-center rounded-lg text-left transition-all duration-200 focus:outline-none',
                             open
                                 ? 'bg-[#F5F2EA]/10'
                                 : 'hover:bg-[#F5F2EA]/[0.06] active:scale-[0.98]',
@@ -271,9 +301,11 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                         aria-haspopup="true"
                         aria-expanded={open}
                     >
-                        {/* Avatar */}
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[11px] font-bold text-[#101F1A] glow-volt-sm">
-                            {initials}
+                        {/* Fixed Avatar Slot (w-14 h-10) — centered at x=36px */}
+                        <div className="flex h-10 w-14 shrink-0 items-center justify-center">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[11px] font-bold text-[#101F1A] glow-volt-sm">
+                                {initials}
+                            </div>
                         </div>
 
                         {/* Name only — left-aligned */}
@@ -285,13 +317,13 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                     </button>
 
                     {/* Collapse toggle — hidden during collapse state */}
-                    <Fade show={!collapsed}>
+                    <Fade show={!collapsed} className="shrink-0">
                         <button
                             type="button"
                             onClick={onToggle}
                             aria-label="Collapse sidebar"
                             title="Collapse sidebar"
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/40 transition-all hover:bg-[#F5F2EA]/[0.08] hover:text-[#D6FF3F] focus-ring-volt press-scale"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/40 transition-all hover:bg-[#F5F2EA]/[0.08] hover:text-[#D6FF3F] focus-ring-volt press-scale mr-1"
                         >
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="1.5" y="1.5" width="17" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
@@ -422,14 +454,16 @@ export default function Sidebar({ collapsed, onToggle }) {
             >
 
                 {/* ── Brand header ─────────────────────────────────── */}
-                <div className="flex h-16 shrink-0 items-center border-b border-[#F5F2EA]/10 px-5">
-                    {/* Logo mark — anchored at 20px padding */}
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#D6FF3F]">
-                        <LogoMark />
+                <div className="flex h-16 shrink-0 items-center border-b border-[#F5F2EA]/10 px-2">
+                    {/* Fixed Logo Slot (w-14 h-10) — centered at x=36px */}
+                    <div className="flex h-10 w-14 shrink-0 items-center justify-center">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#D6FF3F]">
+                            <LogoMark />
+                        </div>
                     </div>
 
                     {/* Wordmark — fades + slides out on collapse */}
-                    <Fade show={!collapsed} className="ml-2.5">
+                    <Fade show={!collapsed} className="flex-1">
                         <span
                             className="font-bold tracking-tight text-[#F5F2EA]"
                             style={{ fontSize: '15px' }}
@@ -440,12 +474,34 @@ export default function Sidebar({ collapsed, onToggle }) {
                 </div>
 
                 {/* ── Navigation ───────────────────────────────────── */}
-                <nav className="flex flex-1 flex-col overflow-hidden px-3 py-4">
-                    <div className="flex flex-col gap-1">
-                        {navItems.map(item => (
-                            <NavItem key={item.name} item={item} collapsed={collapsed} />
-                        ))}
-                    </div>
+                <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-2 py-2 gap-0.5 dark-scrollbar">
+                    {navSections.map((section, idx) => (
+                        <div key={section.title || idx} className="flex flex-col">
+                            {/* Fixed-height section segregation header (h-[22px]) for zero vertical shift */}
+                            <div className="relative flex h-[22px] shrink-0 items-center overflow-hidden">
+                                {idx > 0 && (
+                                    <div
+                                        className="absolute inset-0 flex items-center justify-center transition-opacity duration-200"
+                                        style={{ opacity: collapsed ? 1 : 0, pointerEvents: collapsed ? 'auto' : 'none' }}
+                                    >
+                                        <div className="h-px w-6 bg-[#F5F2EA]/10" />
+                                    </div>
+                                )}
+                                <Fade show={!collapsed} className="px-3">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#F5F2EA]/35 leading-none">
+                                        {section.title}
+                                    </span>
+                                </Fade>
+                            </div>
+
+                            {/* Section Items */}
+                            <div className="flex flex-col gap-1">
+                                {section.items.map(item => (
+                                    <NavItem key={item.name} item={item} collapsed={collapsed} />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </nav>
 
                 {/* ── User footer ──────────────────────────────────── */}
