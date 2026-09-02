@@ -84,7 +84,12 @@ export default function PageHeader({
     };
 
     return (
-        <div className={['flex h-16 w-full items-center justify-between border-b border-[#101F1A]/10 bg-[#F5F2EA]/90 px-6 backdrop-blur-md', className].join(' ')}>
+        <div
+            className={[
+                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/85 px-6 backdrop-blur-md shadow-card transition-all duration-200',
+                className,
+            ].join(' ')}
+        >
 
             {/* ── Left: Dynamic Page Title & Subtitle ───────────────────── */}
             <div className="flex min-w-0 flex-col justify-center">
@@ -110,7 +115,7 @@ export default function PageHeader({
                         <input
                             type="text"
                             placeholder="Search courts, bookings..."
-                            className="h-8 w-56 rounded-lg border border-[#101F1A]/10 bg-white/80 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-xs transition-all focus:border-[#101F1A] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#101F1A]"
+                            className="h-8 w-64 md:w-80 lg:w-96 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-all focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
                         />
                         <div className="pointer-events-none absolute right-1.5 flex items-center">
                             <kbd className="rounded border border-[#101F1A]/15 bg-[#F5F2EA] px-1 py-0.5 text-[9px] font-bold text-[#101F1A]/50 leading-none">
@@ -128,10 +133,10 @@ export default function PageHeader({
                             onClick={() => setNotifOpen(prev => !prev)}
                             aria-label="Notifications"
                             className={[
-                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 focus:outline-none shadow-xs',
+                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-200 focus:outline-none focus-ring-volt hover-lift press-scale shadow-subtle',
                                 notifOpen
-                                    ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F]'
-                                    : 'border-[#101F1A]/10 bg-white/80 text-[#101F1A] hover:bg-white active:scale-95',
+                                    ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F] glow-volt-sm'
+                                    : 'border-[#101F1A]/10 bg-white/90 text-[#101F1A] hover:bg-white',
                             ].join(' ')}
                         >
                             <Bell size={14} />
@@ -145,16 +150,13 @@ export default function PageHeader({
                         {/* Notifications Dropdown Card */}
                         {notifOpen && (
                             <div
-                                style={{
-                                    animation: 'cs-dropdown-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both',
-                                }}
-                                className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-[#101F1A]/10 bg-white p-1.5 shadow-2xl ring-1 ring-black/5"
+                                className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl glass-card p-1.5 shadow-elevated ring-1 ring-black/5 animate-fade-in"
                             >
                                 <div className="flex items-center justify-between border-b border-[#101F1A]/10 px-3 py-2">
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-xs font-bold text-[#101F1A]">Notifications</span>
                                         {unreadCount > 0 && (
-                                            <span className="rounded-full bg-[#D6FF3F] px-1.5 py-0.2 text-[10px] font-bold text-[#101F1A]">
+                                            <span className="rounded-full badge-volt px-1.5 py-0.5 text-[10px] shadow-xs">
                                                 {unreadCount} new
                                             </span>
                                         )}
@@ -179,7 +181,7 @@ export default function PageHeader({
                                                 item.unread ? 'bg-[#F5F2EA]/30' : '',
                                             ].join(' ')}
                                         >
-                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F]">
+                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F] glow-volt-sm">
                                                 {item.type === 'booking' ? (
                                                     <Clock size={13} />
                                                 ) : item.type === 'payment' ? (
@@ -225,20 +227,13 @@ export default function PageHeader({
                 ) : (
                     <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-xs transition-all hover:bg-[#101F1A]/90 hover:shadow-sm active:scale-95"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all hover:bg-[#101F1A]/90 hover-lift press-scale glow-volt-sm focus-ring-volt"
                     >
                         <Plus size={14} strokeWidth={2.5} />
                         <span>Book Court</span>
                     </button>
                 )}
             </div>
-
-            <style>{`
-                @keyframes cs-dropdown-in {
-                    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-                    to   { opacity: 1; transform: translateY(0) scale(1); }
-                }
-            `}</style>
         </div>
     );
 }

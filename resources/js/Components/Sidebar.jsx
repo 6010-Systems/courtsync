@@ -95,10 +95,10 @@ function NavItem({ item, collapsed }) {
                     }
                 }}
                 className={[
-                    'group relative flex items-center rounded-lg text-sm font-medium transition-colors duration-200 px-3.5 py-2.5',
+                    'group relative flex items-center rounded-lg text-sm font-medium transition-all duration-200 px-3.5 py-2.5 hover-lift',
                     isActive
-                        ? 'bg-[#D6FF3F] text-[#101F1A]'
-                        : 'text-[#F5F2EA]/60 hover:bg-[#F5F2EA]/[0.06] hover:text-[#F5F2EA]',
+                        ? 'badge-volt glow-volt-sm shadow-sm'
+                        : 'text-[#F5F2EA]/70 hover:bg-[#F5F2EA]/[0.08] hover:text-[#F5F2EA]',
                 ].join(' ')}
                 onMouseEnter={collapsed ? (e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -272,7 +272,7 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                         aria-expanded={open}
                     >
                         {/* Avatar */}
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[11px] font-bold text-[#101F1A]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[11px] font-bold text-[#101F1A] glow-volt-sm">
                             {initials}
                         </div>
 
@@ -291,7 +291,7 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                             onClick={onToggle}
                             aria-label="Collapse sidebar"
                             title="Collapse sidebar"
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/30 transition-all hover:bg-[#F5F2EA]/[0.06] hover:text-[#D6FF3F] focus:outline-none"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#F5F2EA]/40 transition-all hover:bg-[#F5F2EA]/[0.08] hover:text-[#D6FF3F] focus-ring-volt press-scale"
                         >
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="1.5" y="1.5" width="17" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
@@ -311,11 +311,11 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
                         role="dialog"
                         aria-label="User account menu"
                         style={cardStyle}
-                        className="overflow-hidden rounded-xl bg-[#101F1A] p-1.5 border border-[#F5F2EA]/15 backdrop-blur-md"
+                        className="overflow-hidden rounded-xl glass-panel-dark p-1.5 shadow-elevated dark-scrollbar"
                     >
                         {/* User identity header */}
                         <div className="flex items-center gap-3 rounded-lg bg-[#F5F2EA]/[0.04] p-3 border border-[#F5F2EA]/[0.06]">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[12px] font-bold text-[#101F1A] shadow-md">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D6FF3F] text-[12px] font-bold text-[#101F1A] glow-volt-sm">
                                 {initials}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -410,7 +410,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <aside
                 onClick={handleAsideClick}
                 className={[
-                    'sidebar-transition fixed left-2 top-2 z-30 flex flex-col overflow-hidden rounded-xl bg-[#101F1A]',
+                    'sidebar-transition fixed left-2 top-2 z-30 flex flex-col overflow-hidden rounded-xl bg-[#101F1A] border border-white/[0.08] shadow-elevated dark-scrollbar',
                     collapsed ? 'cursor-pointer' : '',
                 ].join(' ')}
                 style={{

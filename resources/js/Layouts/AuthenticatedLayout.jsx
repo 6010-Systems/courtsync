@@ -33,11 +33,11 @@ export default function AuthenticatedLayout({ header, children }) {
                 className="flex min-h-screen flex-col"
             >
                 {header && (
-                    <header className="sticky top-0 z-20">
+                    <header className="sticky top-2 z-20 px-2 pt-2">
                         {header}
                     </header>
                 )}
-                <main className="flex-1 p-6">
+                <main className="flex-1 px-2 py-3">
                     {children}
                 </main>
             </div>
