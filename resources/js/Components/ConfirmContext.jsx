@@ -1,11 +1,8 @@
 import {
-    AlertCircle,
     AlertTriangle,
-    CheckCircle2,
+    Check,
     HelpCircle,
-    Info,
     Trash2,
-    X,
 } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -13,25 +10,39 @@ import { createPortal } from 'react-dom';
 const ConfirmContext = createContext(null);
 
 const TYPE_CONFIG = {
+    success: {
+        icon: Check,
+        haloBg: 'bg-[#EEF4FF]',
+        innerBg: 'bg-[#3B82F6] text-white shadow-[#3B82F6]/30',
+        confirmBtn: 'bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-md shadow-[#3B82F6]/25',
+        singleBtn: 'bg-[#F3F6FD] text-[#3B82F6] hover:bg-[#E8F0FD]',
+    },
     danger: {
         icon: Trash2,
-        iconBg: 'bg-[#FF5A36]/10 text-[#FF5A36] border-[#FF5A36]/20',
-        confirmBtn: 'bg-[#FF5A36] text-white hover:bg-[#FF5A36]/90 shadow-sm shadow-[#FF5A36]/20',
+        haloBg: 'bg-[#FFF0ED]',
+        innerBg: 'bg-[#FF5A36] text-white shadow-[#FF5A36]/30',
+        confirmBtn: 'bg-[#FF5A36] text-white hover:bg-[#E04522] shadow-md shadow-[#FF5A36]/25',
+        singleBtn: 'bg-[#FFF0ED] text-[#FF5A36] hover:bg-[#FFE2DC]',
     },
     warning: {
         icon: AlertTriangle,
-        iconBg: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-        confirmBtn: 'bg-amber-500 text-white hover:bg-amber-600 shadow-sm shadow-amber-500/20',
+        haloBg: 'bg-[#FFFBEB]',
+        innerBg: 'bg-[#F59E0B] text-white shadow-[#F59E0B]/30',
+        confirmBtn: 'bg-[#F59E0B] text-white hover:bg-[#D97706] shadow-md shadow-[#F59E0B]/25',
+        singleBtn: 'bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]',
     },
     info: {
         icon: HelpCircle,
-        iconBg: 'bg-[#101F1A]/10 text-[#101F1A] border-[#101F1A]/15',
-        confirmBtn: 'bg-[#101F1A] text-[#D6FF3F] hover:bg-[#101F1A]/90 shadow-sm',
+        haloBg: 'bg-[#F5F2EA]',
+        innerBg: 'bg-[#101F1A] text-[#D6FF3F] shadow-[#101F1A]/20',
+        confirmBtn: 'bg-[#101F1A] text-[#D6FF3F] hover:bg-[#1C2E24] shadow-md shadow-[#101F1A]/20',
+        singleBtn: 'bg-[#F5F2EA] text-[#101F1A] hover:bg-[#EAE5D9]',
     },
 };
 
 /**
- * Global Confirm Dialog Provider for CourtSync.
+ * Global Confirm & Alert Dialog Provider for CourtSync.
+ * Matches Sidebar's rounded-xl border radius with clean soft-halo badge theme.
  */
 export function ConfirmProvider({ children }) {
     const [dialogState, setDialogState] = useState(null);
@@ -42,10 +53,10 @@ export function ConfirmProvider({ children }) {
         return new Promise((resolve) => {
             resolverRef.current = resolve;
             setDialogState({
-                title: options?.title ?? 'Are you sure?',
-                message: options?.message ?? 'Please confirm if you want to proceed with this action.',
+                title: options?.title ?? 'Confirm Action',
+                message: options?.message ?? 'Please confirm if you would like to proceed.',
                 confirmText: options?.confirmText ?? 'Confirm',
-                cancelText: options?.cancelText ?? 'Cancel',
+                cancelText: options?.cancelText !== undefined ? options.cancelText : 'Cancel',
                 type: options?.type ?? 'info',
             });
         });
@@ -67,7 +78,7 @@ export function ConfirmProvider({ children }) {
         }
     };
 
-    // Keyboard handlers (Escape = cancel, Enter = confirm)
+    // Keyboard navigation (Escape = cancel, Enter = confirm)
     useEffect(() => {
         if (!dialogState) return;
 
@@ -82,7 +93,7 @@ export function ConfirmProvider({ children }) {
         return () => document.removeEventListener('keydown', onKeyDown);
     }, [dialogState]);
 
-    // Auto-focus confirm button on open
+    // Auto-focus primary confirm button on mount
     useEffect(() => {
         if (dialogState) {
             confirmBtnRef.current?.focus();
@@ -91,6 +102,7 @@ export function ConfirmProvider({ children }) {
 
     const config = dialogState ? (TYPE_CONFIG[dialogState.type] || TYPE_CONFIG.info) : TYPE_CONFIG.info;
     const IconComponent = config.icon;
+    const isSingleButton = !dialogState?.cancelText;
 
     return (
         <ConfirmContext.Provider value={{ confirm }}>
@@ -106,63 +118,70 @@ export function ConfirmProvider({ children }) {
                     {/* Backdrop */}
                     <div
                         onClick={handleCancel}
-                        className="fixed inset-0 bg-[#101F1A]/60 backdrop-blur-xs transition-opacity duration-200"
+                        className="fixed inset-0 bg-[#101F1A]/40 backdrop-blur-xs transition-opacity duration-200"
                         style={{ animation: 'cs-backdrop-in 0.2s ease-out' }}
                     />
 
-                    {/* Dialog Card */}
+                    {/* Dialog Card Container matching sidebar's rounded-xl */}
                     <div
-                        style={{ animation: 'cs-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1)' }}
-                        className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-[#101F1A]/10 bg-white p-6 shadow-2xl ring-1 ring-black/5"
+                        style={{ animation: 'cs-dialog-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                        className="relative z-10 flex w-full max-w-[360px] flex-col items-center rounded-xl border border-black/[0.06] bg-white px-6 pt-6 pb-5 text-center shadow-[0_24px_50px_-12px_rgba(16,31,26,0.18)] ring-1 ring-black/[0.03]"
                     >
-                        {/* Close cross button */}
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            className="absolute right-4 top-4 rounded-lg p-1 text-[#101F1A]/40 transition-colors hover:bg-[#101F1A]/[0.06] hover:text-[#101F1A] focus:outline-none"
-                            aria-label="Close dialog"
+                        {/* Outer Soft Halo with Solid Inner Circle Icon */}
+                        <div
+                            style={{ animation: 'cs-icon-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                            className={['flex h-18 w-18 items-center justify-center rounded-full', config.haloBg].join(' ')}
                         >
-                            <X size={16} />
-                        </button>
-
-                        <div className="flex gap-4">
-                            {/* Icon badge */}
-                            <div className={['flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border shadow-xs', config.iconBg].join(' ')}>
-                                <IconComponent size={20} strokeWidth={2.2} />
-                            </div>
-
-                            {/* Content */}
-                            <div className="min-w-0 flex-1 pt-0.5">
-                                <h3 id="cs-confirm-title" className="text-base font-bold text-[#101F1A]">
-                                    {dialogState.title}
-                                </h3>
-                                <p className="mt-1.5 text-xs leading-relaxed text-[#101F1A]/70">
-                                    {dialogState.message}
-                                </p>
+                            <div className={['flex h-11 w-11 items-center justify-center rounded-full shadow-md', config.innerBg].join(' ')}>
+                                <IconComponent size={20} strokeWidth={2.8} />
                             </div>
                         </div>
 
-                        {/* Actions row */}
-                        <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-[#101F1A]/10 pt-4">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="inline-flex h-9 items-center justify-center rounded-xl border border-[#101F1A]/15 bg-white px-4 text-xs font-bold text-[#101F1A] transition-all hover:bg-[#F5F2EA] active:scale-95 focus:outline-none"
-                            >
-                                {dialogState.cancelText}
-                            </button>
+                        {/* Heading Title */}
+                        <h3 id="cs-confirm-title" className="mt-4 text-[17px] font-bold tracking-tight text-[#101F1A]">
+                            {dialogState.title}
+                        </h3>
+
+                        {/* Subtext Description */}
+                        <p className="mt-1.5 text-[13px] leading-relaxed text-[#101F1A]/60 max-w-[280px]">
+                            {dialogState.message}
+                        </p>
+
+                        {/* Action Buttons */}
+                        {isSingleButton ? (
                             <button
                                 ref={confirmBtnRef}
                                 type="button"
                                 onClick={handleConfirm}
                                 className={[
-                                    'inline-flex h-9 items-center justify-center rounded-xl px-5 text-xs font-bold transition-all active:scale-95 focus:outline-none',
-                                    config.confirmBtn,
+                                    'mt-5 h-10 w-full rounded-xl font-semibold text-xs tracking-wide transition-all active:scale-[0.98] focus:outline-none',
+                                    config.singleBtn,
                                 ].join(' ')}
                             >
-                                {dialogState.confirmText}
+                                {dialogState.confirmText || 'Close'}
                             </button>
-                        </div>
+                        ) : (
+                            <div className="mt-5 flex w-full items-center gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    className="flex-1 h-10 rounded-xl bg-[#F5F2EA] text-[#101F1A]/70 hover:bg-[#EAE5D9] hover:text-[#101F1A] font-semibold text-xs transition-all active:scale-95 focus:outline-none"
+                                >
+                                    {dialogState.cancelText}
+                                </button>
+                                <button
+                                    ref={confirmBtnRef}
+                                    type="button"
+                                    onClick={handleConfirm}
+                                    className={[
+                                        'flex-1 h-10 rounded-xl font-bold text-xs tracking-wide transition-all active:scale-95 focus:outline-none',
+                                        config.confirmBtn,
+                                    ].join(' ')}
+                                >
+                                    {dialogState.confirmText}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>,
                 document.body
@@ -174,8 +193,13 @@ export function ConfirmProvider({ children }) {
                     to   { opacity: 1; }
                 }
                 @keyframes cs-dialog-in {
-                    from { opacity: 0; transform: scale(0.95) translateY(4px); }
+                    from { opacity: 0; transform: scale(0.92) translateY(10px); }
                     to   { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                @keyframes cs-icon-pop {
+                    0%   { opacity: 0; transform: scale(0.6); }
+                    70%  { transform: scale(1.08); }
+                    100% { opacity: 1; transform: scale(1); }
                 }
             `}</style>
         </ConfirmContext.Provider>
@@ -183,16 +207,17 @@ export function ConfirmProvider({ children }) {
 }
 
 /**
- * Hook to invoke global confirmation dialogs anywhere.
+ * Hook to invoke confirmation dialogs anywhere.
  *
  * @example
  * const { confirm } = useConfirm();
  * const ok = await confirm({
- *   title: 'Save Profile Changes?',
- *   message: 'Are you sure you want to update your public details?',
- *   type: 'info'
+ *   title: 'Request Sent Successfully',
+ *   message: 'Your admin has been notified. They will review and grant access if approved.',
+ *   confirmText: 'Close',
+ *   cancelText: null, // single-button alert mode
+ *   type: 'success'
  * });
- * if (!ok) return;
  */
 export function useConfirm() {
     const context = useContext(ConfirmContext);
