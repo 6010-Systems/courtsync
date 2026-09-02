@@ -37,7 +37,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         {header}
                     </header>
                 )}
-                <main className="flex-1 min-w-0 px-2 pt-2 pb-3">
+                <main className="flex-1 min-w-0 px-2 pt-2 pb-2">
                     {children}
                 </main>
             </div>

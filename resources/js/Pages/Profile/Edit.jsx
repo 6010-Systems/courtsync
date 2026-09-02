@@ -35,13 +35,13 @@ export default function Edit({ mustVerifyEmail, status }) {
         >
             <Head title="Settings & Profile" />
 
-            <div className="w-full space-y-6">
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="w-full">
+                <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
 
                     {/* ── Left Column: Profile Info & Password Forms ─────── */}
-                    <div className="space-y-6 lg:col-span-2">
+                    <div className="flex flex-col gap-2 lg:col-span-2">
                         {/* Profile Information Form */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-xs">
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-card">
                             <UpdateProfileInformationForm
                                 mustVerifyEmail={mustVerifyEmail}
                                 status={status}
@@ -49,16 +49,16 @@ export default function Edit({ mustVerifyEmail, status }) {
                         </div>
 
                         {/* Password & Security Form */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-xs">
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-card">
                             <UpdatePasswordForm />
                         </div>
                     </div>
 
                     {/* ── Right Column: Account Summary & Danger Zone ────── */}
-                    <div className="space-y-6">
+                    <div className="flex flex-col gap-2">
 
                         {/* Account Identity Summary Card */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-xs">
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-card">
                             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#101F1A]/50">
                                 <ShieldCheck size={14} className="text-[#101F1A]" />
                                 <span>Account Overview</span>
@@ -100,7 +100,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                         </div>
 
                         {/* Danger Zone Deletion Card */}
-                        <div className="rounded-xl border border-[#FF5A36]/20 bg-white p-6 shadow-xs">
+                        <div className="rounded-xl border border-[#FF5A36]/20 bg-white p-6 shadow-card">
                             <DeleteUserForm />
                         </div>
 
