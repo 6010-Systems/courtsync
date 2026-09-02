@@ -64,7 +64,6 @@ const navSections = [
         items: [
             { name: 'Reports',      href: '#',            icon: BarChart2,     badge: null },
             { name: 'Verification', href: '#',            icon: ShieldCheck,   badge: null },
-            { name: 'Settings',     href: 'profile.edit', icon: Settings,      badge: null },
         ],
     },
 ];

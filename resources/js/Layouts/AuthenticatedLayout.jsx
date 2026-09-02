@@ -30,14 +30,14 @@ export default function AuthenticatedLayout({ header, children }) {
             {/* Main content — offset by sidebar footprint (margin + width) */}
             <div
                 style={{ marginLeft: `${sidebarOffset}px`, transition: 'margin-left 300ms cubic-bezier(0.4,0,0.2,1)' }}
-                className="flex min-h-screen flex-col"
+                className="flex min-h-screen min-w-0 flex-1 flex-col pt-2"
             >
                 {header && (
-                    <header className="sticky top-2 z-20 px-2 pt-2">
+                    <header className="sticky top-2 z-20 px-2">
                         {header}
                     </header>
                 )}
-                <main className="flex-1 px-2 py-3">
+                <main className="flex-1 min-w-0 px-2 pt-2 pb-3">
                     {children}
                 </main>
             </div>
