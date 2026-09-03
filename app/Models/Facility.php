@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Database\Factories\FacilityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['user_id', 'slug', 'name', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'verification_status'])]
 class Facility extends Model
 {
+    /** @use HasFactory<FacilityFactory> */
+    use HasFactory;
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'user_id');

@@ -91,13 +91,24 @@ export default function Register() {
                             Register your court
                         </h2>
                         <p className="mt-2 text-[#10221C]/60">
-                            Already have one?{' '}
+                            This creates a <span className="font-medium text-[#10221C]">facility owner</span> account. Already have one?{' '}
                             <Link
                                 href={route('login')}
                                 className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
                             >
                                 Log in
                             </Link>
+                        </p>
+
+                        <p className="mt-3 rounded-md border border-[#10221C]/10 bg-[#10221C]/[0.03] px-4 py-3 text-sm text-[#10221C]/70">
+                            Looking to book a court instead?{' '}
+                            <Link
+                                href="/"
+                                className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
+                            >
+                                Find your facility
+                            </Link>{' '}
+                            to sign up as a player.
                         </p>
 
                         <form onSubmit={submit} className="mt-8">

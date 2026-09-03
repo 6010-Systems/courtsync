@@ -15,7 +15,7 @@ class FacilityController extends Controller
 {
     public function index(Request $request)
     {
-        return Inertia::render('Owner/Facilities', [
+        return Inertia::render('Facility/Facilities', [
             'facilities' => $request->user()->facilities()->with('verification')->get()
         ]);
     }
@@ -136,7 +136,7 @@ class FacilityController extends Controller
 
     public function staff(Request $request)
     {
-        return inertia('Owner/Staff', [
+        return inertia('Facility/Staff', [
             'auth' => [
                 'user' => $request->user()->load('facilities.staff')
             ]
@@ -182,7 +182,7 @@ class FacilityController extends Controller
             }
         }
 
-        return inertia('Owner/Players', [
+        return inertia('Facility/Players', [
             'auth' => [
                 'user' => $request->user()->load('facilities')
             ],

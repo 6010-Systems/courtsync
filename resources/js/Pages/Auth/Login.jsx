@@ -2,6 +2,7 @@ import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import { ButtonSpinner } from '@/Components/LoadingContext';
+import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -87,13 +88,24 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                             Log in to your account
                         </h2>
                         <p className="mt-2 text-[#10221C]/60">
-                            Don't have an account?{' '}
+                            This is for <span className="font-medium text-[#10221C]">facility owners &amp; staff</span>. Don't have an account?{' '}
                             <Link
                                 href={route('register')}
                                 className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
                             >
                                 Sign up
                             </Link>
+                        </p>
+
+                        <p className="mt-3 rounded-md border border-[#10221C]/10 bg-[#10221C]/[0.03] px-4 py-3 text-sm text-[#10221C]/70">
+                            Looking to book a court instead?{' '}
+                            <Link
+                                href="/"
+                                className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
+                            >
+                                Find your facility
+                            </Link>{' '}
+                            to log in as a player.
                         </p>
 
                         {status && (

@@ -21,7 +21,7 @@ class PlayerSessionController extends Controller
     {
         $facility = Facility::with('verification')->where('slug', $facilitySlug)->firstOrFail();
         
-        return Inertia::render('Auth/PlayerLogin', [
+        return Inertia::render('Players/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
             'lastLoginMethod' => $request->cookie('last_login_method'),

@@ -34,39 +34,55 @@ const LogoMark = () => (
     </svg>
 );
 
-// ── Nav data matching extracted design ────────────────────────────────────────
+// ── Nav data matching extracted design ─────────────────────────────────────
+// `href: '#'` marks a module whose page exists but has no backend routes yet
+// (see NavItem — it renders those as disabled rather than a dead link).
+// `roles` lists which `user.role` values see the item.
 const navSections = [
     {
         title: 'Main',
         items: [
-            { name: 'Dashboard',    href: 'dashboard',          icon: LayoutGrid,    badge: null },
+            { name: 'Dashboard',    href: 'dashboard',                 icon: LayoutGrid,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN', 'PLAYER'] },
         ],
     },
     {
         title: 'Management',
         items: [
-            { name: 'Bookings',     href: 'bookings.index',     icon: CalendarCheck, badge: 3    },
-            { name: 'Calendar',     href: 'calendar.index',     icon: Calendar,      badge: null },
-            { name: 'Facilities',   href: 'facilities.index',   icon: Building2,     badge: null },
-            { name: 'Courts',       href: 'courts.index',       icon: ClipboardList, badge: null },
+            { name: 'Bookings',     href: '#',                         icon: CalendarCheck, badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Calendar',     href: '#',                         icon: Calendar,      badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Facilities',   href: 'facilities.index',          icon: Building2,     badge: null, roles: ['FACILITY_OWNER'] },
+            { name: 'Facilities',   href: 'admin.facilities',          icon: Building2,     badge: null, roles: ['ADMIN'] },
+            { name: 'Courts',       href: '#',                         icon: ClipboardList, badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
         ],
     },
     {
         title: 'People & Finance',
         items: [
-            { name: 'Customers',    href: 'customers.index',    icon: Users,         badge: null },
-            { name: 'Staff',        href: 'staff.index',        icon: UserCheck,     badge: null },
-            { name: 'Payments',     href: 'payments.index',     icon: CreditCard,    badge: null },
+            { name: 'Players',      href: 'facility.players',          icon: Users,         badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Staff',        href: 'facility.staff',            icon: UserCheck,     badge: null, roles: ['FACILITY_OWNER'] },
+            { name: 'Owners',       href: 'admin.owners',              icon: UserCheck,     badge: null, roles: ['ADMIN'] },
+            { name: 'Staff',        href: 'admin.staff',               icon: UserCheck,     badge: null, roles: ['ADMIN'] },
+            { name: 'Customers',    href: '#',                         icon: Users,         badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Payments',     href: '#',                         icon: CreditCard,    badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
         ],
     },
     {
         title: 'System',
         items: [
-            { name: 'Reports',      href: 'reports.index',      icon: BarChart2,     badge: null },
-            { name: 'Verification', href: 'verification.index', icon: ShieldCheck,   badge: null },
+            { name: 'Reports',       href: '#',                        icon: BarChart2,     badge: 'Soon', roles: ['FACILITY_OWNER', 'ADMIN'] },
+            { name: 'Verifications', href: 'admin.verifications',      icon: ShieldCheck,   badge: null, roles: ['ADMIN'] },
         ],
     },
 ];
+
+function navForRole(role) {
+    return navSections
+        .map(section => ({
+            ...section,
+            items: section.items.filter(item => item.roles.includes(role)),
+        }))
+        .filter(section => section.items.length > 0);
+}
 
 // ── Fade wrapper: simple instant fade-out on collapse, smooth glide-in on expand ─
 function Fade({ show, children, className = '', delay = 0 }) {
@@ -103,12 +119,13 @@ function Fade({ show, children, className = '', delay = 0 }) {
 // ── NavItem ───────────────────────────────────────────────────────────────────
 function NavItem({ item, collapsed }) {
     const [tooltipY, setTooltipY] = useState(null);
+    const disabled = item.href === '#';
 
     let isActive = false;
-    try { if (item.href !== '#') isActive = route().current(item.href); } catch (_) {}
+    try { if (!disabled) isActive = route().current(item.href); } catch (_) {}
 
     let href = item.href;
-    try { if (item.href !== '#') href = route(item.href); } catch (_) {}
+    try { if (!disabled) href = route(item.href); } catch (_) {}
 
     const TOOLTIP_LEFT = 84; // 8px margin + 72px sidebar + 4px gap
     const IconComponent = item.icon;
@@ -117,18 +134,21 @@ function NavItem({ item, collapsed }) {
         <>
             <Link
                 href={href}
+                aria-disabled={disabled}
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (item.href === '#') {
+                    if (disabled) {
                         e.preventDefault();
                     }
                 }}
                 className={[
                     'group relative flex h-10 w-full items-center rounded-lg text-sm font-medium transition-colors duration-150',
                     collapsed ? 'justify-center p-0' : 'pr-3',
-                    isActive
-                        ? 'badge-volt glow-volt-sm shadow-sm'
-                        : 'text-[#F5F2EA]/70 hover:bg-[#F5F2EA]/[0.08] hover:text-[#F5F2EA]',
+                    disabled
+                        ? 'cursor-not-allowed text-[#F5F2EA]/30'
+                        : isActive
+                            ? 'badge-volt glow-volt-sm shadow-sm'
+                            : 'text-[#F5F2EA]/70 hover:bg-[#F5F2EA]/[0.08] hover:text-[#F5F2EA]',
                 ].join(' ')}
                 onMouseEnter={collapsed ? (e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -406,6 +426,7 @@ function UserFooter({ user, initials, collapsed, onToggle }) {
 export default function Sidebar({ collapsed, onToggle }) {
     const { auth } = usePage().props;
     const user = auth?.user;
+    const sections = navForRole(user?.role);
 
     const initials = user?.name
         ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
@@ -474,7 +495,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
                 {/* ── Navigation ───────────────────────────────────── */}
                 <nav className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-2 py-2 gap-0.5 dark-scrollbar">
-                    {navSections.map((section, idx) => (
+                    {sections.map((section, idx) => (
                         <div key={section.title || idx} className="flex flex-col">
                             {/* Fixed-height section segregation header (h-[22px]) for zero vertical shift */}
                             <div className="relative flex h-[22px] shrink-0 items-center overflow-hidden">

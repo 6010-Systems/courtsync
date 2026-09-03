@@ -46,9 +46,28 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     Route::get('/dashboard', function (Request $request) {
         $user = $request->user();
-        $user->load('facilities.verification', 'facilities.staff');
+
+        if ($user->role === 'ADMIN') {
+            return Inertia::render('Dashboard', [
+                'user' => $user,
+                'adminStats' => [
+                    'totalOwners' => \App\Models\User::where('role', 'FACILITY_OWNER')->count(),
+                    'totalStaff' => \App\Models\User::where('role', 'FACILITY_STAFF')->count(),
+                    'totalPlayers' => \App\Models\User::where('role', 'PLAYER')->count(),
+                    'totalFacilities' => Facility::count(),
+                    'approvedFacilities' => Facility::where('verification_status', 'APPROVED')->count(),
+                    'pendingVerifications' => Facility::whereIn('verification_status', ['SUBMITTED', 'UNDER_REVIEW'])->count(),
+                ],
+            ]);
+        }
+
+        $user->load([
+            'facilities' => fn ($query) => $query->withCount(['staff', 'players'])->with('verification'),
+            'workFacility' => fn ($query) => $query->withCount(['staff', 'players']),
+        ]);
+
         return Inertia::render('Dashboard', [
-            'user' => $user
+            'user' => $user,
         ]);
     })->middleware(['verified'])->name('dashboard');
     
