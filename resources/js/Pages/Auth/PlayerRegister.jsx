@@ -4,7 +4,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register() {
+export default function PlayerRegister({ facility }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -15,85 +15,76 @@ export default function Register() {
     const submit = (e) => {
         e.preventDefault();
 
-        post(route('register'), {
+        post(`/${facility.slug}/register`, {
             onFinish: () => reset('password', 'password_confirmation'),
         });
     };
 
     return (
         <>
-            <Head title="Register" />
+            <Head title={`Register at ${facility.name}`} />
 
             <div className="courtsync grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.1fr,1fr]">
-                {/* Left — dark diagonal-cut branding panel, mirrors the hero. Full-bleed background, content rail centers against the shared 1280 line. */}
+                {/* Left — branding panel */}
                 <div
-                    className="relative hidden flex-col justify-between bg-[#101F1A] py-10 text-[#F5F2EA] lg:flex"
+                    className="relative hidden flex-col justify-between bg-[#101F1A] py-10 text-[#F5F2EA] lg:flex bg-cover bg-center"
                     style={{
                         clipPath: 'polygon(0 0, 100% 0, 88% 100%, 0 100%)',
+                        backgroundImage: facility.verification?.facility_photos?.length > 0 
+                            ? `url(${facility.verification.facility_photos[0]})` 
+                            : 'none'
                     }}
                 >
-                    <div className="ml-auto w-full max-w-[704px] px-10">
+                    {/* Gradient Overlay for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#10221C] via-[#10221C]/80 to-[#10221C]/40 z-0"></div>
+
+                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10">
                         <Link
-                            href="/"
-                            className="font-display text-2xl tracking-tight"
+                            href={`/${facility.slug}`}
+                            className="font-display text-2xl tracking-tight flex items-center gap-2"
                         >
-                            Court<span className="text-[#D6FF3F]">Sync</span>
+                            <span className="text-[#D6FF3F]">{facility.name}</span>
                         </Link>
                     </div>
 
-                    <div className="ml-auto w-full max-w-[704px] px-10">
+                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10">
                         <div className="max-w-sm">
-                            <h1 className="font-display text-5xl leading-[0.95] tracking-tight">
-                                MANAGE
-                                <br />
-                                YOUR
+                            <h1 className="font-display text-5xl leading-[0.95] tracking-tight drop-shadow-md">
+                                JOIN THE
                                 <br />
                                 <span className="text-[#D6FF3F]">
-                                    FACILITY.
+                                    COMMUNITY.
                                 </span>
                             </h1>
-                            <p className="mt-6 leading-relaxed text-[#F5F2EA]/70">
-                                Register your court on CourtSync, manage your 
-                                bookings, schedule your staff, and grow your 
-                                sports community.
+                            <p className="mt-6 leading-relaxed text-[#F5F2EA]/90 drop-shadow-sm font-medium">
+                                Register at {facility.name} to book courts instantly, manage your schedule, and play!
                             </p>
                         </div>
                     </div>
 
-                    <div className="ml-auto w-full max-w-[704px] px-10">
-                        <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl">
-                            <p className="font-display text-base">
-                                Court A · Badminton
-                            </p>
-                            <p className="mt-1 text-sm text-[#10221C]/60">
-                                8:00 – 9:00 PM · ₱320
-                            </p>
-                            <span className="mt-2 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-1 text-xs font-semibold text-[#B8391D]">
-                                2 left
-                            </span>
-                        </div>
+                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10 opacity-0">
+                        {/* Empty space for balance */}
                     </div>
                 </div>
 
-                {/* Right — form. Full-bleed background, content rail centers against the shared 1280 line. */}
+                {/* Right — form */}
                 <div className="flex flex-col justify-center px-6 py-16 sm:px-12 lg:px-10">
                     <div className="mr-auto w-full max-w-[576px] px-0 lg:pr-10">
                     <div className="mx-auto w-full max-w-sm">
                         <Link
-                            href="/"
-                            className="font-display text-2xl tracking-tight text-[#10221C] lg:hidden"
+                            href={`/${facility.slug}`}
+                            className="font-display text-2xl tracking-tight text-[#10221C] lg:hidden mb-8 block"
                         >
-                            Court
-                            <span className="text-[#FF5A36]">Sync</span>
+                            {facility.name}
                         </Link>
 
                         <h2 className="mt-8 font-display text-3xl tracking-tight text-[#10221C] lg:mt-0">
-                            Register your court
+                            Create your account
                         </h2>
                         <p className="mt-2 text-[#10221C]/60">
                             Already have one?{' '}
                             <Link
-                                href={route('login')}
+                                href={`/${facility.slug}/login`}
                                 className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
                             >
                                 Log in
@@ -102,12 +93,7 @@ export default function Register() {
 
                         <form onSubmit={submit} className="mt-8">
                             <div>
-                                <InputLabel
-                                    htmlFor="name"
-                                    value="Name"
-                                    className="font-medium text-[#10221C]"
-                                />
-
+                                <InputLabel htmlFor="name" value="Name" className="font-medium text-[#10221C]" />
                                 <TextInput
                                     id="name"
                                     name="name"
@@ -115,25 +101,14 @@ export default function Register() {
                                     className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
                                     autoComplete="name"
                                     isFocused={true}
-                                    onChange={(e) =>
-                                        setData('name', e.target.value)
-                                    }
+                                    onChange={(e) => setData('name', e.target.value)}
                                     required
                                 />
-
-                                <InputError
-                                    message={errors.name}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.name} className="mt-2" />
                             </div>
 
                             <div className="mt-5">
-                                <InputLabel
-                                    htmlFor="email"
-                                    value="Email"
-                                    className="font-medium text-[#10221C]"
-                                />
-
+                                <InputLabel htmlFor="email" value="Email" className="font-medium text-[#10221C]" />
                                 <TextInput
                                     id="email"
                                     type="email"
@@ -141,25 +116,14 @@ export default function Register() {
                                     value={data.email}
                                     className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
                                     autoComplete="username"
-                                    onChange={(e) =>
-                                        setData('email', e.target.value)
-                                    }
+                                    onChange={(e) => setData('email', e.target.value)}
                                     required
                                 />
-
-                                <InputError
-                                    message={errors.email}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.email} className="mt-2" />
                             </div>
 
                             <div className="mt-5">
-                                <InputLabel
-                                    htmlFor="password"
-                                    value="Password"
-                                    className="font-medium text-[#10221C]"
-                                />
-
+                                <InputLabel htmlFor="password" value="Password" className="font-medium text-[#10221C]" />
                                 <TextInput
                                     id="password"
                                     type="password"
@@ -167,25 +131,14 @@ export default function Register() {
                                     value={data.password}
                                     className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
                                     autoComplete="new-password"
-                                    onChange={(e) =>
-                                        setData('password', e.target.value)
-                                    }
+                                    onChange={(e) => setData('password', e.target.value)}
                                     required
                                 />
-
-                                <InputError
-                                    message={errors.password}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.password} className="mt-2" />
                             </div>
 
                             <div className="mt-5">
-                                <InputLabel
-                                    htmlFor="password_confirmation"
-                                    value="Confirm password"
-                                    className="font-medium text-[#10221C]"
-                                />
-
+                                <InputLabel htmlFor="password_confirmation" value="Confirm password" className="font-medium text-[#10221C]" />
                                 <TextInput
                                     id="password_confirmation"
                                     type="password"
@@ -193,26 +146,17 @@ export default function Register() {
                                     value={data.password_confirmation}
                                     className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
                                     autoComplete="new-password"
-                                    onChange={(e) =>
-                                        setData(
-                                            'password_confirmation',
-                                            e.target.value,
-                                        )
-                                    }
+                                    onChange={(e) => setData('password_confirmation', e.target.value)}
                                     required
                                 />
-
-                                <InputError
-                                    message={errors.password_confirmation}
-                                    className="mt-2"
-                                />
+                                <InputError message={errors.password_confirmation} className="mt-2" />
                             </div>
 
                             <PrimaryButton
                                 className="mt-7 flex w-full items-center justify-center !rounded-md !bg-[#D6FF3F] !px-7 !py-3.5 font-display text-lg tracking-wide !text-[#101F1A] transition hover:!bg-[#c2ea2e] focus:!ring-[#101F1A]"
                                 disabled={processing}
                             >
-                                Create account
+                                Register
                             </PrimaryButton>
 
                             <div className="relative mt-8 flex items-center justify-center">
@@ -221,7 +165,7 @@ export default function Register() {
                             </div>
 
                             <a
-                                href={route('google.redirect', { tenant: 'owner' })}
+                                href={`/auth/google/player?facility=${facility.slug}`}
                                 className="mt-6 flex w-full items-center justify-center gap-3 rounded-md border border-[#10221C]/15 bg-white px-7 py-3.5 font-medium text-[#10221C] transition hover:bg-gray-50 focus:ring-[#101F1A]"
                             >
                                 <svg className="h-5 w-5" viewBox="0 0 24 24">

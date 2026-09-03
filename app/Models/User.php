@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role', 'staff_role', 'status', 'mobile_number', 'google_id', 'avatar', 'facility_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,5 +29,25 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function facilities()
+    {
+        return $this->hasMany(Facility::class, 'user_id');
+    }
+
+    public function workFacility()
+    {
+        return $this->belongsTo(Facility::class, 'facility_id');
+    }
+
+    /**
+     * The facilities this user has joined as a player.
+     */
+    public function joinedFacilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Facility::class, 'facility_player')
+                    ->withPivot('status')
+                    ->withTimestamps();
     }
 }
