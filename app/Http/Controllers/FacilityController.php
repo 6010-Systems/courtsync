@@ -16,7 +16,7 @@ class FacilityController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Facility/Facilities', [
-            'facilities' => $request->user()->facilities()->with('verification')->get()
+            'facilities' => $request->user()->facilities()->with('verification')->withCount('courts')->get()
         ]);
     }
 
@@ -48,7 +48,7 @@ class FacilityController extends Controller
             ];
 
             if ($facility->verification_status === 'APPROVED' && $request->filled('slug')) {
-                $updateData['slug'] = Str::slug($request->slug);
+                $updateData['slug'] = Facility::generateUniqueSlug($request->slug, $facility->id);
             }
 
             $facility->update($updateData);
@@ -112,12 +112,37 @@ class FacilityController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * Facility IDs this user is allowed to see/manage: an owner's own
+     * facilities, or a staff member's single assigned facility.
+     */
+    private function allowedFacilityIds(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'FACILITY_OWNER') {
+            return $user->facilities()->pluck('id');
+        }
+
+        if ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            return collect([$user->facility_id]);
+        }
+
+        return collect();
+    }
+
     public function storeStaff(Request $request)
     {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff.');
+        }
+
         $request->validate([
             'facility_id' => 'required|exists:facilities,id',
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
         ]);
 
         $facility = $request->user()->facilities()->findOrFail($request->facility_id);
@@ -129,22 +154,97 @@ class FacilityController extends Controller
             'role' => 'FACILITY_STAFF',
             'status' => 'VERIFIED',
             'facility_id' => $facility->id,
+            'permissions' => $request->permissions ?? [],
         ]);
 
         return redirect()->back()->with('success', 'Staff member invited successfully.');
     }
 
+    public function editStaffPermissions(Request $request, User $user)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff permissions.');
+        }
+
+        $facilityIds = $request->user()->facilities()->pluck('id');
+
+        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return inertia('Facility/StaffPermissions', [
+            'staff' => $user->only(['id', 'name', 'email']),
+            'matrix' => User::PERMISSION_MATRIX,
+            'permissions' => $user->permissions ?? [],
+        ]);
+    }
+
+    public function updateStaffPermissions(Request $request, User $user)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff permissions.');
+        }
+
+        $facilityIds = $request->user()->facilities()->pluck('id');
+
+        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
+        ]);
+
+        $user->update(['permissions' => $request->permissions ?? []]);
+
+        return redirect()->back()->with('success', 'Staff permissions updated successfully.');
+    }
+
+    public function updateStaffFacility(Request $request, User $user)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff.');
+        }
+
+        $facilityIds = $request->user()->facilities()->pluck('id');
+
+        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'facility_id' => 'required|exists:facilities,id',
+        ]);
+
+        if (!$facilityIds->contains((int) $request->facility_id)) {
+            abort(403, 'You can only assign staff to one of your own facilities.');
+        }
+
+        $user->update(['facility_id' => $request->facility_id]);
+
+        return redirect()->back()->with('success', 'Staff facility updated successfully.');
+    }
+
     public function staff(Request $request)
     {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff.');
+        }
+
         return inertia('Facility/Staff', [
             'auth' => [
                 'user' => $request->user()->load('facilities.staff')
-            ]
+            ],
         ]);
     }
 
     public function deleteStaff(Request $request, User $user)
     {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage staff.');
+        }
+
         $facilityIds = $request->user()->facilities()->pluck('id');
 
         if (!$facilityIds->contains($user->facility_id)) {
@@ -158,12 +258,20 @@ class FacilityController extends Controller
 
     public function players(Request $request)
     {
-        $facilities = $request->user()->facilities()
-            ->where('verification_status', 'APPROVED')
-            ->with(['players' => function ($query) {
-                $query->select('users.id', 'users.name', 'users.email', 'users.avatar', 'users.created_at');
-            }])
-            ->get();
+        if (!$request->user()->hasPermission('view_players')) {
+            abort(403, 'You do not have permission to view players.');
+        }
+
+        $facilityIds = $this->allowedFacilityIds($request);
+
+        $facilities = $facilityIds->isEmpty()
+            ? collect()
+            : Facility::whereIn('id', $facilityIds)
+                ->where('verification_status', 'APPROVED')
+                ->with(['players' => function ($query) {
+                    $query->select('users.id', 'users.name', 'users.email', 'users.avatar', 'users.created_at');
+                }])
+                ->get();
 
         // Flatten players across all facilities, tagging each with the facility name and pivot status
         $players = [];
@@ -186,16 +294,21 @@ class FacilityController extends Controller
             'auth' => [
                 'user' => $request->user()->load('facilities')
             ],
-            'players' => $players
+            'players' => $players,
+            'canManage' => $request->user()->hasPermission('manage_players'),
         ]);
     }
 
     public function toggleBanPlayer(Request $request, User $user)
     {
-        $facilityId = $request->input('facility_id');
-        $facilityIds = $request->user()->facilities()->pluck('id');
+        if (!$request->user()->hasPermission('manage_players')) {
+            abort(403, 'You do not have permission to manage players.');
+        }
 
-        if (!$facilityIds->contains($facilityId)) {
+        $facilityId = $request->input('facility_id');
+        $facilityIds = $this->allowedFacilityIds($request);
+
+        if (!$facilityIds->contains((int) $facilityId)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -215,6 +328,7 @@ class FacilityController extends Controller
     public function show(Facility $facility)
     {
         $facility->load('verification:id,facility_id,facility_photos');
+        $facility->load('courts');
 
         return Inertia::render('Facility/Show', [
             'facility' => $facility

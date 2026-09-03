@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 
-export default function Players({ auth, players }) {
+export default function Players({ auth, players, canManage }) {
     const handleToggleBan = (player) => {
         const action = player.status === 'BANNED' ? 'Unban' : 'Ban';
         if (confirm(`Are you sure you want to ${action.toLowerCase()} ${player.name}?`)) {
@@ -47,7 +47,7 @@ export default function Players({ auth, players }) {
                                             <th scope="col" className="px-6 py-4">Facility Joined</th>
                                             <th scope="col" className="px-6 py-4">Joined Date</th>
                                             <th scope="col" className="px-6 py-4">Status</th>
-                                            <th scope="col" className="px-6 py-4 text-right">Actions</th>
+                                            {canManage && <th scope="col" className="px-6 py-4 text-right">Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -83,18 +83,20 @@ export default function Players({ auth, players }) {
                                                         <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Active</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                    <button
-                                                        onClick={() => handleToggleBan(player)}
-                                                        className={`text-sm font-bold transition ${
-                                                            player.status === 'BANNED' 
-                                                                ? 'text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100' 
-                                                                : 'text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100'
-                                                        } px-3 py-1.5 rounded-md`}
-                                                    >
-                                                        {player.status === 'BANNED' ? 'Unban Player' : 'Ban Player'}
-                                                    </button>
-                                                </td>
+                                                {canManage && (
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                        <button
+                                                            onClick={() => handleToggleBan(player)}
+                                                            className={`text-sm font-bold transition ${
+                                                                player.status === 'BANNED'
+                                                                    ? 'text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100'
+                                                                    : 'text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100'
+                                                            } px-3 py-1.5 rounded-md`}
+                                                        >
+                                                            {player.status === 'BANNED' ? 'Unban Player' : 'Ban Player'}
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>

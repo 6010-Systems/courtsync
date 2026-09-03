@@ -1,12 +1,12 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Staff({ auth }) {
     const user = auth.user;
-    
+
     // Get all approved facilities
     const approvedFacilities = user.facilities?.filter(f => f.verification_status === 'APPROVED') || [];
 
@@ -23,8 +23,6 @@ export default function Staff({ auth }) {
         });
     };
 
-
-
     const handleDelete = (staff) => {
         if (confirm(`Are you sure you want to permanently remove ${staff.name}? This action cannot be undone.`)) {
             router.delete(route('facility.staff.destroy', staff.id), {
@@ -33,8 +31,14 @@ export default function Staff({ auth }) {
         }
     };
 
+    const handleReassign = (staff, facilityId) => {
+        router.put(route('facility.staff.facility.update', staff.id), { facility_id: facilityId }, {
+            preserveScroll: true,
+        });
+    };
+
     // Flatten all staff across all facilities with facility name
-    const allStaff = (user.facilities || []).flatMap(facility => 
+    const allStaff = (user.facilities || []).flatMap(facility =>
         (facility.staff || []).map(staff => ({
             ...staff,
             facility_name: facility.name,
@@ -60,7 +64,7 @@ export default function Staff({ auth }) {
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h3 className="text-xl font-bold text-[#10221C]">Your Staff</h3>
-                            <p className="text-sm text-gray-500">Manage your facility staff members.</p>
+                            <p className="text-sm text-gray-500">Manage your facility staff members. New staff start with no access — grant permissions from the Access column.</p>
                         </div>
                     </div>
 
@@ -101,6 +105,7 @@ export default function Staff({ auth }) {
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Name</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Email</th>
                                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Facility</th>
+                                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Access</th>
                                     <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -111,9 +116,29 @@ export default function Staff({ auth }) {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{staff.name}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{staff.email}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                    {staff.facility_name}
-                                                </span>
+                                                {approvedFacilities.length > 1 ? (
+                                                    <select
+                                                        value={staff.facility_id}
+                                                        onChange={(e) => handleReassign(staff, e.target.value)}
+                                                        className="rounded-md border-blue-200 bg-blue-50 text-blue-800 text-xs font-semibold py-1 pl-2 pr-7 focus:border-[#D6FF3F] focus:ring-[#D6FF3F]"
+                                                    >
+                                                        {approvedFacilities.map((f) => (
+                                                            <option key={f.id} value={f.id}>{f.name}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                        {staff.facility_name}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <Link
+                                                    href={route('facility.staff.permissions.edit', staff.id)}
+                                                    className="text-sm font-bold text-[#10221C] bg-[#D6FF3F]/40 hover:bg-[#D6FF3F]/60 transition px-3 py-1.5 rounded-md"
+                                                >
+                                                    Manage Access{staff.permissions?.length ? ` (${staff.permissions.length})` : ''}
+                                                </Link>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <button

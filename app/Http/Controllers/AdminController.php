@@ -36,9 +36,9 @@ class AdminController extends Controller
             'verification_status' => 'required|string',
         ]);
 
-        $slug = $request->slug ? Str::slug($request->slug) : null;
+        $slug = $request->slug ? Facility::generateUniqueSlug($request->slug) : null;
         if (empty($slug) && $request->verification_status === 'APPROVED') {
-            $slug = Str::slug($request->name);
+            $slug = Facility::generateUniqueSlug($request->name);
         }
 
         Facility::create([
@@ -74,9 +74,9 @@ class AdminController extends Controller
             'verification_status' => 'required|string',
         ]);
 
-        $slug = $request->slug ? Str::slug($request->slug) : null;
+        $slug = $request->slug ? Facility::generateUniqueSlug($request->slug, $facility->id) : null;
         if (empty($slug) && $request->verification_status === 'APPROVED') {
-            $slug = Str::slug($request->name);
+            $slug = Facility::generateUniqueSlug($request->name, $facility->id);
         }
 
         $facility->update([
@@ -93,6 +93,15 @@ class AdminController extends Controller
         ]);
 
         return redirect()->back();
+    }
+
+    public function courts()
+    {
+        $facilities = Facility::with(['owner', 'courts'])->latest()->get();
+
+        return Inertia::render('Admin/Courts', [
+            'facilities' => $facilities,
+        ]);
     }
 
     public function owners()
@@ -201,7 +210,7 @@ class AdminController extends Controller
         $updateData = ['verification_status' => $request->status];
 
         if ($request->status === 'APPROVED' && empty($facility->slug)) {
-            $updateData['slug'] = Str::slug($facility->name);
+            $updateData['slug'] = Facility::generateUniqueSlug($facility->name, $facility->id);
         }
 
         $facility->update($updateData);

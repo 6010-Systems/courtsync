@@ -416,6 +416,13 @@ export default function Facilities({ auth, facilities }) {
                                         </svg>
                                         <span>{facility.address}, {facility.city}, {facility.province}</span>
                                     </p>
+                                    <p className="text-sm text-gray-500 flex items-center gap-2">
+                                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <rect x="3" y="4" width="18" height="16" rx="2" strokeWidth={2} />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16M3 12h18" />
+                                        </svg>
+                                        <span>{facility.courts_count ?? 0} court{facility.courts_count === 1 ? '' : 's'}</span>
+                                    </p>
                                 </div>
                                 <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
                                     {facility.verification_status === 'APPROVED' && facility.slug ? (

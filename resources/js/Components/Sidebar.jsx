@@ -52,7 +52,8 @@ const navSections = [
             { name: 'Calendar',     href: '#',                         icon: Calendar,      badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
             { name: 'Facilities',   href: 'facilities.index',          icon: Building2,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Facilities',   href: 'admin.facilities',          icon: Building2,     badge: null, roles: ['ADMIN'] },
-            { name: 'Courts',       href: '#',                         icon: ClipboardList, badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Courts',       href: 'facility.courts',           icon: ClipboardList, badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Courts',       href: 'admin.courts',              icon: ClipboardList, badge: null, roles: ['ADMIN'] },
         ],
     },
     {

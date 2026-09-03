@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CourtController;
 use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\PlayerSessionController;
@@ -80,11 +81,20 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     // Facility Staff Routes
     Route::get('/facility/staff', [FacilityController::class, 'staff'])->name('facility.staff');
     Route::post('/facility/staff', [FacilityController::class, 'storeStaff'])->name('facility.staff.store');
+    Route::get('/facility/staff/{user}/permissions', [FacilityController::class, 'editStaffPermissions'])->name('facility.staff.permissions.edit');
+    Route::put('/facility/staff/{user}/permissions', [FacilityController::class, 'updateStaffPermissions'])->name('facility.staff.permissions.update');
+    Route::put('/facility/staff/{user}/facility', [FacilityController::class, 'updateStaffFacility'])->name('facility.staff.facility.update');
     Route::delete('/facility/staff/{user}', [FacilityController::class, 'deleteStaff'])->name('facility.staff.destroy');
-    
+
     // Facility Players Routes
     Route::get('/facility/players', [FacilityController::class, 'players'])->name('facility.players');
     Route::post('/facility/players/{user}/toggle-ban', [FacilityController::class, 'toggleBanPlayer'])->name('facility.players.toggle-ban');
+
+    // Facility Courts Routes
+    Route::get('/facility/courts', [CourtController::class, 'index'])->name('facility.courts');
+    Route::post('/facility/courts', [CourtController::class, 'store'])->name('facility.courts.store');
+    Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
+    Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
 });
 
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
@@ -103,6 +113,8 @@ Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admi
     Route::get('/facilities', [AdminController::class, 'facilities'])->name('facilities');
     Route::post('/facilities', [AdminController::class, 'storeFacility'])->name('facilities.store');
     Route::put('/facilities/{id}', [AdminController::class, 'updateFacility'])->name('facilities.update');
+
+    Route::get('/courts', [AdminController::class, 'courts'])->name('courts');
 });
 
 // Player Auth Routes for specific facilities

@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\Facility;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Facility>
@@ -23,7 +22,7 @@ class FacilityFactory extends Factory
 
         return [
             'user_id' => User::factory()->facilityOwner(),
-            'slug' => Str::slug($name).'-'.Str::random(5),
+            'slug' => Facility::generateUniqueSlug($name),
             'name' => $name,
             'address' => fake()->streetAddress(),
             'city' => fake()->city(),
