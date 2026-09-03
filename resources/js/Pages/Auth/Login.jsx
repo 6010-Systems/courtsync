@@ -3,6 +3,7 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import { ButtonSpinner } from '@/Components/LoadingContext';
 import TextInput from '@/Components/TextInput';
+import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword, lastLoginMethod }) {
