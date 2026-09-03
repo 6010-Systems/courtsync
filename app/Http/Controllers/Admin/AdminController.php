@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Facility;
 use App\Models\FacilityVerification;
@@ -11,6 +12,21 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    public function dashboard(Request $request)
+    {
+        return Inertia::render('Admin/Dashboard', [
+            'user' => $request->user(),
+            'adminStats' => [
+                'totalOwners' => User::where('role', 'FACILITY_OWNER')->count(),
+                'totalStaff' => User::where('role', 'FACILITY_STAFF')->count(),
+                'totalPlayers' => User::where('role', 'PLAYER')->count(),
+                'totalFacilities' => Facility::count(),
+                'approvedFacilities' => Facility::where('verification_status', 'APPROVED')->count(),
+                'pendingVerifications' => Facility::whereIn('verification_status', ['SUBMITTED', 'UNDER_REVIEW'])->count(),
+            ],
+        ]);
+    }
+
     public function facilities()
     {
         $facilities = Facility::with('owner')->latest()->get();
@@ -199,6 +215,7 @@ class AdminController extends Controller
             'verifications' => $verifications
         ]);
     }
+
     public function updateVerificationStatus(Request $request, $facility_id)
     {
         $request->validate([

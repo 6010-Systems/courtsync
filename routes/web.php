@@ -1,8 +1,11 @@
 <?php
 
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\CourtController;
-use App\Http\Controllers\FacilityController;
+use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\FacilityOwner\CourtController;
+use App\Http\Controllers\FacilityOwner\FacilityController;
+use App\Http\Controllers\FacilityOwner\StaffController;
+use App\Http\Controllers\FacilityOwner\PlayerController;
+use App\Http\Controllers\Player\FacilityShowController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\Auth\PlayerSessionController;
 use App\Http\Controllers\Auth\PlayerRegisteredUserController;
@@ -15,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\Facility;
 
+// ── Public Platform Landing ───────────────────────────────────────────
 Route::get('/', function () {
     $facilities = Facility::select('id','name', 'slug', 'city', 'province', 'description')
         ->with('verification:id,facility_id,facility_photos')
@@ -32,6 +36,7 @@ Route::get('/', function () {
     ]);
 });
 
+// ── Authenticated Common Routes (Profile) ──────────────────────────────
 Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -40,38 +45,23 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
 require __DIR__.'/auth.php';
 
+// ── OAuth Socialite ───────────────────────────────────────────────────
 Route::get('/auth/google/{tenant}', [SocialiteController::class, 'redirect'])->name('google.redirect');
 Route::get('/auth/google/{tenant}/callback', [SocialiteController::class, 'callback'])->name('google.callback');
 
+// ── Role-Dispatched Dashboard ─────────────────────────────────────────
+Route::middleware(['auth', CheckBanned::class, 'verified'])->get('/dashboard', function (Request $request) {
+    $user = $request->user();
+
+    if ($user->role === 'ADMIN') {
+        return (new AdminController)->dashboard($request);
+    }
+
+    return (new FacilityController)->dashboard($request);
+})->name('dashboard');
+
+// ── Facility Owner & Staff Routes ─────────────────────────────────────
 Route::middleware(['auth', CheckBanned::class])->group(function () {
-
-    Route::get('/dashboard', function (Request $request) {
-        $user = $request->user();
-
-        if ($user->role === 'ADMIN') {
-            return Inertia::render('Dashboard', [
-                'user' => $user,
-                'adminStats' => [
-                    'totalOwners' => \App\Models\User::where('role', 'FACILITY_OWNER')->count(),
-                    'totalStaff' => \App\Models\User::where('role', 'FACILITY_STAFF')->count(),
-                    'totalPlayers' => \App\Models\User::where('role', 'PLAYER')->count(),
-                    'totalFacilities' => Facility::count(),
-                    'approvedFacilities' => Facility::where('verification_status', 'APPROVED')->count(),
-                    'pendingVerifications' => Facility::whereIn('verification_status', ['SUBMITTED', 'UNDER_REVIEW'])->count(),
-                ],
-            ]);
-        }
-
-        $user->load([
-            'facilities' => fn ($query) => $query->withCount(['staff', 'players'])->with('verification'),
-            'workFacility' => fn ($query) => $query->withCount(['staff', 'players']),
-        ]);
-
-        return Inertia::render('Dashboard', [
-            'user' => $user,
-        ]);
-    })->middleware(['verified'])->name('dashboard');
-    
     // Facilities Management
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
     Route::post('/facility', [FacilityController::class, 'store'])->name('facility.store');
@@ -79,16 +69,16 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility/verification', [FacilityController::class, 'storeVerification'])->name('facility.verification.store');
     
     // Facility Staff Routes
-    Route::get('/facility/staff', [FacilityController::class, 'staff'])->name('facility.staff');
-    Route::post('/facility/staff', [FacilityController::class, 'storeStaff'])->name('facility.staff.store');
-    Route::get('/facility/staff/{user}/permissions', [FacilityController::class, 'editStaffPermissions'])->name('facility.staff.permissions.edit');
-    Route::put('/facility/staff/{user}/permissions', [FacilityController::class, 'updateStaffPermissions'])->name('facility.staff.permissions.update');
-    Route::put('/facility/staff/{user}/facility', [FacilityController::class, 'updateStaffFacility'])->name('facility.staff.facility.update');
-    Route::delete('/facility/staff/{user}', [FacilityController::class, 'deleteStaff'])->name('facility.staff.destroy');
+    Route::get('/facility/staff', [StaffController::class, 'index'])->name('facility.staff');
+    Route::post('/facility/staff', [StaffController::class, 'store'])->name('facility.staff.store');
+    Route::get('/facility/staff/{user}/permissions', [StaffController::class, 'editPermissions'])->name('facility.staff.permissions.edit');
+    Route::put('/facility/staff/{user}/permissions', [StaffController::class, 'updatePermissions'])->name('facility.staff.permissions.update');
+    Route::put('/facility/staff/{user}/facility', [StaffController::class, 'updateFacility'])->name('facility.staff.facility.update');
+    Route::delete('/facility/staff/{user}', [StaffController::class, 'destroy'])->name('facility.staff.destroy');
 
     // Facility Players Routes
-    Route::get('/facility/players', [FacilityController::class, 'players'])->name('facility.players');
-    Route::post('/facility/players/{user}/toggle-ban', [FacilityController::class, 'toggleBanPlayer'])->name('facility.players.toggle-ban');
+    Route::get('/facility/players', [PlayerController::class, 'index'])->name('facility.players');
+    Route::post('/facility/players/{user}/toggle-ban', [PlayerController::class, 'toggleBan'])->name('facility.players.toggle-ban');
 
     // Facility Courts Routes
     Route::get('/facility/courts', [CourtController::class, 'index'])->name('facility.courts');
@@ -97,6 +87,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
 });
 
+// ── Platform Administrator Routes ─────────────────────────────────────
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/owners', [AdminController::class, 'owners'])->name('owners');
     Route::post('/owners', [AdminController::class, 'storeOwner'])->name('owners.store');
@@ -117,7 +108,7 @@ Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admi
     Route::get('/courts', [AdminController::class, 'courts'])->name('courts');
 });
 
-// Player Auth Routes for specific facilities
+// ── Tenant Player Auth Routes ─────────────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('/{facility:slug}/login', [PlayerSessionController::class, 'create'])->name('player.login');
     Route::post('/{facility:slug}/login', [PlayerSessionController::class, 'store']);
@@ -125,5 +116,5 @@ Route::middleware('guest')->group(function () {
     Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store']);
 });
 
-// Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)
-Route::get('/{facility:slug}', [FacilityController::class, 'show'])->name('facility.show');
+// ── Tenant Public / Player Facility Profile ───────────────────────────
+Route::get('/{facility:slug}', [FacilityShowController::class, 'show'])->name('facility.show');

@@ -11,9 +11,10 @@ import {
     ShieldCheck,
     UserCheck,
     Users,
+    ClipboardList,
+    Plus,
 } from 'lucide-react';
 
-// ── Shared card shell — matches Profile/Edit.jsx's design language ─────────
 function Card({ className = '', children }) {
     return (
         <div className={`rounded-xl border border-[#101F1A]/10 bg-white p-6 shadow-card ${className}`}>
@@ -70,7 +71,7 @@ const STATUS_COPY = {
     SUSPENDED: 'This facility has been suspended by an administrator.',
 };
 
-export default function Dashboard({ user, adminStats }) {
+export default function FacilityOwnerDashboard({ user }) {
     // ── Facility owner: no verified account yet ────────────────────────
     if (user.role === 'FACILITY_OWNER' && user.status !== 'VERIFIED') {
         return (
@@ -98,8 +99,9 @@ export default function Dashboard({ user, adminStats }) {
                         You haven't registered any facilities yet. Add your first facility to start managing staff, players, and bookings.
                     </p>
                     <Link href={route('facilities.index')} className="mt-6">
-                        <PrimaryButton className="!bg-[#101F1A] hover:!bg-[#1a382d]">
-                            Go to Facilities
+                        <PrimaryButton className="gap-2">
+                            <Plus size={16} />
+                            Add Your First Facility
                         </PrimaryButton>
                     </Link>
                 </Card>
@@ -107,37 +109,19 @@ export default function Dashboard({ user, adminStats }) {
         );
     }
 
-    // ── Facility staff: not yet linked to an active facility ───────────
-    if (user.role === 'FACILITY_STAFF' && user.status === 'PENDING_VERIFICATION') {
-        return (
-            <AuthenticatedLayout header={<PageHeader title="Dashboard" subtitle="Welcome to CourtSync" actions={null} showSearch={false} showNotifications={false} />}>
-                <Head title="Dashboard" />
-                <NoticeCard
-                    title="Waiting for Verification"
-                    description="Your account is pending verification. Please wait for an administrator or facility owner to link your account to a facility."
-                />
-            </AuthenticatedLayout>
-        );
-    }
-
-    const approvedFacilities = user.role === 'FACILITY_OWNER'
-        ? (user.facilities || []).filter(f => f.verification_status === 'APPROVED')
-        : [];
-    const pendingFacilities = user.role === 'FACILITY_OWNER'
-        ? (user.facilities || []).filter(f => f.verification_status !== 'APPROVED')
-        : [];
+    const facilities = user.facilities ?? [];
+    const pendingFacilities = facilities.filter(f => f.verification_status !== 'APPROVED');
+    const approvedFacilities = facilities.filter(f => f.verification_status === 'APPROVED');
 
     return (
         <AuthenticatedLayout
             header={
                 <PageHeader
-                    title={`Welcome back, ${user.name}`}
+                    title="Dashboard"
                     subtitle={
-                        user.role === 'ADMIN'
-                            ? 'Platform overview'
-                            : user.role === 'FACILITY_STAFF'
-                                ? user.work_facility?.name ?? 'No facility assigned'
-                                : 'Here’s what’s happening across your facilities'
+                        user.role === 'FACILITY_STAFF'
+                            ? `Staff portal for ${user.work_facility?.name ?? 'your assigned facility'}`
+                            : 'Here’s what’s happening across your facilities'
                     }
                     actions={null}
                     showSearch={false}
@@ -183,19 +167,7 @@ export default function Dashboard({ user, adminStats }) {
                     </div>
                 )}
 
-                {/* Admin: platform-wide stats */}
-                {user.role === 'ADMIN' && adminStats && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <StatCard label="Facility Owners" value={adminStats.totalOwners} icon={UserCheck} />
-                        <StatCard label="Facility Staff" value={adminStats.totalStaff} icon={UserCheck} />
-                        <StatCard label="Registered Players" value={adminStats.totalPlayers} icon={Users} />
-                        <StatCard label="Approved Facilities" value={adminStats.approvedFacilities} icon={Building2} />
-                        <StatCard label="Total Facilities" value={adminStats.totalFacilities} icon={Building2} />
-                        <StatCard label="Pending Verifications" value={adminStats.pendingVerifications} icon={ShieldCheck} />
-                    </div>
-                )}
-
-                {/* Coming-soon revenue tile — kept honest with the sidebar's disabled Payments module */}
+                {/* Coming-soon revenue tile */}
                 {(user.role === 'FACILITY_OWNER' && approvedFacilities.length > 0) && (
                     <Card className="flex items-center gap-3 opacity-60">
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#101F1A]/5 text-[#101F1A]/50">

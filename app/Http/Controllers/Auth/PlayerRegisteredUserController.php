@@ -23,7 +23,7 @@ class PlayerRegisteredUserController extends Controller
     {
         $facility = Facility::with('verification')->where('slug', $facilitySlug)->firstOrFail();
         
-        return Inertia::render('Players/Register', [
+        return Inertia::render('Player/Auth/Register', [
             'facility' => $facility,
         ]);
     }

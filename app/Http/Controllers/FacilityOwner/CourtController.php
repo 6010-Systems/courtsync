@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\FacilityOwner;
 
+use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\Facility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Inertia\Inertia;
 
 class CourtController extends Controller
 {
@@ -42,7 +44,7 @@ class CourtController extends Controller
             ? collect()
             : Facility::whereIn('id', $facilityIds)->with('courts')->get();
 
-        return inertia('Facility/Courts', [
+        return Inertia::render('FacilityOwner/Courts', [
             'facilities' => $facilities,
             'can' => [
                 'create' => $user->hasPermission('create_courts'),
