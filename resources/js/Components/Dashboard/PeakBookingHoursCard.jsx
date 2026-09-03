@@ -131,8 +131,8 @@ function PeakBookingHoursCardComponent({
                       title={`${courtName} @ ${hourLabel}: ${Math.round(intensity * 100)}% booked`}
                       className={`h-8 rounded-lg cursor-pointer transition-all duration-150 border relative ${
                         isHovered
-                          ? 'scale-105 z-10 shadow-md ring-2 ring-[#101F1A]'
-                          : 'hover:scale-[1.03]'
+                          ? 'z-10 shadow-xs ring-2 ring-[#101F1A] border-[#101F1A]'
+                          : 'hover:border-[#101F1A]/40'
                       }`}
                       style={cellStyle}
                     />

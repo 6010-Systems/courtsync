@@ -1,18 +1,13 @@
-import PageHeader from '@/Components/PageHeader';
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import BookingsPage from '@/Components/Bookings/BookingsPage';
 import { Head } from '@inertiajs/react';
 
-export default function CalendarIndex() {
+export default function CalendarIndex(props) {
     return (
-        <AuthenticatedLayout
-            header={
-                <PageHeader
-                    title="Calendar"
-                    subtitle="View court schedules and availability"
-                />
-            }
-        >
-            <Head title="Calendar" />
+        <AuthenticatedLayout>
+            <Head title="Facility Calendar & Bookings" />
+            <BookingsPage {...props} />
         </AuthenticatedLayout>
     );
 }

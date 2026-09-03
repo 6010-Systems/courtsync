@@ -153,7 +153,7 @@ function CourtUtilizationCardComponent({
             <div
               key={c.name}
               title={`${c.name} (${c.sport}): ${c.active ? `Occupied (${c.time})` : 'Available'}`}
-              className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl border text-center transition-all duration-200 hover:scale-105 ${
+              className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl border text-center transition-all duration-150 hover:border-[#101F1A]/30 ${
                 c.active
                   ? 'bg-[#101F1A]/[0.04] border-[#101F1A]/10 text-[#101F1A]'
                   : 'bg-emerald-50 border-emerald-200/90 text-emerald-900'

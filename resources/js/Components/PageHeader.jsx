@@ -25,11 +25,27 @@ export default function PageHeader({
     actions,
     showSearch = true,
     showNotifications = true,
+    searchQuery = '',
+    onSearchChange,
+    searchPlaceholder = 'Search courts, bookings...',
     className = '',
 }) {
     const [notifOpen, setNotifOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(2);
     const notifRef = useRef(null);
+    const searchInputRef = useRef(null);
+
+    // Keyboard shortcut ⌘K or Ctrl+K
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Mock venue notifications
     const [notifications, setNotifications] = useState([
@@ -86,7 +102,7 @@ export default function PageHeader({
     return (
         <div
             className={[
-                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/85 px-6 backdrop-blur-md shadow-card transition-colors duration-200',
+                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white px-6 shadow-card transition-colors duration-200',
                 className,
             ].join(' ')}
         >
@@ -113,9 +129,12 @@ export default function PageHeader({
                             <Search size={13} strokeWidth={2.2} />
                         </span>
                         <input
+                            ref={searchInputRef}
                             type="text"
-                            placeholder="Search courts, bookings..."
-                            className="h-8 w-64 md:w-80 lg:w-96 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-colors focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
+                            value={searchQuery}
+                            onChange={(e) => onSearchChange?.(e.target.value)}
+                            placeholder={searchPlaceholder}
+                            className="h-8 w-48 sm:w-60 md:w-72 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-colors focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
                         />
                         <div className="pointer-events-none absolute right-1.5 flex items-center">
                             <kbd className="rounded border border-[#101F1A]/15 bg-[#F5F2EA] px-1 py-0.5 text-[9px] font-bold text-[#101F1A]/50 leading-none">

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
     /* Brand Colors */
@@ -239,12 +240,11 @@ body {
    7. Interactive Micro-transitions
    ========================================================================== */
 .hover-lift {
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-subtle);
 }
 
 .press-scale {
@@ -254,3 +254,45 @@ body {
 .press-scale:active {
     transform: scale(0.97);
 }
+
+/* ==========================================================================
+   8. Typography & Domain Helpers
+   ========================================================================== */
+.font-display {
+    font-family: 'Anton', sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.diagonal-hatch {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(16, 31, 26, 0.05),
+        rgba(16, 31, 26, 0.05) 10px,
+        rgba(16, 31, 26, 0.12) 10px,
+        rgba(16, 31, 26, 0.12) 20px
+    );
+}
+
+.diagonal-hatch-dark {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.03),
+        rgba(255, 255, 255, 0.03) 10px,
+        rgba(255, 255, 255, 0.08) 10px,
+        rgba(255, 255, 255, 0.08) 20px
+    );
+}
+
+.pulsing-dot {
+    position: relative;
+}
+.pulsing-dot::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    background-color: inherit;
+    opacity: 0.75;
+    animation: pulseVolt 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
