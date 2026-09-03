@@ -144,12 +144,12 @@ export default function Owners({ users }) {
                                             <div className="ml-4 max-w-[300px]">
                                                 <div className="text-sm font-semibold text-gray-900 truncate">{u.name}</div>
                                                 <div className="text-sm text-gray-500 truncate">{u.email}</div>
-                                                {u.facility && (
+                                                {u.facilities && u.facilities.length > 0 && (
                                                     <div 
                                                         className="text-xs text-gray-400 mt-0.5 truncate" 
-                                                        title={`${u.facility.name} - ${u.facility.address}, ${u.facility.city}`}
+                                                        title={`${u.facilities[0].name} - ${u.facilities[0].address}, ${u.facilities[0].city}`}
                                                     >
-                                                        📍 {u.facility.name} - {u.facility.city}, {u.facility.province}
+                                                        📍 {u.facilities[0].name} - {u.facilities[0].city}, {u.facilities[0].province} {u.facilities.length > 1 ? `(+${u.facilities.length - 1} more)` : ''}
                                                     </div>
                                                 )}
                                             </div>

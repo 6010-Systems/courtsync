@@ -9,20 +9,31 @@ export default function Verifications({ verifications }) {
     // View Modal State
     const [viewingVerification, setViewingVerification] = useState(null);
 
-    // Approve Modal State
-    const [approvingFacility, setApprovingFacility] = useState(null);
-    const { post, processing } = useForm();
+    // Status Update Modal State
+    const [updatingFacility, setUpdatingFacility] = useState(null);
+    const [newStatus, setNewStatus] = useState('');
+    const { data, setData, post, processing } = useForm({
+        status: ''
+    });
 
     const openViewModal = (verification) => setViewingVerification(verification);
     const closeViewModal = () => setViewingVerification(null);
 
-    const openApproveModal = (facility) => setApprovingFacility(facility);
-    const closeApproveModal = () => setApprovingFacility(null);
+    const openStatusModal = (facility, status) => {
+        setUpdatingFacility(facility);
+        setNewStatus(status);
+        setData('status', status);
+    };
+    
+    const closeStatusModal = () => {
+        setUpdatingFacility(null);
+        setNewStatus('');
+    };
 
-    const submitApprove = (e) => {
+    const submitStatus = (e) => {
         e.preventDefault();
-        post(route('admin.verifications.approve', approvingFacility.id), {
-            onSuccess: () => closeApproveModal(),
+        post(route('admin.verifications.status', updatingFacility.id), {
+            onSuccess: () => closeStatusModal(),
         });
     };
 
@@ -86,12 +97,21 @@ export default function Verifications({ verifications }) {
                                                     </svg>
                                                 </button>
                                                 <button 
-                                                    onClick={() => openApproveModal(v.facility)}
-                                                    className="text-green-600 hover:text-green-900"
+                                                    onClick={() => openStatusModal(v.facility, 'APPROVED')}
+                                                    className="text-green-600 hover:text-green-900 mr-3"
                                                     title="Approve"
                                                 >
                                                     <svg className="w-5 h-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </button>
+                                                <button 
+                                                    onClick={() => openStatusModal(v.facility, 'REJECTED')}
+                                                    className="text-red-600 hover:text-red-900"
+                                                    title="Reject"
+                                                >
+                                                    <svg className="w-5 h-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
                                                 </button>
                                             </td>
@@ -155,23 +175,24 @@ export default function Verifications({ verifications }) {
                 )}
             </Modal>
 
-            {/* Approve Confirmation Modal */}
-            <Modal show={approvingFacility !== null} onClose={closeApproveModal} maxWidth="md">
-                <form onSubmit={submitApprove} className="p-6">
+            {/* Update Status Confirmation Modal */}
+            <Modal show={updatingFacility !== null} onClose={closeStatusModal} maxWidth="md">
+                <form onSubmit={submitStatus} className="p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">
-                        Approve Facility?
+                        {newStatus === 'APPROVED' ? 'Approve' : 'Reject'} Facility?
                     </h2>
                     <p className="text-sm text-gray-600 mb-6">
-                        Are you sure you want to approve <strong>{approvingFacility?.name}</strong>? This will instantly give the owner full access to the platform, and their facility will be marked as verified.
+                        Are you sure you want to {newStatus === 'APPROVED' ? 'approve' : 'reject'} <strong>{updatingFacility?.name}</strong>? 
+                        {newStatus === 'APPROVED' ? ' This will instantly give the owner full access to the platform.' : ''}
                     </p>
 
                     <div className="flex justify-end gap-3">
-                        <SecondaryButton onClick={closeApproveModal}>Cancel</SecondaryButton>
+                        <SecondaryButton onClick={closeStatusModal}>Cancel</SecondaryButton>
                         <PrimaryButton 
-                            className="!bg-green-600 hover:!bg-green-700 focus:!bg-green-700 active:!bg-green-800"
+                            className={newStatus === 'APPROVED' ? "!bg-green-600 hover:!bg-green-700 focus:!bg-green-700 active:!bg-green-800" : "!bg-red-600 hover:!bg-red-700"}
                             disabled={processing}
                         >
-                            Yes, Approve Facility
+                            Yes, {newStatus === 'APPROVED' ? 'Approve' : 'Reject'} Facility
                         </PrimaryButton>
                     </div>
                 </form>

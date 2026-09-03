@@ -47,4 +47,10 @@ return [
         'redirect' => env('GOOGLE_OWNER_REDIRECT_URI', '/auth/google/owner/callback'),
     ],
 
+    'google_player' => [
+        'client_id' => env('GOOGLE_PLAYER_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_PLAYER_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_PLAYER_REDIRECT_URI', '/auth/google/player/callback'),
+    ],
+
 ];

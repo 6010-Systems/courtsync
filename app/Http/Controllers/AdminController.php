@@ -11,9 +11,93 @@ use Inertia\Inertia;
 
 class AdminController extends Controller
 {
+    public function facilities()
+    {
+        $facilities = Facility::with('owner')->latest()->get();
+        $owners = User::where('role', 'FACILITY_OWNER')->get();
+        return Inertia::render('Admin/Facilities', [
+            'facilities' => $facilities,
+            'owners' => $owners
+        ]);
+    }
+
+    public function storeFacility(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:facilities,slug',
+            'address' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'description' => 'nullable|string',
+            'user_id' => 'required|exists:users,id',
+            'verification_status' => 'required|string',
+        ]);
+
+        $slug = $request->slug ? Str::slug($request->slug) : null;
+        if (empty($slug) && $request->verification_status === 'APPROVED') {
+            $slug = Str::slug($request->name);
+        }
+
+        Facility::create([
+            'user_id' => $request->user_id,
+            'slug' => $slug,
+            'name' => $request->name,
+            'address' => $request->address,
+            'city' => $request->city,
+            'province' => $request->province,
+            'country' => $request->country,
+            'contact_number' => $request->contact_number,
+            'description' => $request->description,
+            'verification_status' => $request->verification_status,
+        ]);
+
+        return redirect()->back();
+    }
+
+    public function updateFacility(Request $request, $id)
+    {
+        $facility = Facility::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:facilities,slug,' . $id,
+            'address' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'description' => 'nullable|string',
+            'user_id' => 'required|exists:users,id',
+            'verification_status' => 'required|string',
+        ]);
+
+        $slug = $request->slug ? Str::slug($request->slug) : null;
+        if (empty($slug) && $request->verification_status === 'APPROVED') {
+            $slug = Str::slug($request->name);
+        }
+
+        $facility->update([
+            'user_id' => $request->user_id,
+            'slug' => $slug,
+            'name' => $request->name,
+            'address' => $request->address,
+            'city' => $request->city,
+            'province' => $request->province,
+            'country' => $request->country,
+            'contact_number' => $request->contact_number,
+            'description' => $request->description,
+            'verification_status' => $request->verification_status,
+        ]);
+
+        return redirect()->back();
+    }
+
     public function owners()
     {
-        $users = User::with('facility')->where('role', 'FACILITY_OWNER')->latest()->get();
+        $users = User::with('facilities')->where('role', 'FACILITY_OWNER')->latest()->get();
         return Inertia::render('Admin/Owners', [
             'users' => $users
         ]);
@@ -99,20 +183,30 @@ class AdminController extends Controller
     {
         $verifications = FacilityVerification::with('facility.owner')
             ->whereHas('facility', function($query) {
-                $query->where('verification_status', 'PENDING');
+                $query->whereIn('verification_status', ['SUBMITTED', 'UNDER_REVIEW']);
             })
             ->latest()->get();
         return Inertia::render('Admin/Verifications', [
             'verifications' => $verifications
         ]);
     }
-    public function approveVerification($facility_id)
+    public function updateVerificationStatus(Request $request, $facility_id)
     {
+        $request->validate([
+            'status' => 'required|string|in:DRAFT,SUBMITTED,UNDER_REVIEW,APPROVED,REJECTED,SUSPENDED'
+        ]);
+
         $facility = Facility::findOrFail($facility_id);
         
-        $facility->update(['verification_status' => 'VERIFIED']);
+        $updateData = ['verification_status' => $request->status];
+
+        if ($request->status === 'APPROVED' && empty($facility->slug)) {
+            $updateData['slug'] = Str::slug($facility->name);
+        }
+
+        $facility->update($updateData);
         
-        if ($facility->owner) {
+        if ($request->status === 'APPROVED' && $facility->owner) {
             $facility->owner->update(['status' => 'VERIFIED']);
         }
 
