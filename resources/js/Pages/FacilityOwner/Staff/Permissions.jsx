@@ -1,11 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, Link, useForm } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { useToast } from '@/Components/ToastContext';
 
 const ACTIONS = ['view', 'create', 'edit', 'delete'];
 const ACTION_LABELS = { view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete' };
 
 export default function StaffPermissions({ staff, matrix, permissions }) {
+    const toast = useToast();
     const { data, setData, put, processing, recentlySuccessful } = useForm({
         permissions,
     });
@@ -21,12 +24,31 @@ export default function StaffPermissions({ staff, matrix, permissions }) {
 
     const submit = (e) => {
         e.preventDefault();
-        put(route('facility.staff.permissions.update', staff.id));
+        put(route('facility.staff.permissions.update', staff.id), {
+            onSuccess: () => {
+                toast.success('Permissions updated successfully');
+            },
+            onError: () => {
+                toast.error('Failed to update permissions');
+            }
+        });
     };
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-xl font-bold leading-tight text-[#10221C]">Permissions</h2>}
+            header={
+                <PageHeader
+                    title={`Permissions — ${staff.name}`}
+                    subtitle={`Manage granular access controls for ${staff.email}`}
+                    actions={
+                        <Link href={route('facility.staff')} className="text-xs font-bold text-[#101F1A]/70 hover:text-[#101F1A]">
+                            ← Back to Team
+                        </Link>
+                    }
+                    showSearch={false}
+                    showNotifications={false}
+                />
+            }
         >
             <Head title={`Permissions — ${staff.name}`} />
 

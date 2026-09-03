@@ -1,11 +1,16 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { useConfirm } from '@/Components/ConfirmContext';
+import { useToast } from '@/Components/ToastContext';
 
 export default function Staff({ auth }) {
     const user = auth.user;
+    const { confirm } = useConfirm();
+    const toast = useToast();
 
     // Get all approved facilities
     const approvedFacilities = user.facilities?.filter(f => f.verification_status === 'APPROVED') || [];
@@ -19,21 +24,47 @@ export default function Staff({ auth }) {
     const submitStaff = (e) => {
         e.preventDefault();
         postStaff(route('facility.staff.store'), {
-            onSuccess: () => resetStaff(),
+            onSuccess: () => {
+                toast.success('Staff member invited successfully');
+                resetStaff();
+            },
+            onError: () => {
+                toast.error('Failed to invite staff member. Please check details.');
+            }
         });
     };
 
-    const handleDelete = (staff) => {
-        if (confirm(`Are you sure you want to permanently remove ${staff.name}? This action cannot be undone.`)) {
-            router.delete(route('facility.staff.destroy', staff.id), {
-                preserveScroll: true,
-            });
-        }
+    const handleDelete = async (staff) => {
+        const confirmed = await confirm({
+            title: `Remove ${staff.name}?`,
+            message: `Are you sure you want to permanently remove ${staff.name} from facility staff? They will lose access immediately.`,
+            confirmText: 'Remove Staff',
+            cancelText: 'Cancel',
+            type: 'danger',
+        });
+
+        if (!confirmed) return;
+
+        router.delete(route('facility.staff.destroy', staff.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`${staff.name} has been removed from staff.`);
+            },
+            onError: () => {
+                toast.error('Failed to remove staff member.');
+            }
+        });
     };
 
     const handleReassign = (staff, facilityId) => {
         router.put(route('facility.staff.facility.update', staff.id), { facility_id: facilityId }, {
             preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Staff facility assignment updated');
+            },
+            onError: () => {
+                toast.error('Failed to update facility assignment');
+            }
         });
     };
 
@@ -48,18 +79,18 @@ export default function Staff({ auth }) {
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-                    <div>
-                        <h2 className="text-xl font-bold leading-tight text-[#10221C]">
-                            Team Management
-                        </h2>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Team Management"
+                    subtitle="Manage facility staff roles, invitations, and permissions"
+                    actions={null}
+                    showSearch={false}
+                    showNotifications={false}
+                />
             }
         >
             <Head title="Team Management" />
 
-            <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-6 w-full">
                 <div className="bg-white p-8 shadow-sm rounded-lg border border-gray-200">
                     <div className="flex justify-between items-center mb-6">
                         <div>

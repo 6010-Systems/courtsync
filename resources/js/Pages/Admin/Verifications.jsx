@@ -1,11 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, useForm } from '@inertiajs/react';
-import Modal from '@/Components/Modal';
+import Dialog from '@/Components/Dialog';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
+import { useToast } from '@/Components/ToastContext';
 import { useState } from 'react';
 
 export default function Verifications({ verifications }) {
+    const toast = useToast();
     // View Modal State
     const [viewingVerification, setViewingVerification] = useState(null);
 
@@ -33,17 +36,31 @@ export default function Verifications({ verifications }) {
     const submitStatus = (e) => {
         e.preventDefault();
         post(route('admin.verifications.status', updatingFacility.id), {
-            onSuccess: () => closeStatusModal(),
+            onSuccess: () => {
+                toast.success(`Facility status updated to ${newStatus}`);
+                closeStatusModal();
+            },
+            onError: () => {
+                toast.error('Failed to update facility status');
+            }
         });
     };
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-xl font-bold leading-tight text-[#10221C]">Facility Verifications</h2>}
+            header={
+                <PageHeader
+                    title="Facility Verifications"
+                    subtitle="Review and verify business documents submitted by facility owners"
+                    actions={null}
+                    showSearch={false}
+                    showNotifications={false}
+                />
+            }
         >
             <Head title="Admin - Verifications" />
 
-            <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-6 w-full">
                 <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-6 border-b border-gray-200">
                         <p className="text-sm text-gray-500">Review pending facility applications. You can view the documents and approve them here.</p>
@@ -124,79 +141,86 @@ export default function Verifications({ verifications }) {
                 </div>
             </div>
 
-            {/* View Documents Modal */}
-            <Modal show={viewingVerification !== null} onClose={closeViewModal} maxWidth="2xl">
+            {/* View Verification Details Dialog */}
+            <Dialog 
+                isOpen={viewingVerification !== null} 
+                onClose={closeViewModal} 
+                closeOnClickOutside={false}
+                size="3xl"
+            >
                 {viewingVerification && (
-                    <div className="p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-gray-900">
+                    <div className="p-5">
+                        <div className="pb-2.5 mb-3 border-b border-[#101F1A]/10">
+                            <h2 className="text-base font-black text-[#101F1A]">
                                 {viewingVerification.facility?.name} Documents
                             </h2>
-                            <button onClick={closeViewModal} className="text-gray-400 hover:text-gray-600">
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
                         </div>
                         
-                        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                        <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
                             <div>
-                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 border-b pb-1">Government ID ({viewingVerification.government_id_type})</h3>
-                                <p className="text-sm text-gray-600 mb-2">Number: {viewingVerification.government_id_number}</p>
+                                <h3 className="text-xs font-bold text-[#101F1A] uppercase tracking-wide mb-1.5 border-b border-[#101F1A]/10 pb-1">Government ID ({viewingVerification.government_id_type})</h3>
+                                <p className="text-xs text-[#101F1A]/70 mb-2 font-medium">Number: {viewingVerification.government_id_number}</p>
                                 {viewingVerification.government_id_image_path ? (
-                                    <img src={viewingVerification.government_id_image_path} alt="Government ID" className="w-full rounded border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.government_id_image_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.government_id_image_path}</a>` }} />
-                                ) : <p className="text-gray-400 text-sm italic">Not Provided</p>}
+                                    <img src={viewingVerification.government_id_image_path} alt="Government ID" className="w-full rounded-xl border border-[#101F1A]/10 shadow-2xs" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.government_id_image_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.government_id_image_path}</a>` }} />
+                                ) : <p className="text-[#101F1A]/40 text-xs italic">Not Provided</p>}
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 border-b pb-1">Business Permit</h3>
+                                <h3 className="text-xs font-bold text-[#101F1A] uppercase tracking-wide mb-1.5 border-b border-[#101F1A]/10 pb-1">Business Permit</h3>
                                 {viewingVerification.business_permit_path ? (
-                                    <img src={viewingVerification.business_permit_path} alt="Business Permit" className="w-full rounded border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.business_permit_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.business_permit_path}</a>` }} />
-                                ) : <p className="text-gray-400 text-sm italic">Not Provided</p>}
+                                    <img src={viewingVerification.business_permit_path} alt="Business Permit" className="w-full rounded-xl border border-[#101F1A]/10 shadow-2xs" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.business_permit_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.business_permit_path}</a>` }} />
+                                ) : <p className="text-[#101F1A]/40 text-xs italic">Not Provided</p>}
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 border-b pb-1">Business Registration</h3>
+                                <h3 className="text-xs font-bold text-[#101F1A] uppercase tracking-wide mb-1.5 border-b border-[#101F1A]/10 pb-1">Business Registration</h3>
                                 {viewingVerification.business_registration_path ? (
-                                    <img src={viewingVerification.business_registration_path} alt="Business Registration" className="w-full rounded border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.business_registration_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.business_registration_path}</a>` }} />
-                                ) : <p className="text-gray-400 text-sm italic">Not Provided</p>}
+                                    <img src={viewingVerification.business_registration_path} alt="Business Registration" className="w-full rounded-xl border border-[#101F1A]/10 shadow-2xs" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.business_registration_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.business_registration_path}</a>` }} />
+                                ) : <p className="text-[#101F1A]/40 text-xs italic">Not Provided</p>}
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 border-b pb-1">Proof of Ownership</h3>
+                                <h3 className="text-xs font-bold text-[#101F1A] uppercase tracking-wide mb-1.5 border-b border-[#101F1A]/10 pb-1">Proof of Ownership</h3>
                                 {viewingVerification.proof_of_ownership_path ? (
-                                    <img src={viewingVerification.proof_of_ownership_path} alt="Proof of Ownership" className="w-full rounded border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.proof_of_ownership_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.proof_of_ownership_path}</a>` }} />
-                                ) : <p className="text-gray-400 text-sm italic">Not Provided</p>}
+                                    <img src={viewingVerification.proof_of_ownership_path} alt="Proof of Ownership" className="w-full rounded-xl border border-[#101F1A]/10 shadow-2xs" onError={(e) => { e.target.onerror = null; e.target.outerHTML = `<a href="${viewingVerification.proof_of_ownership_path}" target="_blank" class="text-blue-600 hover:underline break-all">${viewingVerification.proof_of_ownership_path}</a>` }} />
+                                ) : <p className="text-[#101F1A]/40 text-xs italic">Not Provided</p>}
                             </div>
                         </div>
 
-                        <div className="mt-6 flex justify-end">
-                            <SecondaryButton onClick={closeViewModal}>Close</SecondaryButton>
+                        <div className="mt-3 pt-2 border-t border-[#101F1A]/10 flex justify-end">
+                            <SecondaryButton onClick={closeViewModal} className="!text-xs font-bold !py-1.5 !px-4">Close</SecondaryButton>
                         </div>
                     </div>
                 )}
-            </Modal>
+            </Dialog>
 
-            {/* Update Status Confirmation Modal */}
-            <Modal show={updatingFacility !== null} onClose={closeStatusModal} maxWidth="md">
-                <form onSubmit={submitStatus} className="p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">
+            {/* Update Status Confirmation Dialog */}
+            <Dialog 
+                isOpen={updatingFacility !== null} 
+                onClose={closeStatusModal} 
+                closeOnClickOutside={false}
+                size="md"
+            >
+                <form onSubmit={submitStatus} className="p-5">
+                    <h2 className="text-base font-black text-[#101F1A] mb-2">
                         {newStatus === 'APPROVED' ? 'Approve' : 'Reject'} Facility?
                     </h2>
-                    <p className="text-sm text-gray-600 mb-6">
+                    <p className="text-xs text-[#101F1A]/70 mb-5 leading-relaxed">
                         Are you sure you want to {newStatus === 'APPROVED' ? 'approve' : 'reject'} <strong>{updatingFacility?.name}</strong>? 
                         {newStatus === 'APPROVED' ? ' This will instantly give the owner full access to the platform.' : ''}
                     </p>
 
-                    <div className="flex justify-end gap-3">
-                        <SecondaryButton onClick={closeStatusModal}>Cancel</SecondaryButton>
+                    <div className="flex justify-end gap-2 pt-3 border-t border-[#101F1A]/10">
+                        <SecondaryButton onClick={closeStatusModal} className="!text-xs font-bold !py-1.5 !px-3.5">Cancel</SecondaryButton>
                         <PrimaryButton 
-                            className={newStatus === 'APPROVED' ? "!bg-green-600 hover:!bg-green-700 focus:!bg-green-700 active:!bg-green-800" : "!bg-red-600 hover:!bg-red-700"}
+                            className={newStatus === 'APPROVED' ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white !text-xs font-bold !py-1.5 !px-4" : "!bg-rose-600 hover:!bg-rose-700 !text-white !text-xs font-bold !py-1.5 !px-4"}
                             disabled={processing}
                         >
                             Yes, {newStatus === 'APPROVED' ? 'Approve' : 'Reject'} Facility
                         </PrimaryButton>
                     </div>
                 </form>
-            </Modal>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

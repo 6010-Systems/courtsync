@@ -118,14 +118,14 @@ export function ConfirmProvider({ children }) {
                     {/* Backdrop */}
                     <div
                         onClick={handleCancel}
-                        className="fixed inset-0 bg-[#101F1A]/40 backdrop-blur-xs transition-opacity duration-200"
+                        className="fixed inset-0 bg-[#101F1A]/50 backdrop-blur-xs transition-opacity duration-200"
                         style={{ animation: 'cs-backdrop-in 0.2s ease-out' }}
                     />
 
-                    {/* Dialog Card Container matching sidebar's rounded-xl */}
+                    {/* Dialog Card Container matching rounded-2xl */}
                     <div
                         style={{ animation: 'cs-dialog-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
-                        className="relative z-10 flex w-full max-w-[360px] flex-col items-center rounded-xl border border-black/[0.06] bg-white px-6 pt-6 pb-5 text-center shadow-[0_24px_50px_-12px_rgba(16,31,26,0.18)] ring-1 ring-black/[0.03]"
+                        className="relative z-10 flex w-full max-w-[360px] flex-col items-center rounded-2xl border border-black/[0.06] bg-white px-6 pt-6 pb-5 text-center shadow-[0_24px_50px_-12px_rgba(16,31,26,0.18)] ring-1 ring-black/[0.03]"
                     >
                         {/* Outer Soft Halo with Solid Inner Circle Icon */}
                         <div

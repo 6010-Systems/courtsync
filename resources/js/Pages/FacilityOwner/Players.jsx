@@ -1,25 +1,56 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, router } from '@inertiajs/react';
+import { useConfirm } from '@/Components/ConfirmContext';
+import { useToast } from '@/Components/ToastContext';
 
 export default function Players({ auth, players, canManage }) {
-    const handleToggleBan = (player) => {
-        const action = player.status === 'BANNED' ? 'Unban' : 'Ban';
-        if (confirm(`Are you sure you want to ${action.toLowerCase()} ${player.name}?`)) {
-            router.post(route('facility.players.toggle-ban', player.id), {
-                facility_id: player.facility_id,
-            }, {
-                preserveScroll: true,
-            });
-        }
+    const { confirm } = useConfirm();
+    const toast = useToast();
+
+    const handleToggleBan = async (player) => {
+        const isBanned = player.status === 'BANNED';
+        const action = isBanned ? 'Unban' : 'Ban';
+        const confirmed = await confirm({
+            title: `${action} Player: ${player.name}?`,
+            message: isBanned
+                ? `Are you sure you want to unban ${player.name}? They will be able to book courts and join activities again.`
+                : `Are you sure you want to ban ${player.name}? They will be restricted from booking courts at your facilities.`,
+            confirmText: `${action} Player`,
+            cancelText: 'Cancel',
+            type: isBanned ? 'info' : 'danger',
+        });
+
+        if (!confirmed) return;
+
+        router.post(route('facility.players.toggle-ban', player.id), {
+            facility_id: player.facility_id,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Player ${player.name} has been ${isBanned ? 'unbanned' : 'banned'}.`);
+            },
+            onError: () => {
+                toast.error(`Failed to ${action.toLowerCase()} player.`);
+            }
+        });
     };
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-2xl font-bold leading-tight text-[#10221C]">Players</h2>}
+            header={
+                <PageHeader
+                    title="Players"
+                    subtitle="Manage registered players across your facilities"
+                    actions={null}
+                    showSearch={false}
+                    showNotifications={false}
+                />
+            }
         >
             <Head title="Players" />
 
-            <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div className="w-full">
                 <div className="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100">
                     <div className="p-6 text-gray-900">
                         

@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import SportIcon from '@/Components/Bookings/SportIcon';
@@ -75,26 +76,23 @@ export default function Courts({ facilities = [] }) {
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#101F1A] text-[#D6FF3F] flex items-center justify-center font-bold text-sm shadow-2xs">
-                            <Shield size={15} strokeWidth={2.4} />
+                <PageHeader
+                    title="Platform Courts"
+                    subtitle="Cross-facility overview of all registered courts, sports, and live statuses"
+                    actions={
+                        <div className="flex items-center gap-2 rounded-lg bg-[#101F1A]/5 px-3 py-1.5 text-xs font-bold text-[#101F1A]">
+                            <Shield size={14} className="text-[#101F1A]" />
+                            <span>System Administrator</span>
                         </div>
-                        <div>
-                            <h2 className="text-xl font-bold tracking-tight text-[#101F1A]">
-                                Platform Courts
-                            </h2>
-                            <p className="text-xs text-[#101F1A]/60 font-medium">
-                                Cross-facility overview of all registered courts, sports, and live statuses
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                    }
+                    showSearch={false}
+                    showNotifications={false}
+                />
             }
         >
             <Head title="Platform Courts" />
 
-            <div className="w-full space-y-5 pb-12">
+            <div className="w-full space-y-4 pb-2">
                 {/* ── KPI Strip (Matching Bookings/Dashboard) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
@@ -209,7 +207,7 @@ export default function Courts({ facilities = [] }) {
                                 onClick={() => setStatusFilter(tab.key)}
                                 className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                                     statusFilter === tab.key
-                                        ? 'bg-white text-[#101F1A] shadow-xs'
+                                        ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
                                         : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-white/40'
                                 }`}
                             >
@@ -289,7 +287,7 @@ export default function Courts({ facilities = [] }) {
                                                     <td className="px-4 py-2.5 font-bold text-[#101F1A]">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 rounded-md bg-[#F5F2EA] border border-[#101F1A]/10 flex items-center justify-center text-[#101F1A] shrink-0">
-                                                                <SportIcon sport={court.type || 'Court'} size={12} />
+                                                                <Building2 size={12} />
                                                             </div>
                                                             <div>
                                                                 <div>{court.name}</div>

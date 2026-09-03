@@ -71,12 +71,16 @@ export default function AuthenticatedLayout({ header, children }) {
                 }`}
             >
                 {header && (
-                    <header className="sticky top-2 z-20 px-3 sm:px-4 pb-2">
-                        {header}
+                    <header className="sticky top-2 z-20 px-3 sm:px-5 lg:px-6 pb-2">
+                        <div className="w-full">
+                            {header}
+                        </div>
                     </header>
                 )}
-                <main className="flex-1 min-w-0 px-3 sm:px-4 pt-1 pb-4">
-                    {children}
+                <main className="flex-1 min-w-0 px-3 sm:px-5 lg:px-6 pt-1 pb-2">
+                    <div className="w-full">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

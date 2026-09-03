@@ -29,6 +29,7 @@ export default function PageHeader({
     onSearchChange,
     searchPlaceholder = 'Search courts, bookings...',
     className = '',
+    containerClassName = '',
 }) {
     const [notifOpen, setNotifOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(2);
@@ -99,7 +100,7 @@ export default function PageHeader({
         setUnreadCount(0);
     };
 
-    return (
+    const headerContent = (
         <div
             className={[
                 'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 px-5 backdrop-blur-md shadow-card transition-all duration-200',
@@ -253,4 +254,14 @@ export default function PageHeader({
             </div>
         </div>
     );
+
+    if (containerClassName) {
+        return (
+            <div className={containerClassName}>
+                {headerContent}
+            </div>
+        );
+    }
+
+    return headerContent;
 }
