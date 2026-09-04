@@ -1,7 +1,7 @@
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
+import { ButtonSpinner } from '@/Components/LoadingContext';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -179,12 +179,21 @@ export default function Login({ status, canResetPassword }) {
                                 </label>
                             </div>
 
-                            <PrimaryButton
-                                className="mt-7 flex w-full items-center justify-center !rounded-md !bg-[#D6FF3F] !px-7 !py-3.5 font-display text-lg tracking-wide !text-[#101F1A] transition hover:!bg-[#c2ea2e] focus:!ring-[#101F1A]"
+                            <button
+                                type="submit"
+                                id="login-submit-btn"
                                 disabled={processing}
+                                className="mt-7 flex w-full items-center justify-center gap-2.5 rounded-md bg-[#D6FF3F] px-7 py-3.5 font-display text-lg tracking-wide text-[#101F1A] transition-all duration-200 hover:bg-[#c2ea2e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#101F1A] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
                             >
-                                Log in
-                            </PrimaryButton>
+                                {processing ? (
+                                    <>
+                                        <ButtonSpinner size={20} color="#101F1A" />
+                                        <span>Signing in…</span>
+                                    </>
+                                ) : (
+                                    <span>Log in</span>
+                                )}
+                            </button>
                         </form>
                     </div>
                     </div>

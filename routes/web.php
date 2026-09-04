@@ -14,23 +14,46 @@ Route::get('/', function () {
     ]);
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Owner/Placeholder', ['title' => 'Dashboard']);
-    })->name('dashboard');
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard/Index');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
-    Route::prefix('owner')->name('owner.')->group(function () {
-        Route::get('/bookings', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Bookings']))->name('bookings');
-        Route::get('/calendar', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Calendar']))->name('calendar');
-        Route::get('/facilities', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Facilities']))->name('facilities');
-        Route::get('/courts', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Courts']))->name('courts');
-        Route::get('/customers', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Customers']))->name('customers');
-        Route::get('/staff', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Staff']))->name('staff');
-        Route::get('/payments', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Payments']))->name('payments');
-        Route::get('/reports', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Reports']))->name('reports');
-        Route::get('/verification', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Verification']))->name('verification');
-        Route::get('/settings', fn () => Inertia::render('Owner/Placeholder', ['title' => 'Settings']))->name('settings');
-    });
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/bookings', function () {
+        return Inertia::render('Bookings/Index');
+    })->name('bookings.index');
+
+    Route::get('/calendar', function () {
+        return Inertia::render('Calendar/Index');
+    })->name('calendar.index');
+
+    Route::get('/facilities', function () {
+        return Inertia::render('Facilities/Index');
+    })->name('facilities.index');
+
+    Route::get('/courts', function () {
+        return Inertia::render('Courts/Index');
+    })->name('courts.index');
+
+    Route::get('/customers', function () {
+        return Inertia::render('Customers/Index');
+    })->name('customers.index');
+
+    Route::get('/staff', function () {
+        return Inertia::render('Staff/Index');
+    })->name('staff.index');
+
+    Route::get('/payments', function () {
+        return Inertia::render('Payments/Index');
+    })->name('payments.index');
+
+    Route::get('/reports', function () {
+        return Inertia::render('Reports/Index');
+    })->name('reports.index');
+
+    Route::get('/verification', function () {
+        return Inertia::render('Verification/Index');
+    })->name('verification.index');
 });
 
 Route::middleware('auth')->group(function () {

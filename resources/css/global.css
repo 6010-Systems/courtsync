@@ -1,0 +1,298 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    /* Brand Colors */
+    --color-volt: #D6FF3F;
+    --color-volt-hover: #c4ec32;
+    --color-volt-dim: rgba(214, 255, 63, 0.15);
+    --color-volt-glow: rgba(214, 255, 63, 0.4);
+
+    --color-dark-bg: #101F1A;
+    --color-dark-surface: #162923;
+    --color-dark-card: #1C2E24;
+    --color-dark-border: rgba(255, 255, 255, 0.08);
+
+    --color-sand-bg: #F5F2EA;
+    --color-sand-surface: #FFFFFF;
+    --color-sand-muted: #E8E4D9;
+    --color-sand-border: #E2DDD2;
+
+    /* Semantic Accents */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    --color-info: #3B82F6;
+
+    /* Typography */
+    --font-sans: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Radius Tokens */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+
+    /* Elevations & Shadows */
+    --shadow-subtle: 0 1px 3px rgba(16, 31, 26, 0.04), 0 1px 2px rgba(16, 31, 26, 0.02);
+    --shadow-card: 0 4px 20px -2px rgba(16, 31, 26, 0.06), 0 2px 6px -1px rgba(16, 31, 26, 0.04);
+    --shadow-elevated: 0 12px 32px -4px rgba(16, 31, 26, 0.12), 0 4px 12px -2px rgba(16, 31, 26, 0.08);
+    --shadow-volt-glow: 0 0 20px rgba(214, 255, 63, 0.35);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   2. Base Resets & Global Enhancements
+   ========================================================================== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-sans);
+    color: #1a2e26;
+    background-color: var(--color-sand-bg);
+    min-height: 100vh;
+}
+
+/* Custom Highlight / Selection */
+::selection {
+    background-color: var(--color-volt);
+    color: var(--color-dark-bg);
+}
+
+::-moz-selection {
+    background-color: var(--color-volt);
+    color: var(--color-dark-bg);
+}
+
+/* ==========================================================================
+   3. Custom Sleek Scrollbars
+   ========================================================================== */
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(16, 31, 26, 0.18);
+    border-radius: var(--radius-full);
+    transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 31, 26, 0.32);
+}
+
+/* Dark mode / dark surface scrollbars */
+.dark-scrollbar::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb,
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: rgba(214, 255, 63, 0.4);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(16, 31, 26, 0.18) transparent;
+}
+
+/* ==========================================================================
+   4. Glassmorphism & Visual Textures
+   ========================================================================== */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-panel-dark {
+    background: rgba(16, 31, 26, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--color-sand-border);
+    box-shadow: var(--shadow-card);
+    border-radius: var(--radius-lg);
+}
+
+/* Court Pattern Background */
+.court-pattern-bg {
+    background-image: radial-gradient(rgba(16, 31, 26, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+/* ==========================================================================
+   5. Glow & Accent Utilities
+   ========================================================================== */
+.glow-volt {
+    box-shadow: var(--shadow-volt-glow);
+}
+
+.glow-volt-sm {
+    box-shadow: 0 0 10px rgba(214, 255, 63, 0.3);
+}
+
+.badge-volt {
+    background-color: var(--color-volt);
+    color: var(--color-dark-bg);
+    font-weight: 700;
+}
+
+.focus-ring-volt:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-sand-bg), 0 0 0 4px var(--color-volt);
+}
+
+/* ==========================================================================
+   6. Keyframe Animations & Animation Helpers
+   ========================================================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulseVolt {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(214, 255, 63, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(214, 255, 63, 0);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 250ms var(--transition-smooth) forwards;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 300ms var(--transition-smooth) forwards;
+}
+
+.animate-pulse-volt {
+    animation: pulseVolt 2s infinite ease-in-out;
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #ece7dc 25%, #f7f5ef 50%, #ece7dc 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+/* ==========================================================================
+   7. Interactive Micro-transitions
+   ========================================================================== */
+.hover-lift {
+    transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.hover-lift:hover {
+    box-shadow: var(--shadow-subtle);
+}
+
+.press-scale {
+    transition: transform var(--transition-fast);
+}
+
+.press-scale:active {
+    transform: scale(0.97);
+}
+
+/* ==========================================================================
+   8. Typography & Domain Helpers
+   ========================================================================== */
+.font-display {
+    font-family: 'Anton', sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.diagonal-hatch {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(16, 31, 26, 0.05),
+        rgba(16, 31, 26, 0.05) 10px,
+        rgba(16, 31, 26, 0.12) 10px,
+        rgba(16, 31, 26, 0.12) 20px
+    );
+}
+
+.diagonal-hatch-dark {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.03),
+        rgba(255, 255, 255, 0.03) 10px,
+        rgba(255, 255, 255, 0.08) 10px,
+        rgba(255, 255, 255, 0.08) 20px
+    );
+}
+
+.pulsing-dot {
+    position: relative;
+}
+.pulsing-dot::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    background-color: inherit;
+    opacity: 0.75;
+    animation: pulseVolt 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
