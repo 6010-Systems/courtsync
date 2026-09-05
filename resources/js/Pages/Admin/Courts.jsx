@@ -207,7 +207,7 @@ export default function Courts({ facilities = [] }) {
                                 onClick={() => setStatusFilter(tab.key)}
                                 className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                                     statusFilter === tab.key
-                                        ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
+                                        ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
                                         : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-white/40'
                                 }`}
                             >

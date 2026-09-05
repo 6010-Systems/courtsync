@@ -488,7 +488,7 @@ export default function Facilities({ facilities = [], owners = [] }) {
                                                         )}
                                                         <button 
                                                             onClick={() => openEditModal(f)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#101F1A] bg-[#101F1A] text-[#D6FF3F] hover:bg-[#162923] rounded-lg transition-colors cursor-pointer"
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-[#101F1A] text-[#D6FF3F] hover:bg-[#162923] rounded-lg transition-colors cursor-pointer"
                                                         >
                                                             <Edit3 size={12} />
                                                             <span>Edit</span>
@@ -496,7 +496,16 @@ export default function Facilities({ facilities = [], owners = [] }) {
                                                     </div>
                                                 </td>
                                             </tr>
-                      {/* ── Form Dialog Content (Add & Edit) ─────────────────────────── */}
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Form Dialog Content (Add & Edit) ─────────────────────────── */}
             {(addingFacility || editingFacility) && (
                 <Dialog 
                     isOpen={true} 

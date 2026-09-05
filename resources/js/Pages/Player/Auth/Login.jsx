@@ -1,11 +1,26 @@
+import { useState } from 'react';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
+import { ButtonSpinner } from '@/Components/LoadingContext';
 import TextInput from '@/Components/TextInput';
+import AuthBrandPanel from '@/Components/Auth/AuthBrandPanel';
+import GoogleIcon from '@/Components/Auth/GoogleIcon';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { 
+    Eye, 
+    EyeOff, 
+    Mail, 
+    Lock, 
+    ArrowRight, 
+    CheckCircle2,
+    XCircle,
+    MapPin
+} from 'lucide-react';
 
 export default function PlayerLogin({ status, canResetPassword, lastLoginMethod, facility }) {
+    const [showPassword, setShowPassword] = useState(false);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -21,173 +36,225 @@ export default function PlayerLogin({ status, canResetPassword, lastLoginMethod,
 
     return (
         <>
-            <Head title={`Log in to ${facility.name}`} />
+            <Head title={`Log In — ${facility.name}`} />
 
-            <div className="courtsync grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.1fr,1fr]">
-                {/* Left — branding panel */}
-                <div
-                    className="relative hidden flex-col justify-between bg-[#101F1A] py-10 text-[#F5F2EA] lg:flex bg-cover bg-center"
-                    style={{
-                        clipPath: 'polygon(0 0, 100% 0, 88% 100%, 0 100%)',
-                        backgroundImage: facility.verification?.facility_photos?.length > 0 
-                            ? `url(${facility.verification.facility_photos[0]})` 
-                            : 'none'
-                    }}
+            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr]">
+                <AuthBrandPanel
+                    badge="Player Reservation Portal"
+                    titleNode={
+                        <>
+                            READY TO <br />
+                            <span className="text-[#D6FF3F]">PLAY TODAY?</span>
+                        </>
+                    }
+                    subtitle="Log in to view available court times, reserve slots with instant payment, and manage your upcoming game bookings."
+                    logoHref={`/${facility.slug}`}
+                    logoNode={<span className="text-white">{facility.name}</span>}
+                    logoInitial={facility.name ? facility.name.charAt(0) : 'C'}
+                    bgImage={facility.verification?.facility_photos?.[0]}
+                    bottomLeft="Powered by CourtSync"
                 >
-                    {/* Gradient Overlay for readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#10221C] via-[#10221C]/80 to-[#10221C]/40 z-0"></div>
+                    {facility.address && (
+                        <div className="flex items-center gap-2 text-xs text-[#F5F2EA]/75">
+                            <MapPin className="h-4 w-4 text-[#D6FF3F] shrink-0" />
+                            <span>{facility.address}</span>
+                        </div>
+                    )}
+                </AuthBrandPanel>
 
-                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10">
-                        <Link
-                            href={`/${facility.slug}`}
-                            className="font-display text-2xl tracking-tight flex items-center gap-2"
-                        >
-                            <span className="text-[#D6FF3F]">{facility.name}</span>
-                        </Link>
-                    </div>
-
-                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10">
-                        <div className="max-w-sm">
-                            <h1 className="font-display text-5xl leading-[0.95] tracking-tight drop-shadow-md">
-                                READY TO
-                                <br />
-                                <span className="text-[#D6FF3F]">
-                                    PLAY?
+                {/* Right — Clean Form Container */}
+                <div className="flex flex-col justify-center px-6 py-12 sm:px-12 md:px-16 lg:px-12 xl:px-20">
+                    <div className="mx-auto w-full max-w-[440px]">
+                        {/* Mobile Header */}
+                        <div className="mb-8 flex items-center justify-between lg:hidden">
+                            <Link
+                                href={`/${facility.slug}`}
+                                className="inline-flex items-center gap-2 font-display text-xl font-bold tracking-tight text-[#10221C]"
+                            >
+                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#101F1A] text-[#D6FF3F] font-black text-sm">
+                                    {facility.name ? facility.name.charAt(0) : 'C'}
                                 </span>
-                            </h1>
-                            <p className="mt-6 leading-relaxed text-[#F5F2EA]/90 drop-shadow-sm font-medium">
-                                Log in to book your court, manage your reservations, and see available schedules at {facility.name}.
+                                <span>{facility.name}</span>
+                            </Link>
+                            <span className="rounded-full bg-[#101F1A]/5 px-2.5 py-1 text-[11px] font-bold text-[#101F1A]/70 uppercase tracking-wider">
+                                Player Log In
+                            </span>
+                        </div>
+
+                        {/* Title & Subtext */}
+                        <div className="mb-8">
+                            <h2 className="font-display text-3xl font-extrabold tracking-tight text-[#10221C] sm:text-4xl">
+                                Log in to book
+                            </h2>
+                            <p className="mt-2 text-sm text-[#10221C]/65 font-medium">
+                                Don't have an account at {facility.name}?{' '}
+                                <Link
+                                    href={`/${facility.slug}/register`}
+                                    className="font-bold text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-4 hover:text-black transition"
+                                >
+                                    Sign up now
+                                </Link>
                             </p>
                         </div>
-                    </div>
 
-                    <div className="relative z-10 ml-auto w-full max-w-[704px] px-10 opacity-0">
-                        {/* Empty space for balance */}
-                    </div>
-                </div>
-
-                {/* Right — form */}
-                <div className="flex flex-col justify-center px-6 py-16 sm:px-12 lg:px-10">
-                    <div className="mr-auto w-full max-w-[576px] px-0 lg:pr-10">
-                    <div className="mx-auto w-full max-w-sm">
-                        <Link
-                            href={`/${facility.slug}`}
-                            className="font-display text-2xl tracking-tight text-[#10221C] lg:hidden mb-8 block"
-                        >
-                            {facility.name}
-                        </Link>
-
-                        <h2 className="mt-8 font-display text-3xl tracking-tight text-[#10221C] lg:mt-0">
-                            Log in to book
-                        </h2>
-                        <p className="mt-2 text-[#10221C]/60">
-                            Don't have an account?{' '}
-                            <Link
-                                href={`/${facility.slug}/register`}
-                                className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
-                            >
-                                Sign up
-                            </Link>
-                        </p>
-
+                        {/* Flash Status Message */}
                         {status && (
-                            <div className={`mb-4 text-sm font-medium ${status.toLowerCase().includes('banned') ? 'text-red-600' : 'text-green-600'}`}>
-                                {status}
+                            <div className={`mb-6 flex items-center gap-2.5 rounded-xl border p-3.5 text-xs font-semibold ${
+                                status.toLowerCase().includes('banned') 
+                                    ? 'border-red-200 bg-red-50 text-red-700' 
+                                    : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            }`}>
+                                {status.toLowerCase().includes('banned') ? (
+                                    <XCircle className="h-4 w-4 shrink-0" />
+                                ) : (
+                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                )}
+                                <span>{status}</span>
                             </div>
                         )}
 
-                        <form onSubmit={submit} className="mt-8">
+                        {/* Login Form */}
+                        <form onSubmit={submit} className="space-y-4">
+                            {/* Email */}
                             <div>
-                                <InputLabel htmlFor="email" value="Email" className="font-medium text-[#10221C]" />
-                                <TextInput
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={data.email}
-                                    className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
-                                    autoComplete="username"
-                                    isFocused={true}
-                                    onChange={(e) => setData('email', e.target.value)}
+                                <InputLabel
+                                    htmlFor="email"
+                                    value="Email address"
+                                    className="block text-xs font-bold uppercase tracking-wider text-[#101F1A]/80 mb-1.5"
                                 />
-                                <InputError message={errors.email} className="mt-2" />
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#101F1A]/40">
+                                        <Mail className="h-4 w-4" />
+                                    </div>
+                                    <TextInput
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        value={data.email}
+                                        placeholder="player@example.com"
+                                        className="h-11 w-full rounded-xl border-[#101F1A]/15 bg-white/80 pl-10 pr-3.5 text-sm font-medium text-[#101F1A] placeholder-[#101F1A]/35 shadow-xs transition-all focus:border-[#101F1A] focus:bg-white focus:ring-2 focus:ring-[#101F1A]/10"
+                                        autoComplete="username"
+                                        isFocused={true}
+                                        onChange={(e) => setData('email', e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <InputError message={errors.email} className="mt-1.5" />
                             </div>
 
-                            <div className="mt-5">
-                                <div className="flex items-center justify-between">
-                                    <InputLabel htmlFor="password" value="Password" className="font-medium text-[#10221C]" />
+                            {/* Password */}
+                            <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <InputLabel
+                                        htmlFor="password"
+                                        value="Password"
+                                        className="block text-xs font-bold uppercase tracking-wider text-[#101F1A]/80"
+                                    />
                                     {canResetPassword && (
                                         <Link
                                             href={route('password.request')}
-                                            className="text-sm font-medium text-[#10221C] underline decoration-[#10221C]/30 decoration-2 underline-offset-2 hover:decoration-[#10221C]"
+                                            className="text-xs font-semibold text-[#101F1A]/70 hover:text-[#101F1A] hover:underline"
                                         >
                                             Forgot password?
                                         </Link>
                                     )}
                                 </div>
-                                <TextInput
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    value={data.password}
-                                    className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
-                                    autoComplete="current-password"
-                                    onChange={(e) => setData('password', e.target.value)}
-                                />
-                                <InputError message={errors.password} className="mt-2" />
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#101F1A]/40">
+                                        <Lock className="h-4 w-4" />
+                                    </div>
+                                    <TextInput
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="password"
+                                        value={data.password}
+                                        placeholder="••••••••"
+                                        className="h-11 w-full rounded-xl border-[#101F1A]/15 bg-white/80 pl-10 pr-10 text-sm font-medium text-[#101F1A] placeholder-[#101F1A]/35 shadow-xs transition-all focus:border-[#101F1A] focus:bg-white focus:ring-2 focus:ring-[#101F1A]/10"
+                                        autoComplete="current-password"
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition"
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
+                                <InputError message={errors.password} className="mt-1.5" />
                             </div>
 
-                            <div className="mt-5 block">
-                                <label className="flex items-center">
+                            {/* Remember Me */}
+                            <div className="pt-1 flex items-center justify-between">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
                                     <Checkbox
                                         name="remember"
                                         checked={data.remember}
                                         onChange={(e) => setData('remember', e.target.checked)}
-                                        className="rounded border-[#10221C]/15 text-[#101F1A] focus:ring-[#101F1A]"
+                                        className="h-4 w-4 rounded border-[#10221C]/20 text-[#101F1A] focus:ring-[#101F1A]"
                                     />
-                                    <span className="ml-2 text-sm text-[#10221C]/80">Remember me</span>
+                                    <span className="text-xs font-semibold text-[#10221C]/80">
+                                        Remember me
+                                    </span>
                                 </label>
                             </div>
 
-                            <PrimaryButton
-                                className="mt-7 flex w-full items-center justify-center gap-2 !rounded-md !bg-[#D6FF3F] !px-7 !py-3.5 font-display text-lg tracking-wide !text-[#101F1A] transition hover:!bg-[#c2ea2e] focus:!ring-[#101F1A]"
+                            {/* Submit Button */}
+                            <button
+                                type="submit"
                                 disabled={processing}
+                                className="group relative mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-all hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 active:scale-[0.99] disabled:opacity-50"
                             >
-                                Log in {lastLoginMethod === 'email' && <span className="bg-[#10221C] text-[#D6FF3F] text-[10px] font-sans font-bold px-2 py-0.5 rounded-full tracking-normal">LAST USED</span>}
-                            </PrimaryButton>
+                                {processing ? (
+                                    <span className="flex items-center gap-2">
+                                        <ButtonSpinner /> Signing in...
+                                    </span>
+                                ) : (
+                                    <>
+                                        <span>Log In to Book</span>
+                                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                    </>
+                                )}
+                                {lastLoginMethod === 'email' && (
+                                    <span className="absolute right-3 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] tracking-tight">
+                                        LAST USED
+                                    </span>
+                                )}
+                            </button>
 
-                            <div className="relative mt-8 flex items-center justify-center">
-                                <div className="absolute inset-x-0 h-px bg-[#10221C]/10"></div>
-                                <span className="relative bg-[#F5F2EA] px-4 text-sm text-[#10221C]/50">or log in with</span>
+                            {/* Divider */}
+                            <div className="relative my-6 flex items-center justify-center">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-[#10221C]/10"></div>
+                                </div>
+                                <span className="relative bg-[#F5F2EA] px-3 text-xs font-bold uppercase tracking-wider text-[#10221C]/40">
+                                    or log in with
+                                </span>
                             </div>
 
-                            <div className="mt-6 flex flex-col gap-3">
-                                <a
-                                    href={`/auth/google/player?facility=${facility.slug}`}
-                                    className="relative flex w-full items-center justify-center gap-3 rounded-md border border-[#10221C]/15 bg-white px-7 py-3.5 font-medium text-[#10221C] transition hover:bg-gray-50 focus:ring-[#101F1A]"
-                                >
-                                    {lastLoginMethod === 'google' && (
-                                        <span className="absolute -top-3 right-4 bg-[#10221C] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm tracking-wide">LAST USED</span>
-                                    )}
-                                    <svg className="h-5 w-5" viewBox="0 0 24 24">
-                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                    </svg>
-                                    Continue with Google
-                                </a>
-                            </div>
+                            {/* Google OAuth for Player */}
+                            <a
+                                href={`/auth/google/player?facility=${facility.slug}`}
+                                className="relative flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-all hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm active:scale-[0.99]"
+                            >
+                                {lastLoginMethod === 'google' && (
+                                    <span className="absolute -top-2.5 right-4 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] shadow-sm">
+                                        LAST USED
+                                    </span>
+                                )}
+                                <GoogleIcon />
+                                <span>Continue with Google</span>
+                            </a>
                         </form>
-                    </div>
                     </div>
                 </div>
             </div>
-
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap');
-                .courtsync { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-                .font-display { font-family: 'Anton', ui-sans-serif, system-ui, sans-serif; }
-            `}</style>
         </>
     );
 }

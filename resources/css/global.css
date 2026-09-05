@@ -1,41 +1,86 @@
-/* Local Quicksand Font Definitions (Explicit static weights to prevent rendering glitches and layout shifts) */
+/* Local Poppins Font Definitions */
 @font-face {
-    font-family: 'Quicksand';
-    src: url('/fonts/Quicksand/static/Quicksand-Light.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-Light.ttf') format('truetype');
     font-weight: 300;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Quicksand';
-    src: url('/fonts/Quicksand/static/Quicksand-Regular.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Quicksand';
-    src: url('/fonts/Quicksand/static/Quicksand-Medium.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-Medium.ttf') format('truetype');
     font-weight: 500;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Quicksand';
-    src: url('/fonts/Quicksand/static/Quicksand-SemiBold.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
     font-weight: 600;
     font-style: normal;
     font-display: swap;
 }
 
 @font-face {
-    font-family: 'Quicksand';
-    src: url('/fonts/Quicksand/static/Quicksand-Bold.ttf') format('truetype');
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-Bold.ttf') format('truetype');
     font-weight: 700;
     font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-ExtraBold.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Poppins';
+    src: url('/fonts/Poppins/Poppins-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Local Quicksand Font Definition (variable font — supports 300–700) */
+@font-face {
+    font-family: 'Quicksand';
+    src: url('/fonts/Quicksand/Quicksand-VariableFont_wght.ttf') format('truetype-variations'),
+         url('/fonts/Quicksand/Quicksand-VariableFont_wght.ttf') format('truetype');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Local Montserrat Font Definitions */
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/fonts/Montserrat/Montserrat-VariableFont_wght.ttf') format('truetype-variations'),
+         url('/fonts/Montserrat/Montserrat-VariableFont_wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Montserrat';
+    src: url('/fonts/Montserrat/Montserrat-Italic-VariableFont_wght.ttf') format('truetype-variations'),
+         url('/fonts/Montserrat/Montserrat-Italic-VariableFont_wght.ttf') format('truetype');
+    font-weight: 100 900;
+    font-style: italic;
     font-display: swap;
 }
 
@@ -63,7 +108,8 @@
     --color-info: #3B82F6;
 
     --font-sans: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-display: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-montserrat: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
     /* Radius Tokens */
     --radius-sm: 6px;
@@ -102,6 +148,7 @@ html {
 
 body {
     font-family: var(--font-sans);
+    font-weight: 500; /* Quicksand reads best at medium weight */
     color: #1a2e26;
     background-color: var(--color-sand-bg);
     min-height: 100vh;
@@ -217,62 +264,149 @@ body {
 /* ==========================================================================
    6. Keyframe Animations & Animation Helpers
    ========================================================================== */
+
+/* --- Entrance animations --- */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUpSm {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Opacity-only fade — use on elements that have their own CSS transform (e.g. rotate)
+   so the animation does NOT reset or override that transform */
+@keyframes fadeOnly {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-28px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    from { opacity: 0; transform: translateX(28px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* --- Ambient / looping animations --- */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-14px); }
+}
+
+@keyframes floatSlow {
+    0%, 100% { transform: translateY(0px) translateX(0px); }
+    33%       { transform: translateY(-10px) translateX(6px); }
+    66%       { transform: translateY(6px) translateX(-4px); }
+}
+
+@keyframes glowBreathe {
+    0%, 100% { opacity: 0.08; transform: scale(1); }
+    50%       { opacity: 0.18; transform: scale(1.08); }
 }
 
 @keyframes pulseVolt {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(214, 255, 63, 0.6);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(214, 255, 63, 0);
-    }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(214, 255, 63, 0.6); }
+    50%       { box-shadow: 0 0 0 8px rgba(214, 255, 63, 0); }
+}
+
+/* Badge shimmer — moving light streak */
+@keyframes shimmerBadge {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-    100% {
-        background-position: 200% 0;
-    }
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
 
-.animate-fade-in {
-    animation: fadeIn 250ms var(--transition-smooth) forwards;
+/* Subtle card tilt on hover */
+@keyframes tiltIn {
+    from { opacity: 0; transform: rotate(-2deg) translateY(8px); }
+    to   { opacity: 1; transform: rotate(0deg) translateY(0); }
 }
 
-.animate-slide-in-right {
-    animation: slideInRight 300ms var(--transition-smooth) forwards;
+/* --- Utility classes --- */
+.animate-fade-in    { animation: fadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-up    { animation: fadeUp 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-up-sm { animation: fadeUpSm 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-only  { animation: fadeOnly 700ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-left  { animation: slideInLeft  600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-right { animation: slideInRight 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-scale-in   { animation: scaleIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-float      { animation: float 5s ease-in-out infinite; }
+.animate-float-slow { animation: floatSlow 8s ease-in-out infinite; }
+.animate-glow-breathe { animation: glowBreathe 4s ease-in-out infinite; }
+.animate-pulse-volt { animation: pulseVolt 2s infinite ease-in-out; }
+.animate-tilt-in    { animation: tiltIn 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Shimmer badge — apply to badge pill spans */
+.animate-shimmer-badge {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(214, 255, 63, 0.35) 40%,
+        rgba(255, 255, 255, 0.25) 50%,
+        rgba(214, 255, 63, 0.35) 60%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmerBadge 3s ease-in-out infinite;
 }
 
-.animate-pulse-volt {
-    animation: pulseVolt 2s infinite ease-in-out;
-}
+/* Stagger delay helpers */
+.delay-75  { animation-delay: 75ms; }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }
 
 .skeleton-shimmer {
     background: linear-gradient(90deg, #ece7dc 25%, #f7f5ef 50%, #ece7dc 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+}
+
+/* Respect prefers-reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-fade-up,
+    .animate-fade-up-sm,
+    .animate-fade-only,
+    .animate-slide-left,
+    .animate-slide-right,
+    .animate-scale-in,
+    .animate-float,
+    .animate-float-slow,
+    .animate-glow-breathe,
+    .animate-pulse-volt,
+    .animate-tilt-in,
+    .animate-shimmer-badge {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
 }
 
 /* ==========================================================================
@@ -298,9 +432,10 @@ body {
    8. Typography & Domain Helpers
    ========================================================================== */
 .font-display {
-    font-family: var(--font-display);
+    font-family: 'Poppins', var(--font-display);
     letter-spacing: -0.02em;
 }
+
 
 .diagonal-hatch {
     background: repeating-linear-gradient(
