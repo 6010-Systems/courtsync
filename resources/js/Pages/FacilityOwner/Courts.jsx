@@ -52,6 +52,64 @@ const TIME_PRESETS = [
     '24 Hours / Open Daily',
 ];
 
+const SPORT_COURT_IMAGES = {
+    pickleball: [
+        'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1628891890467-b79f2c8ba9dc?auto=format&fit=crop&w=800&q=80',
+    ],
+    badminton: [
+        'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80',
+    ],
+    tennis: [
+        'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80',
+    ],
+    basketball: [
+        'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1519766304817-4f37bda74a29?auto=format&fit=crop&w=800&q=80',
+    ],
+    volleyball: [
+        'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1592656094267-764a45160876?auto=format&fit=crop&w=800&q=80',
+    ],
+    futsal: [
+        'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=800&q=80',
+    ],
+    padel: [
+        'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
+    ],
+    'table tennis': [
+        'https://images.unsplash.com/photo-1534158914592-062992fbe900?auto=format&fit=crop&w=800&q=80',
+    ],
+};
+
+const DEFAULT_COURT_IMAGES = [
+    'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=800&q=80',
+];
+
+function getCourtImage(court, facility, index = 0) {
+    const facilityPhotos = (facility?.verification?.facility_photos || []).filter(p => Boolean(p && typeof p === 'string' && p.trim()));
+    if (facilityPhotos.length > 0) {
+        return facilityPhotos[(court.id || index) % facilityPhotos.length];
+    }
+
+    const typeKey = (court.type || '').toLowerCase();
+    for (const [sport, images] of Object.entries(SPORT_COURT_IMAGES)) {
+        if (typeKey.includes(sport)) {
+            return images[(court.id || index) % images.length];
+        }
+    }
+
+    return DEFAULT_COURT_IMAGES[(court.id || index) % DEFAULT_COURT_IMAGES.length];
+}
+
 export default function Courts({ facilities = [], can = {} }) {
     const { confirm } = useConfirm();
     const toast = useToast();
@@ -549,95 +607,124 @@ export default function Courts({ facilities = [], can = {} }) {
                                     </div>
 
                                     {/* Courts Grid — 4 cards per row */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
-                                        {facility.filteredCourts.map((court) => {
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        {facility.filteredCourts.map((court, courtIndex) => {
                                             const statusStyle = COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE;
                                             const statusLabel = COURT_STATUS_LABELS[court.status] || court.status;
+                                            const courtImg = getCourtImage(court, facility, courtIndex);
 
                                             return (
                                                 <div
                                                     key={court.id}
-                                                    className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20"
+                                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#101F1A]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
+                                                    style={{ animationDelay: `${courtIndex * 40}ms` }}
                                                 >
-                                                    <div>
-                                                        {/* Top Row: Facility Icon Badge + Court Name + Status */}
-                                                        <div className="flex items-start justify-between gap-2.5 mb-3">
-                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                <div className="w-8 h-8 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA] flex items-center justify-center text-[#101F1A] shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                                                                    <Building2 size={15} />
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <h4 className="font-bold text-sm text-[#101F1A] tracking-tight truncate">
-                                                                        {court.name}
-                                                                    </h4>
-                                                                    <span className="text-[11px] font-medium text-[#101F1A]/60 block truncate">
-                                                                        {court.type || 'Standard Court'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
+                                                    {/* Top Image: Edge-to-edge with smooth dissolved gradient overlay */}
+                                                    <div className="relative h-36 sm:h-40 w-full shrink-0 overflow-hidden bg-white">
+                                                        <img
+                                                            src={courtImg}
+                                                            alt={court.name}
+                                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                                                            style={{
+                                                                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                                                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                                            }}
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length];
+                                                            }}
+                                                        />
 
-                                                            <span className={`px-2 py-0.5 text-[10px] font-bold border rounded-md uppercase tracking-wider whitespace-nowrap shadow-2xs shrink-0 ${statusStyle}`}>
+                                                        {/* Floating Sport Badge */}
+                                                        <div className="absolute top-2.5 left-2.5 z-10">
+                                                            <span className="inline-flex items-center gap-1.5 bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-xs border border-white/10">
+                                                                <SportIcon sport={court.type} className="w-3 h-3 text-[#D6FF3F]" />
+                                                                <span>{court.type || 'Court'}</span>
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Floating Status Badge */}
+                                                        <div className="absolute top-2.5 right-2.5 z-10">
+                                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold border rounded-full uppercase tracking-wider whitespace-nowrap shadow-xs backdrop-blur-md bg-white/95 ${statusStyle}`}>
                                                                 {statusLabel}
                                                             </span>
                                                         </div>
 
-                                                        {/* Court Details Strip */}
-                                                        <div className="space-y-1.5 mt-3 pt-2.5 border-t border-[#101F1A]/5">
-                                                            {/* Rate */}
-                                                            <div className="flex items-center justify-between text-xs">
-                                                                <span className="text-[#101F1A]/50 font-medium flex items-center gap-1">
-                                                                    <PhilippinePeso size={12} className="text-[#101F1A]/40" />
-                                                                    Rate
-                                                                </span>
-                                                                <span className="font-bold text-[#101F1A] bg-[#F5F2EA] px-2 py-0.5 rounded border border-[#101F1A]/5">
-                                                                    {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : 'Free / Not set'}
-                                                                </span>
+                                                        {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
+                                                        <div
+                                                            className="absolute inset-0 pointer-events-none"
+                                                            style={{
+                                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    {/* Card Body */}
+                                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4 sm:pb-3.5 flex-1 flex flex-col justify-between">
+                                                        <div>
+                                                            <div className="flex items-center justify-between gap-2 h-6">
+                                                                <h4 className="font-display font-bold text-[15px] sm:text-base text-[#101F1A] tracking-tight truncate group-hover:text-[#FF5A36] transition-colors" title={court.name}>
+                                                                    {court.name}
+                                                                </h4>
                                                             </div>
 
-                                                            {/* Operating Hours */}
-                                                            <div className="flex items-center justify-between text-xs">
-                                                                <span className="text-[#101F1A]/50 font-medium flex items-center gap-1">
-                                                                    <Clock size={12} className="text-[#101F1A]/40" />
-                                                                    Hours
-                                                                </span>
-                                                                <span className="font-medium text-[#101F1A]/80 truncate max-w-[150px]" title={court.time_range}>
-                                                                    {court.time_range || 'Venue standard'}
-                                                                </span>
-                                                            </div>
+                                                            <div className="space-y-1.5 mt-2 pt-2 border-t border-[#101F1A]/6 text-xs">
+                                                                <div className="flex items-center justify-between h-6">
+                                                                    <span className="text-[#101F1A]/60 font-medium flex items-center gap-1.5">
+                                                                        <PhilippinePeso size={12} className="text-[#FF5A36] shrink-0" />
+                                                                        Hourly Rate
+                                                                    </span>
+                                                                    <span className="font-display font-bold text-xs sm:text-sm text-[#101F1A] bg-[#F5F2EA] px-2 py-0.5 rounded-md border border-[#101F1A]/5">
+                                                                        {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : 'Free / Not set'}
+                                                                    </span>
+                                                                </div>
 
-                                                            {/* Description */}
-                                                            {court.description && (
-                                                                <p className="pt-1.5 text-[11px] text-[#101F1A]/60 line-clamp-2 leading-snug">
-                                                                    {court.description}
+                                                                <div className="flex items-center justify-between h-6">
+                                                                    <span className="text-[#101F1A]/60 font-medium flex items-center gap-1.5">
+                                                                        <Clock size={12} className="text-[#101F1A]/40 shrink-0" />
+                                                                        Operating Hours
+                                                                    </span>
+                                                                    <span className="font-medium text-[#101F1A]/80 truncate max-w-[135px]" title={court.time_range}>
+                                                                        {court.time_range || 'Venue standard'}
+                                                                    </span>
+                                                                </div>
+
+                                                                <p className="pt-0.5 text-[11px] text-[#101F1A]/60 line-clamp-1 leading-normal h-5 flex items-center overflow-hidden">
+                                                                    {court.description || 'Verified court with standard playing equipment.'}
                                                                 </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Footer Actions — fixed height and bottom pinned */}
+                                                        <div className="mt-3 pt-2.5 border-t border-[#101F1A]/6 flex items-center justify-between shrink-0 h-10">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                                {court.type || 'Court'}
+                                                            </span>
+
+                                                            {(can.edit || can.delete) && (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {can.edit && (
+                                                                        <button
+                                                                            onClick={() => openEditModal(court, facility)}
+                                                                            className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#101F1A] bg-[#D6FF3F] hover:bg-[#c4ec32] rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 font-display"
+                                                                        >
+                                                                            <Edit3 size={11} strokeWidth={2.2} />
+                                                                            <span>Edit</span>
+                                                                        </button>
+                                                                    )}
+                                                                    {can.delete && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteCourt(court)}
+                                                                            className="inline-flex items-center justify-center w-7 h-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                                            title="Delete court"
+                                                                            aria-label={`Delete ${court.name}`}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
-
-                                                    {/* Card Actions Footer */}
-                                                    {(can.edit || can.delete) && (
-                                                        <div className="mt-4 pt-2.5 border-t border-[#101F1A]/5 flex items-center justify-between">
-                                                            {can.edit ? (
-                                                                <button
-                                                                    onClick={() => openEditModal(court, facility)}
-                                                                    className="inline-flex items-center gap-1 text-xs font-bold text-[#101F1A] hover:bg-[#101F1A]/5 px-2 py-1 rounded-md transition cursor-pointer"
-                                                                >
-                                                                    <Edit3 size={12} />
-                                                                    Edit
-                                                                </button>
-                                                            ) : <div />}
-
-                                                            {can.delete && (
-                                                                <button
-                                                                    onClick={() => handleDeleteCourt(court)}
-                                                                    className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-md transition cursor-pointer"
-                                                                >
-                                                                    <Trash2 size={12} />
-                                                                    Delete
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}

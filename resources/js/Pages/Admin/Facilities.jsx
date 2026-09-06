@@ -390,7 +390,7 @@ export default function Facilities({ facilities = [], owners = [] }) {
                 </div>
 
                 {/* ── Elevated Table View ──────────────────────────────────── */}
-                <div className="rounded-2xl border border-[#101F1A]/10 bg-white/95 shadow-card backdrop-blur-md overflow-hidden">
+                <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 shadow-card backdrop-blur-md overflow-hidden">
                     {facilities.length === 0 ? (
                         <div className="text-center py-16 px-4">
                             <Building2 size={32} className="mx-auto text-[#101F1A]/30 mb-3" />

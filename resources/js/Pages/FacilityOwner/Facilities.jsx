@@ -71,6 +71,55 @@ const STATUS_BADGES = {
     },
 };
 
+const MOCK_FACILITY_IMAGES = [
+    'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80', // Pickleball Club
+    'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80', // Tennis Hard Court
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=80', // Basketball Center
+    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80', // Badminton Hall
+    'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=1200&q=80', // Padel Club
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80', // Futsal Turf
+    'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=1200&q=80', // Volleyball Complex
+    'https://images.unsplash.com/photo-1519766304817-4f37bda74a29?auto=format&fit=crop&w=1200&q=80', // Stadium Arena
+];
+
+const PRESET_PHOTO_SETS = [
+    {
+        label: 'Pickleball Arena',
+        photos: [
+            'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1628891890467-b79f2c8ba9dc?auto=format&fit=crop&w=1200&q=80',
+        ],
+    },
+    {
+        label: 'Tennis Club',
+        photos: [
+            'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80',
+        ],
+    },
+    {
+        label: 'Basketball Gym',
+        photos: [
+            'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1519766304817-4f37bda74a29?auto=format&fit=crop&w=1200&q=80',
+        ],
+    },
+    {
+        label: 'Badminton Center',
+        photos: [
+            'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80',
+        ],
+    },
+    {
+        label: 'Padel Courts',
+        photos: [
+            'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=1200&q=80',
+            'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80',
+        ],
+    },
+];
+
 export default function Facilities({ auth, facilities = [] }) {
     const user = auth.user;
     const { confirm } = useConfirm();
@@ -284,7 +333,7 @@ export default function Facilities({ auth, facilities = [] }) {
                 >
                     <Head title="Setup Facility" />
                     <div className="py-4 max-w-3xl mx-auto">
-                        <div className="bg-white/95 backdrop-blur-md p-6 sm:p-8 shadow-card rounded-2xl border border-[#101F1A]/10">
+                        <div className="bg-white/95 backdrop-blur-md p-6 sm:p-8 shadow-card rounded-xl border border-[#101F1A]/10">
                             {/* Step Indicator */}
                             <div className="mb-6 pb-5 border-b border-[#101F1A]/10 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -472,7 +521,7 @@ export default function Facilities({ auth, facilities = [] }) {
                 >
                     <Head title="Submit Verification" />
                     <div className="py-4 max-w-3xl mx-auto">
-                        <div className="bg-white/95 backdrop-blur-md p-6 sm:p-8 shadow-card rounded-2xl border border-[#101F1A]/10">
+                        <div className="bg-white/95 backdrop-blur-md p-6 sm:p-8 shadow-card rounded-xl border border-[#101F1A]/10">
                             {/* Step Indicator */}
                             <div className="mb-6 pb-5 border-b border-[#101F1A]/10 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -573,7 +622,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                 </div>
                                 
                                 <div className="mt-4 border-t border-[#101F1A]/10 pt-5">
-                                    <div className="flex justify-between items-center mb-3">
+                                    <div className="flex justify-between items-center mb-2">
                                         <div>
                                             <h3 className="text-xs font-bold uppercase tracking-wider text-[#101F1A]">Facility Photos</h3>
                                             <p className="text-[11px] text-[#101F1A]/60">Provide direct image URLs showing courts and amenities.</p>
@@ -586,14 +635,41 @@ export default function Facilities({ auth, facilities = [] }) {
                                             <Plus size={13} strokeWidth={2.4} /> Add Photo URL
                                         </button>
                                     </div>
+
+                                    {/* Quick Sample Presets */}
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-3.5 pt-1">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 flex items-center gap-1">
+                                            <Sparkles size={11} className="text-[#D6FF3F] bg-[#101F1A] p-0.5 rounded" /> Quick Presets:
+                                        </span>
+                                        {PRESET_PHOTO_SETS.map((preset) => (
+                                            <button
+                                                key={preset.label}
+                                                type="button"
+                                                onClick={() => setVerificationData('facility_photos', [...preset.photos])}
+                                                className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#F5F2EA] hover:bg-[#D6FF3F] text-[#101F1A] transition-colors cursor-pointer border border-[#101F1A]/10"
+                                            >
+                                                + {preset.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                     
-                                    <div className="space-y-2.5">
+                                    <div className="space-y-3">
                                         {verificationData.facility_photos.map((photo, index) => (
-                                            <div key={index} className="flex gap-2 items-center">
+                                            <div key={index} className="flex gap-2.5 items-center">
+                                                {photo && typeof photo === 'string' && photo.startsWith('http') && (
+                                                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-[#101F1A]/10 bg-[#101F1A]/5 shadow-2xs">
+                                                        <img
+                                                            src={photo}
+                                                            alt="Preview thumbnail"
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                        />
+                                                    </div>
+                                                )}
                                                 <div className="flex-1">
                                                     <TextInput 
                                                         type="url" 
-                                                        placeholder="https://example.com/court-interior.jpg" 
+                                                        placeholder="https://images.unsplash.com/photo-..." 
                                                         value={photo} 
                                                         onChange={(e) => handlePhotoChange(index, e.target.value)} 
                                                         className="block w-full text-xs font-medium" 
@@ -806,11 +882,11 @@ export default function Facilities({ auth, facilities = [] }) {
 
                 {/* ── Facilities Cards Grid ─────────────────────────────────── */}
                 {facilities.length === 0 ? (
-                    <div className="rounded-2xl border border-[#101F1A]/10 bg-white/90 p-12 text-center shadow-card backdrop-blur-md max-w-lg mx-auto my-10">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#D6FF3F]/30 text-[#101F1A] border border-[#D6FF3F] shadow-2xs mb-4">
+                    <div className="rounded-xl border border-[#101F1A]/10 bg-white/90 p-12 text-center shadow-card backdrop-blur-md max-w-lg mx-auto my-10">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-[#D6FF3F]/30 text-[#101F1A] border border-[#D6FF3F] shadow-2xs mb-4">
                             <Building2 size={24} strokeWidth={2.2} />
                         </div>
-                        <h2 className="text-xl font-black tracking-tight text-[#101F1A] mb-1.5">No Facilities Yet</h2>
+                        <h2 className="text-xl font-display font-black tracking-tight text-[#101F1A] mb-1.5">No Facilities Yet</h2>
                         <p className="text-xs font-medium text-[#101F1A]/60 max-w-sm mx-auto mb-6">
                             You haven't registered any sports facilities yet. Add your first venue to start configuring courts and booking schedules.
                         </p>
@@ -823,7 +899,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                 setActiveStep(1);
                                 setIsAdding(true);
                             }}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#101F1A] px-5 py-2.5 text-xs font-bold text-[#D6FF3F] shadow-subtle hover:bg-[#162923] transition-all cursor-pointer"
+                            className="inline-flex items-center gap-2 rounded-lg bg-[#101F1A] px-5 py-2.5 text-xs font-bold text-[#D6FF3F] shadow-subtle hover:bg-[#162923] transition-all cursor-pointer"
                         >
                             <Plus size={15} strokeWidth={2.4} />
                             <span>Add Your First Facility</span>
@@ -842,32 +918,43 @@ export default function Facilities({ auth, facilities = [] }) {
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredFacilities.map((facility) => {
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {filteredFacilities.map((facility, i) => {
                             const badge = STATUS_BADGES[facility.verification_status] || STATUS_BADGES.DRAFT;
                             const BadgeIcon = badge.icon;
                             const courtsCount = facility.courts_count ?? (facility.courts?.length || 0);
+                            const photos = facility.verification?.facility_photos || [];
+                            const validPhotos = photos.filter(p => Boolean(p && typeof p === 'string' && p.trim()));
+                            const hasCustomPhoto = validPhotos.length > 0;
+                            const coverPhoto = hasCustomPhoto
+                                ? validPhotos[0]
+                                : MOCK_FACILITY_IMAGES[(facility.id || i) % MOCK_FACILITY_IMAGES.length];
 
                             return (
                                 <div
                                     key={facility.id}
-                                    className="group relative flex flex-col justify-between rounded-2xl border border-[#101F1A]/10 bg-white/95 p-5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/25"
+                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#10221C]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
+                                    style={{ animationDelay: `${i * 60}ms` }}
                                 >
-                                    <div>
-                                        {/* Header Row */}
-                                        <div className="flex items-start justify-between gap-2.5 mb-3">
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="truncate text-base font-black tracking-tight text-[#101F1A] group-hover:text-[#101F1A]/80 transition-colors">
-                                                    {facility.name}
-                                                </h3>
-                                                {facility.slug && (
-                                                    <span className="text-[10px] font-medium text-[#101F1A]/50">
-                                                        /f/{facility.slug}
-                                                    </span>
-                                                )}
-                                            </div>
+                                    {/* Top Image: Edge-to-edge with smooth gradient overlay integrating into card background */}
+                                    <div className="relative h-40 sm:h-44 w-full shrink-0 overflow-hidden bg-white">
+                                        <img
+                                            src={coverPhoto}
+                                            alt={facility.name}
+                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                                            style={{
+                                                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                            }}
+                                            onError={(e) => {
+                                                e.currentTarget.src = MOCK_FACILITY_IMAGES[i % MOCK_FACILITY_IMAGES.length];
+                                            }}
+                                        />
+
+                                        {/* Status Badge floating on image */}
+                                        <div className="absolute top-3 left-3 z-10">
                                             <span className={[
-                                                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border shrink-0',
+                                                'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-2xs border bg-white/95 transition-transform duration-300 group-hover:scale-105',
                                                 badge.bg,
                                             ].join(' ')}>
                                                 <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
@@ -875,68 +962,119 @@ export default function Facilities({ auth, facilities = [] }) {
                                             </span>
                                         </div>
 
-                                        {/* Address & Contact Details */}
-                                        <div className="space-y-1.5 my-3 text-xs font-medium text-[#101F1A]/70">
-                                            <p className="flex items-start gap-2">
-                                                <MapPin size={13} className="mt-0.5 shrink-0 text-[#101F1A]/40" />
-                                                <span className="line-clamp-2">{facility.address}, {facility.city}, {facility.province}</span>
-                                            </p>
-                                            {facility.contact_number && (
-                                                <p className="flex items-center gap-2">
-                                                    <Phone size={13} className="shrink-0 text-[#101F1A]/40" />
-                                                    <span>{facility.contact_number}</span>
-                                                </p>
-                                            )}
+                                        {/* Photo count indicator on top-right */}
+                                        <div className="absolute top-3 right-3 z-10">
+                                            <span className="inline-flex items-center gap-1 bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-2xs border border-white/10">
+                                                {hasCustomPhoto ? (
+                                                    <>
+                                                        <Camera size={10} />
+                                                        <span>{validPhotos.length} {validPhotos.length === 1 ? 'photo' : 'photos'}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles size={10} className="text-[#D6FF3F]" />
+                                                        <span>Preview</span>
+                                                    </>
+                                                )}
+                                            </span>
                                         </div>
 
-                                        {/* Quick Metrics Badge Strip */}
-                                        <div className="flex items-center gap-2 pt-3 border-t border-[#101F1A]/5">
-                                            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F5F2EA] px-2.5 py-1 text-[11px] font-bold text-[#101F1A]">
-                                                <Layers size={12} className="text-[#101F1A]/60" />
-                                                <span>{courtsCount} {courtsCount === 1 ? 'Court' : 'Courts'}</span>
-                                            </span>
-                                            {facility.verification_status === 'APPROVED' && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                                                    <ShieldCheck size={11} /> Verified
-                                                </span>
-                                            )}
-                                        </div>
+                                        {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
+                                        <div
+                                            className="absolute inset-0 pointer-events-none"
+                                            style={{
+                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
+                                            }}
+                                        />
                                     </div>
 
-                                    {/* Footer Actions */}
-                                    <div className="mt-5 pt-3.5 border-t border-[#101F1A]/10 flex items-center justify-between gap-2">
-                                        {facility.verification_status === 'APPROVED' && facility.slug ? (
-                                            <a
-                                                href={route('facility.show', facility.slug)}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1 text-xs font-bold text-[#101F1A] hover:text-[#101F1A]/70 transition-colors"
-                                            >
-                                                <span>Public Page</span>
-                                                <ExternalLink size={12} />
-                                            </a>
-                                        ) : (
-                                            <span className="text-[11px] font-medium text-[#101F1A]/40">
-                                                {facility.verification_status === 'APPROVED' ? 'No slug set' : 'Awaiting approval'}
-                                            </span>
-                                        )}
+                                    {/* Card Body — flex-1 flex flex-col justify-between ensures footer is pinned identically */}
+                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex items-center justify-between gap-2 h-6 sm:h-7">
+                                                <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors truncate flex-1" title={facility.name}>
+                                                    {facility.name}
+                                                </h3>
+                                                {facility.verification_status === 'APPROVED' && (
+                                                    <span className="shrink-0 text-emerald-600" title="Verified Facility Partner">
+                                                        <ShieldCheck size={16} />
+                                                    </span>
+                                                )}
+                                            </div>
 
-                                        <div className="flex items-center gap-1.5">
-                                            <Link
-                                                href={route('facility.courts')}
-                                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#101F1A] bg-[#101F1A]/5 hover:bg-[#101F1A]/10 rounded-lg transition-colors cursor-pointer"
-                                            >
-                                                <Layers size={12} />
-                                                <span>Courts</span>
-                                            </Link>
-                                            <button
-                                                type="button"
-                                                onClick={() => openEditFacility(facility)}
-                                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#101F1A] bg-[#101F1A] text-[#D6FF3F] hover:bg-[#162923] rounded-lg transition-colors cursor-pointer"
-                                            >
-                                                <Edit3 size={12} strokeWidth={2.2} />
-                                                <span>Edit</span>
-                                            </button>
+                                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#10221C]/60 truncate h-5">
+                                                <MapPin size={12} className="text-[#FF5A36]/80 shrink-0" />
+                                                <span className="truncate">{facility.city}, {facility.province}</span>
+                                            </p>
+
+                                            <p className="mt-1.5 text-xs text-[#10221C]/50 line-clamp-2 leading-relaxed h-9 overflow-hidden">
+                                                {facility.description || 'Verified sports facility with active court management and booking.'}
+                                            </p>
+
+                                            {/* Quick Metrics Badge Strip */}
+                                            <div className="flex flex-wrap items-center gap-1.5 pt-2 mt-2 border-t border-[#101F1A]/5">
+                                                <span className="inline-flex items-center gap-1.5 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
+                                                    <Layers size={11} className="text-[#101F1A]/60" />
+                                                    <span>{courtsCount} {courtsCount === 1 ? 'Court' : 'Courts'}</span>
+                                                </span>
+                                                {facility.slug && (
+                                                    <span className="font-mono text-[10px] bg-[#10221C]/5 px-1.5 py-0.5 rounded text-[#10221C]/60 truncate max-w-[120px]">
+                                                        /{facility.slug}
+                                                    </span>
+                                                )}
+                                                {facility.contact_number && (
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#101F1A]/60 bg-[#101F1A]/[0.03] px-2 py-0.5 rounded border border-[#101F1A]/5 truncate max-w-[130px]">
+                                                        <Phone size={10} className="shrink-0 text-[#10221C]/40" />
+                                                        <span className="truncate">{facility.contact_number}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Footer Actions — fixed height and bottom pinned */}
+                                        <div className="mt-3 pt-2.5 border-t border-[#10221C]/6 flex items-center justify-between shrink-0 h-10">
+                                            {facility.verification_status === 'APPROVED' && facility.slug ? (
+                                                <a
+                                                    href={route('facility.show', facility.slug)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/75 hover:text-[#FF5A36] transition-colors"
+                                                >
+                                                    <span>Public Page</span>
+                                                    <ExternalLink size={11} />
+                                                </a>
+                                            ) : (
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40">
+                                                    {facility.verification_status === 'APPROVED' ? 'No slug set' : 'Awaiting Review'}
+                                                </span>
+                                            )}
+
+                                            <div className="flex items-center gap-1.5">
+                                                <Link
+                                                    href={route('facility.courts')}
+                                                    className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#101F1A] bg-[#101F1A]/5 hover:bg-[#101F1A]/10 rounded-lg transition-colors cursor-pointer"
+                                                >
+                                                    <Layers size={11} />
+                                                    <span>Courts</span>
+                                                </Link>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditFacility(facility)}
+                                                    className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#101F1A] bg-[#D6FF3F] hover:bg-[#c4ec32] rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105"
+                                                >
+                                                    <Edit3 size={11} strokeWidth={2.2} />
+                                                    <span>Edit</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => deleteFacility(facility.id, facility.name)}
+                                                    className="inline-flex items-center justify-center w-7 h-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                    title="Delete facility"
+                                                    aria-label={`Delete ${facility.name}`}
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
