@@ -3,9 +3,12 @@ import InputLabel from '@/Components/InputLabel';
 import { ButtonSpinner } from '@/Components/LoadingContext';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Mail, ArrowLeft, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPassword({ status }) {
+    const shouldReduce = useReducedMotion();
+
     const { data, setData, post, processing, errors } = useForm({
         email: '',
     });
@@ -20,12 +23,17 @@ export default function ForgotPassword({ status }) {
         <>
             <Head title="Forgot Password — CourtSync" />
 
-            <div className="flex min-h-screen items-center justify-center bg-[#F5F2EA] px-6 py-12 text-[#10221C]">
-                <div className="w-full max-w-md rounded-2xl border border-[#10221C]/10 bg-white/80 p-8 shadow-card backdrop-blur-sm sm:p-10">
+            <div className="flex min-h-screen items-center justify-center bg-[#F5F2EA] px-6 py-12 text-[#10221C] overflow-x-hidden">
+                <motion.div
+                    initial={shouldReduce ? false : { opacity: 0, scale: 0.98, y: 12 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    className="w-full max-w-md rounded-2xl border border-[#10221C]/10 bg-white/80 p-8 shadow-card backdrop-blur-sm sm:p-10"
+                >
                     <div className="mb-6 flex items-center justify-between">
                         <Link
                             href="/"
-                            className="inline-flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-[#10221C]"
+                            className="inline-flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-[#10221C] hover:opacity-80 transition-opacity"
                         >
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#101F1A] text-[#D6FF3F] font-black text-sm">
                                 C
@@ -45,12 +53,20 @@ export default function ForgotPassword({ status }) {
                         No worries. Enter your registered email and we&apos;ll send you instructions to reset your password.
                     </p>
 
-                    {status && (
-                        <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-semibold text-emerald-800">
-                            <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            <span>{status}</span>
-                        </div>
-                    )}
+                    <AnimatePresence>
+                        {status && (
+                            <motion.div
+                                initial={shouldReduce ? false : { opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.25 }}
+                                className="mt-5 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-semibold text-emerald-800"
+                            >
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                <span>{status}</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <form onSubmit={submit} className="mt-6 space-y-4">
                         <div>
@@ -78,10 +94,12 @@ export default function ForgotPassword({ status }) {
                             <InputError message={errors.email} className="mt-1.5" />
                         </div>
 
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={processing}
-                            className="group mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-all hover:bg-[#c4ec32] hover:shadow-md active:scale-[0.99] disabled:opacity-50"
+                            whileHover={processing ? {} : { scale: 1.01 }}
+                            whileTap={processing ? {} : { scale: 0.985 }}
+                            className="group mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-colors hover:bg-[#c4ec32] hover:shadow-md disabled:opacity-50 cursor-pointer"
                         >
                             {processing ? (
                                 <span className="flex items-center gap-2">
@@ -93,7 +111,7 @@ export default function ForgotPassword({ status }) {
                                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                                 </>
                             )}
-                        </button>
+                        </motion.button>
                     </form>
 
                     <div className="mt-6 border-t border-[#10221C]/10 pt-5 text-center">
@@ -105,8 +123,9 @@ export default function ForgotPassword({ status }) {
                             Back to login
                         </Link>
                     </div>
-                </div>
+                </motion.div>
             </div>
         </>
     );
 }
+

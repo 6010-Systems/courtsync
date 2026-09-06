@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { Building2 } from 'lucide-react';
+import { Building2, MapPin, ArrowRight, Sparkles } from 'lucide-react';
 import { useCountUp } from '@/hooks/useCountUp';
 
 const SPORTS = [
@@ -27,7 +27,14 @@ const STEPS = [
     },
 ];
 
-
+const MOCK_FACILITY_IMAGES = [
+    'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80',
+];
 
 export default function Welcome({ auth, facilities = [] }) {
     const bookingsToday = useCountUp(214);
@@ -119,7 +126,7 @@ export default function Welcome({ auth, facilities = [] }) {
 
                             <div className="flex flex-col gap-4 lg:items-end">
                                 {/* Stat card */}
-                                <div className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 px-6 py-5 animate-fade-up delay-400">
+                                <div className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 px-6 py-5 animate-fade-up delay-400 transition-all duration-300 hover:border-[#D6FF3F]/30 hover:bg-[#F5F2EA]/8">
                                     <p className="font-display text-5xl font-black text-[#D6FF3F]">
                                         {bookingsToday}
                                     </p>
@@ -128,30 +135,33 @@ export default function Welcome({ auth, facilities = [] }) {
                                     </p>
                                 </div>
 
-                                {/* Card 1 — tilted -3deg. Uses animate-fade-only so opacity-only entrance never resets the rotate transform */}
-                                <div className="w-56 -rotate-3 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl animate-fade-only delay-500">
-                                    <p className="font-display text-sm font-bold tracking-tight">
-                                        Court 3 · Pickleball
-                                    </p>
-                                    <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
-                                        6:00 – 7:00 PM · ₱450
-                                    </p>
-                                    <span className="mt-2.5 inline-block rounded-full bg-[#D6FF3F]/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#10221C]">
-                                        Open
-                                    </span>
-                                </div>
+                                {/* Floating Cards Container with subtle ambient floating motion */}
+                                <div className="animate-float flex flex-col gap-4 lg:items-end">
+                                    {/* Card 1 — tilted -3deg */}
+                                    <div className="w-56 -rotate-3 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-2xl animate-fade-only delay-500 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-default">
+                                        <p className="font-display text-sm font-bold tracking-tight">
+                                            Court 3 · Pickleball
+                                        </p>
+                                        <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
+                                            6:00 – 7:00 PM · ₱450
+                                        </p>
+                                        <span className="mt-2.5 inline-block rounded-full bg-[#D6FF3F]/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#10221C]">
+                                            Open
+                                        </span>
+                                    </div>
 
-                                {/* Card 2 — tilted +2deg. Uses animate-fade-only so opacity-only entrance never resets the rotate transform */}
-                                <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl animate-fade-only delay-600">
-                                    <p className="font-display text-sm font-bold tracking-tight">
-                                        Court A · Badminton
-                                    </p>
-                                    <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
-                                        8:00 – 9:00 PM · ₱320
-                                    </p>
-                                    <span className="mt-2.5 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#B8391D]">
-                                        2 left
-                                    </span>
+                                    {/* Card 2 — tilted +2deg */}
+                                    <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-2xl animate-fade-only delay-600 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-default">
+                                        <p className="font-display text-sm font-bold tracking-tight">
+                                            Court A · Badminton
+                                        </p>
+                                        <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
+                                            8:00 – 9:00 PM · ₱320
+                                        </p>
+                                        <span className="mt-2.5 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#B8391D]">
+                                            2 left
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -168,7 +178,7 @@ export default function Welcome({ auth, facilities = [] }) {
                             <span
                                 key={sport}
                                 className={
-                                    'animate-scale-in rounded-full border-2 px-5 py-2 font-display text-base tracking-wide transition-transform hover:scale-105 ' +
+                                    'animate-scale-in rounded-full border-2 px-5 py-2 font-display text-base tracking-wide transition-all duration-200 hover:scale-105 hover:shadow-sm active:scale-95 cursor-default ' +
                                     (i % 3 === 0
                                         ? 'border-[#101F1A] bg-[#101F1A] text-[#F5F2EA]'
                                         : i % 3 === 1
@@ -183,52 +193,90 @@ export default function Welcome({ auth, facilities = [] }) {
                     </div>
                 </section>
 
-                {/* Featured Facilities */}
+                {/* Featured Facilities — calibrated so 2 rows fit cleanly in the overall viewport height */}
                 {facilities.length > 0 && (
-                    <section className="mx-auto max-w-6xl px-6 py-16">
-                        <div className="flex items-center justify-between mb-10">
+                    <section className="mx-auto max-w-6xl px-6 py-6 sm:py-8">
+                        <div className="flex items-center justify-between mb-4 sm:mb-5">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#10221C]/40">Featured</p>
-                                <h2 className="font-display text-3xl font-black tracking-tight text-[#10221C]">
+                                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#10221C]/40 flex items-center gap-1.5">
+                                    <Sparkles size={12} className="text-[#FF5A36]" />
+                                    Featured Venues
+                                </p>
+                                <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-[#10221C] mt-0.5">
                                     Top Facilities
                                 </h2>
                             </div>
-                            <Link href={route('register')} className="text-sm font-bold text-[#FF5A36] hover:underline">
-                                View all →
+                            <Link href={route('register')} className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#FF5A36] hover:text-[#e64d2b] transition-colors">
+                                <span>View all</span>
+                                <ArrowRight size={13} className="transition-transform duration-200 group-hover:translate-x-1" />
                             </Link>
                         </div>
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid gap-3 sm:gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                             {facilities.map((facility, i) => (
                                 <Link
                                     key={facility.slug}
                                     href={`/${facility.slug}`}
-                                    className="group rounded-xl border border-[#10221C]/10 bg-white p-6 shadow-sm transition-all hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
-                                    style={{ animationDelay: `${i * 80}ms` }}
+                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#10221C]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
+                                    style={{ animationDelay: `${i * 60}ms` }}
                                 >
-                                    <div className="mb-4 h-32 w-full rounded-lg bg-[#10221C]/5 flex items-center justify-center text-[#10221C]/25 overflow-hidden">
-                                        {facility.verification?.facility_photos?.[0] ? (
-                                            <img
-                                                src={facility.verification.facility_photos[0]}
-                                                alt={facility.name}
-                                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                            />
-                                        ) : (
-                                            <Building2 className="h-10 w-10" />
-                                        )}
+                                    {/* Top Image: Edge-to-edge with smooth gradient overlay integrating into card background */}
+                                    <div className="relative h-36 sm:h-40 lg:h-44 w-full shrink-0 overflow-hidden bg-white">
+                                        <img
+                                            src={facility.verification?.facility_photos?.[0] || MOCK_FACILITY_IMAGES[(facility.id || i) % MOCK_FACILITY_IMAGES.length]}
+                                            alt={facility.name}
+                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                                            style={{
+                                                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                            }}
+                                            onError={(e) => {
+                                                e.currentTarget.src = MOCK_FACILITY_IMAGES[i % MOCK_FACILITY_IMAGES.length];
+                                            }}
+                                        />
+
+                                        {/* Floating Venue Status Badge */}
+                                        <div className="absolute top-3 left-3 z-10">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#101F1A] bg-white/90 backdrop-blur-md shadow-2xs border border-white/60 transition-transform duration-300 group-hover:scale-105">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Partner Venue
+                                            </span>
+                                        </div>
+
+                                        {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
+                                        <div
+                                            className="absolute inset-0 pointer-events-none"
+                                            style={{
+                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
+                                            }}
+                                        />
                                     </div>
-                                    <h3 className="font-display text-xl font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition">
-                                        {facility.name}
-                                    </h3>
-                                    <p className="mt-1.5 text-sm font-medium text-[#10221C]/50 line-clamp-2">
-                                        {facility.city}, {facility.province}
-                                    </p>
-                                    <div className="mt-4 flex items-center justify-between">
-                                        <span className="text-sm font-bold text-[#10221C]">Book Now</span>
-                                        <span className="text-[#D6FF3F] bg-[#10221C] rounded-full p-1 group-hover:bg-[#FF5A36] group-hover:text-white transition-all group-hover:scale-110">
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </span>
+
+                                    {/* Card Body — flex-1 flex flex-col justify-between ensures footer is pinned identically */}
+                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors duration-200 truncate h-6 sm:h-7 flex items-center" title={facility.name}>
+                                                {facility.name}
+                                            </h3>
+
+                                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#10221C]/60 truncate h-5">
+                                                <MapPin size={12} className="text-[#FF5A36]/80 shrink-0" />
+                                                <span className="truncate">{facility.city}, {facility.province}</span>
+                                            </p>
+
+                                            <p className="mt-1.5 text-xs text-[#10221C]/50 line-clamp-2 leading-relaxed h-9 overflow-hidden">
+                                                {facility.description || 'Verified premier sports facility with top-tier playing courts.'}
+                                            </p>
+                                        </div>
+
+                                        {/* Fixed Footer — pinned to bottom and identical across cards */}
+                                        <div className="mt-3 pt-2.5 border-t border-[#10221C]/6 flex items-center justify-between shrink-0 h-10">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#10221C]/75 group-hover:text-[#10221C] transition-colors">
+                                                Book Courts
+                                            </span>
+                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F] shadow-xs transition-all duration-300 group-hover:bg-[#FF5A36] group-hover:text-white group-hover:scale-105 group-hover:shadow-sm">
+                                                <ArrowRight size={14} strokeWidth={2.5} className="shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+                                            </span>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}

@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES_DARK, courtIsBookable } from '@/Utils/courtStatus';
+import { Sparkles, CheckCircle2 } from 'lucide-react';
 
-export default function BookingWidget({ facility, user, courts = [] }) {
+export default function BookingWidget({
+    facility,
+    user,
+    courts = [],
+    selectedCourtId: externalCourtId,
+    onSelectCourt,
+    isHighlighted = false,
+}) {
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
 
@@ -15,7 +23,23 @@ export default function BookingWidget({ facility, user, courts = [] }) {
         { start_time: '18:00', end_time: '19:00', formatted: '06:00 PM - 07:00 PM' }
     ];
 
-    const [selectedCourtId, setSelectedCourtId] = useState(selectableCourts[0]?.id ?? null);
+    const [internalCourtId, setInternalCourtId] = useState(
+        externalCourtId ?? selectableCourts[0]?.id ?? null
+    );
+
+    useEffect(() => {
+        if (externalCourtId !== undefined && externalCourtId !== null) {
+            setInternalCourtId(externalCourtId);
+        }
+    }, [externalCourtId]);
+
+    const activeCourtId = externalCourtId ?? internalCourtId;
+
+    const handleCourtChange = (id) => {
+        setInternalCourtId(id);
+        onSelectCourt?.(id);
+    };
+
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [availableSlots, setAvailableSlots] = useState(mockSlots);
     const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
@@ -47,7 +71,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
         // Randomly hide some slots for the mock effect
         const randomSlots = mockSlots.filter(() => Math.random() > 0.3);
         setAvailableSlots(randomSlots);
-    }, [selectedDate, selectedCourtId]);
+    }, [selectedDate, activeCourtId]);
 
     const handleBooking = () => {
         if (!selectedTimeSlot) return;
@@ -55,32 +79,52 @@ export default function BookingWidget({ facility, user, courts = [] }) {
         setSelectedTimeSlot(null);
     };
 
-    const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
+    const selectedCourt = selectableCourts.find(c => c.id == activeCourtId);
     const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
 
     if (selectableCourts.length === 0) {
         return (
             <div className="bg-[#10221C] p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#10221C]/40 border border-white/10">
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Book a Court</h3>
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-white mb-1">Book a Court</h3>
                 <p className="text-sm text-gray-400">This facility hasn't listed any courts yet.</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-[#10221C] p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#10221C]/40 border border-white/10 lg:sticky lg:top-10">
-            <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Book a Court</h3>
+        <div
+            className={`bg-[#10221C] p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#10221C]/40 border border-white/10 lg:sticky lg:top-10 transition-all duration-500 ${
+                isHighlighted ? 'ring-2 ring-[#D6FF3F] shadow-[0_0_30px_rgba(214,255,63,0.35)]' : ''
+            }`}
+        >
+            <div className="flex items-center justify-between mb-1">
+                <h3 className="font-display text-xl sm:text-2xl font-bold text-white">Book a Court</h3>
+                {isHighlighted && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#101F1A] bg-[#D6FF3F] px-2.5 py-0.5 rounded-full animate-bounce">
+                        <Sparkles size={12} /> Court Selected
+                    </span>
+                )}
+            </div>
             <p className="text-sm text-gray-400 mb-5 sm:mb-6">Select a date and time to reserve.</p>
 
             <div className="space-y-5 sm:space-y-6">
                 {/* Court Selection */}
                 <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-3">Select Court</label>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-bold text-gray-300">Select Court</label>
+                        {selectedCourt && (
+                            <span className="text-[11px] font-medium text-[#D6FF3F] flex items-center gap-1">
+                                <CheckCircle2 size={12} /> {selectedCourt.name}
+                            </span>
+                        )}
+                    </div>
                     <div className="relative">
                         <select
-                            value={selectedCourtId}
-                            onChange={(e) => setSelectedCourtId(e.target.value)}
-                            className="block w-full pl-4 pr-10 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-white border-2 border-white/10 bg-white/5 focus:outline-none focus:ring-0 focus:border-[#D6FF3F] rounded-xl appearance-none transition hover:border-white/20 cursor-pointer"
+                            value={activeCourtId || ''}
+                            onChange={(e) => handleCourtChange(e.target.value)}
+                            className={`block w-full pl-4 pr-10 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-white border-2 bg-white/5 focus:outline-none focus:ring-0 focus:border-[#D6FF3F] rounded-xl appearance-none transition hover:border-white/20 cursor-pointer ${
+                                isHighlighted ? 'border-[#D6FF3F] ring-2 ring-[#D6FF3F]/30 bg-white/10' : 'border-white/10'
+                            }`}
                         >
                             {selectableCourts.map(court => (
                                 <option key={court.id} value={court.id} className="text-gray-900">

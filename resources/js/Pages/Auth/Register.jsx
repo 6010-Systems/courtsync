@@ -7,6 +7,7 @@ import AuthBrandPanel from '@/Components/Auth/AuthBrandPanel';
 import GoogleIcon from '@/Components/Auth/GoogleIcon';
 import PasswordStrengthBar from '@/Components/Auth/PasswordStrengthBar';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { 
     Eye, 
     EyeOff, 
@@ -20,9 +21,29 @@ import {
     Users
 } from 'lucide-react';
 
+const formContainerVariants = {
+    hidden: {},
+    visible: {
+        transition: {
+            staggerChildren: 0.04,
+            delayChildren: 0.05,
+        },
+    },
+};
+
+const formItemVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+};
+
 export default function Register() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const shouldReduce = useReducedMotion();
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -43,7 +64,7 @@ export default function Register() {
         <>
             <Head title="Create Facility Account — CourtSync" />
 
-            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr]">
+            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr] overflow-x-hidden">
                 <AuthBrandPanel
                     badge="Facility Owner Registration"
                     titleNode={
@@ -89,11 +110,16 @@ export default function Register() {
                     </div>
                 </AuthBrandPanel>
 
-                {/* Right — Clean Form Container (Static) */}
+                {/* Right — Clean Form Container with Staggered Entrance */}
                 <div className="flex flex-col justify-center px-6 py-12 sm:px-12 md:px-16 lg:px-12 xl:px-20">
-                    <div className="mx-auto w-full max-w-[440px]">
+                    <motion.div
+                        className="mx-auto w-full max-w-[440px]"
+                        variants={formContainerVariants}
+                        initial={shouldReduce ? false : 'hidden'}
+                        animate="visible"
+                    >
                         {/* Mobile Brand Logo */}
-                        <div className="mb-8 flex items-center justify-between lg:hidden">
+                        <motion.div variants={formItemVariants} className="mb-8 flex items-center justify-between lg:hidden">
                             <Link
                                 href="/"
                                 className="inline-flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-[#10221C]"
@@ -106,10 +132,10 @@ export default function Register() {
                             <span className="rounded-full bg-[#101F1A]/5 px-2.5 py-1 text-[11px] font-bold text-[#101F1A]/70 uppercase tracking-wider">
                                 Register
                             </span>
-                        </div>
+                        </motion.div>
 
                         {/* Title & Subtext */}
-                        <div className="mb-8">
+                        <motion.div variants={formItemVariants} className="mb-8">
                             <h2 className="font-display text-3xl font-extrabold tracking-tight text-[#10221C] sm:text-4xl">
                                 Create an account
                             </h2>
@@ -122,12 +148,12 @@ export default function Register() {
                                     Log in
                                 </Link>
                             </p>
-                        </div>
+                        </motion.div>
 
                         {/* Registration Form */}
                         <form onSubmit={submit} className="space-y-4">
                             {/* Full Name */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="name"
                                     value="Full Name / Owner Name"
@@ -150,10 +176,10 @@ export default function Register() {
                                     />
                                 </div>
                                 <InputError message={errors.name} className="mt-1.5" />
-                            </div>
+                            </motion.div>
 
                             {/* Email */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="email"
                                     value="Email address"
@@ -176,10 +202,10 @@ export default function Register() {
                                     />
                                 </div>
                                 <InputError message={errors.email} className="mt-1.5" />
-                            </div>
+                            </motion.div>
 
                             {/* Password */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="password"
                                     value="Password"
@@ -203,22 +229,29 @@ export default function Register() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition focus:outline-none"
                                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
-                                        {showPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
+                                        <motion.span
+                                            key={showPassword ? 'hide' : 'show'}
+                                            initial={shouldReduce ? false : { opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </motion.span>
                                     </button>
                                 </div>
                                 <InputError message={errors.password} className="mt-1.5" />
                                 <PasswordStrengthBar password={data.password} />
-                            </div>
+                            </motion.div>
 
                             {/* Confirm Password */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="password_confirmation"
                                     value="Confirm Password"
@@ -242,59 +275,75 @@ export default function Register() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition focus:outline-none"
                                         aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                                     >
-                                        {showConfirmPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
+                                        <motion.span
+                                            key={showConfirmPassword ? 'hide' : 'show'}
+                                            initial={shouldReduce ? false : { opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {showConfirmPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </motion.span>
                                     </button>
                                 </div>
                                 <InputError message={errors.password_confirmation} className="mt-1.5" />
-                            </div>
+                            </motion.div>
 
                             {/* Submit Button */}
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="group relative mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-all hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 active:scale-[0.99] disabled:opacity-50"
-                            >
-                                {processing ? (
-                                    <span className="flex items-center gap-2">
-                                        <ButtonSpinner /> Creating account...
-                                    </span>
-                                ) : (
-                                    <>
-                                        <span>Create Facility Account</span>
-                                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                    </>
-                                )}
-                            </button>
+                            <motion.div variants={formItemVariants}>
+                                <motion.button
+                                    type="submit"
+                                    disabled={processing}
+                                    whileHover={processing ? {} : { scale: 1.01 }}
+                                    whileTap={processing ? {} : { scale: 0.985 }}
+                                    className="group relative mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-colors hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {processing ? (
+                                        <span className="flex items-center gap-2">
+                                            <ButtonSpinner /> Creating account...
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span>Create Facility Account</span>
+                                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                        </>
+                                    )}
+                                </motion.button>
+                            </motion.div>
 
                             {/* Divider */}
-                            <div className="relative my-6 flex items-center justify-center">
+                            <motion.div variants={formItemVariants} className="relative my-6 flex items-center justify-center">
                                 <div className="absolute inset-0 flex items-center">
                                     <div className="w-full border-t border-[#10221C]/10"></div>
                                 </div>
                                 <span className="relative bg-[#F5F2EA] px-3 text-xs font-bold uppercase tracking-wider text-[#10221C]/40">
                                     or register with
                                 </span>
-                            </div>
+                            </motion.div>
 
                             {/* Google OAuth */}
-                            <a
-                                href={route('google.redirect', { tenant: 'owner' })}
-                                className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-all hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm active:scale-[0.99]"
-                            >
-                                <GoogleIcon />
-                                <span>Sign up with Google</span>
-                            </a>
+                            <motion.div variants={formItemVariants}>
+                                <motion.a
+                                    href={route('google.redirect', { tenant: 'owner' })}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.985 }}
+                                    className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-colors hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm"
+                                >
+                                    <GoogleIcon />
+                                    <span>Sign up with Google</span>
+                                </motion.a>
+                            </motion.div>
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </>
     );
 }
+

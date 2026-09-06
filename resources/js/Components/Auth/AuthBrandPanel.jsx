@@ -59,19 +59,15 @@ export default function AuthBrandPanel({
                 clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)',
                 ...(bgImage ? { backgroundImage: `url(${bgImage})` } : {}),
             }}
-            initial={shouldReduce ? false : { opacity: 0, x: -32 }}
+            initial={shouldReduce ? false : { opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
             {/* Dark gradient overlay — only when bgImage is set */}
             {bgImage && (
                 <div className="absolute inset-0 bg-gradient-to-t from-[#101F1A] via-[#101F1A]/90 to-[#101F1A]/60 z-0" />
             )}
 
-            {/* Ambient glow — top-left */}
-            <div
-                className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#D6FF3F]/10 blur-3xl z-0 transform-gpu"
-            />
             {/* Ambient glow — bottom-right */}
             <div
                 className="pointer-events-none absolute -bottom-24 right-12 h-96 w-96 rounded-full bg-[#D6FF3F]/5 blur-3xl z-0 transform-gpu"

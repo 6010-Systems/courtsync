@@ -7,6 +7,7 @@ import TextInput from '@/Components/TextInput';
 import AuthBrandPanel from '@/Components/Auth/AuthBrandPanel';
 import GoogleIcon from '@/Components/Auth/GoogleIcon';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
     Eye, 
     EyeOff, 
@@ -20,8 +21,28 @@ import {
     XCircle
 } from 'lucide-react';
 
+const formContainerVariants = {
+    hidden: {},
+    visible: {
+        transition: {
+            staggerChildren: 0.04,
+            delayChildren: 0.05,
+        },
+    },
+};
+
+const formItemVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+};
+
 export default function Login({ status, canResetPassword, lastLoginMethod }) {
     const [showPassword, setShowPassword] = useState(false);
+    const shouldReduce = useReducedMotion();
 
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
@@ -41,7 +62,7 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
         <>
             <Head title="Log In — CourtSync" />
 
-            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr]">
+            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr] overflow-x-hidden">
                 <AuthBrandPanel
                     badge="Facility Owner & Staff Portal"
                     titleNode={
@@ -80,11 +101,16 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                     </div>
                 </AuthBrandPanel>
 
-                {/* Right — Form Container (Static) */}
+                {/* Right — Form Container with Staggered Entrance */}
                 <div className="flex flex-col justify-center px-6 py-12 sm:px-12 md:px-16 lg:px-12 xl:px-20">
-                    <div className="mx-auto w-full max-w-[440px]">
+                    <motion.div
+                        className="mx-auto w-full max-w-[440px]"
+                        variants={formContainerVariants}
+                        initial={shouldReduce ? false : 'hidden'}
+                        animate="visible"
+                    >
                         {/* Mobile Brand Logo */}
-                        <div className="mb-8 flex items-center justify-between lg:hidden">
+                        <motion.div variants={formItemVariants} className="mb-8 flex items-center justify-between lg:hidden">
                             <Link
                                 href="/"
                                 className="inline-flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-[#10221C]"
@@ -97,10 +123,10 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                             <span className="rounded-full bg-[#101F1A]/5 px-2.5 py-1 text-[11px] font-bold text-[#101F1A]/70 uppercase tracking-wider">
                                 Portal
                             </span>
-                        </div>
+                        </motion.div>
 
                         {/* Title & Subtext */}
-                        <div className="mb-8">
+                        <motion.div variants={formItemVariants} className="mb-8">
                             <h2 className="font-display text-3xl font-extrabold tracking-tight text-[#10221C] sm:text-4xl">
                                 Welcome back
                             </h2>
@@ -113,10 +139,10 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                     Register now
                                 </Link>
                             </p>
-                        </div>
+                        </motion.div>
 
                         {/* Player Portal Callout */}
-                        <div className="mb-6 flex items-center justify-between rounded-xl border border-[#10221C]/10 bg-white/70 p-3.5 shadow-xs backdrop-blur-sm">
+                        <motion.div variants={formItemVariants} className="mb-6 flex items-center justify-between rounded-xl border border-[#10221C]/10 bg-white/70 p-3.5 shadow-xs backdrop-blur-sm">
                             <div className="flex items-center gap-2.5 text-xs text-[#10221C]/75">
                                 <Calendar className="h-4 w-4 text-[#10221C]/50 shrink-0" />
                                 <span>Looking to book courts as a <strong>player</strong>?</span>
@@ -127,30 +153,36 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                             >
                                 Find court <ArrowRight className="h-3 w-3" />
                             </Link>
-                        </div>
+                        </motion.div>
 
                         {/* Flash Status Message */}
-                        {status && (
-                            <div
-                                className={`mb-6 flex items-center gap-2.5 rounded-xl border p-3.5 text-xs font-semibold ${
-                                    status.toLowerCase().includes('banned') 
-                                        ? 'border-red-200 bg-red-50 text-red-700' 
-                                        : 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                                }`}
-                            >
-                                {status.toLowerCase().includes('banned') ? (
-                                    <XCircle className="h-4 w-4 shrink-0" />
-                                ) : (
-                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                )}
-                                <span>{status}</span>
-                            </div>
-                        )}
+                        <AnimatePresence>
+                            {status && (
+                                <motion.div
+                                    initial={shouldReduce ? false : { opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.25 }}
+                                    className={`mb-6 flex items-center gap-2.5 rounded-xl border p-3.5 text-xs font-semibold ${
+                                        status.toLowerCase().includes('banned') 
+                                            ? 'border-red-200 bg-red-50 text-red-700' 
+                                            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                    }`}
+                                >
+                                    {status.toLowerCase().includes('banned') ? (
+                                        <XCircle className="h-4 w-4 shrink-0" />
+                                    ) : (
+                                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    )}
+                                    <span>{status}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Login Form */}
                         <form onSubmit={submit} className="space-y-4">
                             {/* Email */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="email"
                                     value="Email address"
@@ -174,10 +206,10 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                     />
                                 </div>
                                 <InputError message={errors.email} className="mt-1.5" />
-                            </div>
+                            </motion.div>
 
                             {/* Password */}
-                            <div>
+                            <motion.div variants={formItemVariants}>
                                 <div className="flex items-center justify-between mb-1.5">
                                     <InputLabel
                                         htmlFor="password"
@@ -211,21 +243,28 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition"
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition focus:outline-none"
                                         aria-label={showPassword ? 'Hide password' : 'Show password'}
                                     >
-                                        {showPassword ? (
-                                            <EyeOff className="h-4 w-4" />
-                                        ) : (
-                                            <Eye className="h-4 w-4" />
-                                        )}
+                                        <motion.span
+                                            key={showPassword ? 'hide' : 'show'}
+                                            initial={shouldReduce ? false : { opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </motion.span>
                                     </button>
                                 </div>
                                 <InputError message={errors.password} className="mt-1.5" />
-                            </div>
+                            </motion.div>
 
                             {/* Remember Me */}
-                            <div className="pt-1 flex items-center justify-between">
+                            <motion.div variants={formItemVariants} className="pt-1 flex items-center justify-between">
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
                                     <Checkbox
                                         name="remember"
@@ -237,58 +276,67 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                         Keep me signed in
                                     </span>
                                 </label>
-                            </div>
+                            </motion.div>
 
                             {/* Submit Button */}
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="group relative mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-all hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 active:scale-[0.99] disabled:opacity-50"
-                            >
-                                {processing ? (
-                                    <span className="flex items-center gap-2">
-                                        <ButtonSpinner /> Signing in...
-                                    </span>
-                                ) : (
-                                    <>
-                                        <span>Sign In to Dashboard</span>
-                                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                    </>
-                                )}
-                                {lastLoginMethod === 'email' && (
-                                    <span className="absolute right-3 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] tracking-tight">
-                                        LAST USED
-                                    </span>
-                                )}
-                            </button>
+                            <motion.div variants={formItemVariants}>
+                                <motion.button
+                                    type="submit"
+                                    disabled={processing}
+                                    whileHover={processing ? {} : { scale: 1.01 }}
+                                    whileTap={processing ? {} : { scale: 0.985 }}
+                                    className="group relative mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-colors hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {processing ? (
+                                        <span className="flex items-center gap-2">
+                                            <ButtonSpinner /> Signing in...
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span>Sign In to Dashboard</span>
+                                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                        </>
+                                    )}
+                                    {lastLoginMethod === 'email' && (
+                                        <span className="absolute right-3 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] tracking-tight">
+                                            LAST USED
+                                        </span>
+                                    )}
+                                </motion.button>
+                            </motion.div>
 
                             {/* Divider */}
-                            <div className="relative my-6 flex items-center justify-center">
+                            <motion.div variants={formItemVariants} className="relative my-6 flex items-center justify-center">
                                 <div className="absolute inset-0 flex items-center">
                                     <div className="w-full border-t border-[#10221C]/10"></div>
                                 </div>
                                 <span className="relative bg-[#F5F2EA] px-3 text-xs font-bold uppercase tracking-wider text-[#10221C]/40">
                                     or continue with
                                 </span>
-                            </div>
+                            </motion.div>
 
                             {/* Google OAuth */}
-                            <a
-                                href={route('google.redirect', { tenant: 'owner' })}
-                                className="relative flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-all hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm active:scale-[0.99]"
-                            >
-                                {lastLoginMethod === 'google' && (
-                                    <span className="absolute -top-2.5 right-4 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] shadow-sm">
-                                        LAST USED
-                                    </span>
-                                )}
-                                <GoogleIcon />
-                                <span>Sign in with Google</span>
-                            </a>
+                            <motion.div variants={formItemVariants}>
+                                <motion.a
+                                    href={route('google.redirect', { tenant: 'owner' })}
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.985 }}
+                                    className="relative flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-colors hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm"
+                                >
+                                    {lastLoginMethod === 'google' && (
+                                        <span className="absolute -top-2.5 right-4 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] shadow-sm">
+                                            LAST USED
+                                        </span>
+                                    )}
+                                    <GoogleIcon />
+                                    <span>Sign in with Google</span>
+                                </motion.a>
+                            </motion.div>
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </>
     );
 }
+

@@ -4,7 +4,7 @@
     src: url('/fonts/Poppins/Poppins-Light.ttf') format('truetype');
     font-weight: 300;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -12,7 +12,7 @@
     src: url('/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -20,7 +20,7 @@
     src: url('/fonts/Poppins/Poppins-Medium.ttf') format('truetype');
     font-weight: 500;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -28,7 +28,7 @@
     src: url('/fonts/Poppins/Poppins-SemiBold.ttf') format('truetype');
     font-weight: 600;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -36,7 +36,7 @@
     src: url('/fonts/Poppins/Poppins-Bold.ttf') format('truetype');
     font-weight: 700;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -44,7 +44,7 @@
     src: url('/fonts/Poppins/Poppins-ExtraBold.ttf') format('truetype');
     font-weight: 800;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 @font-face {
@@ -52,7 +52,7 @@
     src: url('/fonts/Poppins/Poppins-Black.ttf') format('truetype');
     font-weight: 900;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 /* Local Quicksand Font Definition (variable font — supports 300–700) */
@@ -62,7 +62,7 @@
          url('/fonts/Quicksand/Quicksand-VariableFont_wght.ttf') format('truetype');
     font-weight: 300 700;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
 }
 
 /* Local Montserrat Font Definitions */
@@ -152,6 +152,14 @@ body {
     color: #1a2e26;
     background-color: var(--color-sand-bg);
     min-height: 100vh;
+}
+
+/* Headings — Poppins (geometric, clean, bold hierarchy) */
+h1, h2, h3, h4, h5, h6,
+.font-display,
+.font-heading,
+.font-poppins {
+    font-family: var(--font-display);
 }
 
 /* Custom Highlight / Selection */

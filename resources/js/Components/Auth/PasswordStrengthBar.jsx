@@ -1,3 +1,5 @@
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+
 /**
  * Live password strength indicator.
  *
@@ -12,13 +14,14 @@
  * @param {string} password The current password value to evaluate.
  */
 export default function PasswordStrengthBar({ password }) {
-    if (!password) return null;
+    const shouldReduce = useReducedMotion();
+    const isVisible = Boolean(password);
 
     const checks = {
-        length: password.length >= 8,
-        upper: /[A-Z]/.test(password),
-        number: /[0-9]/.test(password),
-        special: /[^A-Za-z0-9]/.test(password),
+        length: Boolean(password && password.length >= 8),
+        upper: Boolean(password && /[A-Z]/.test(password)),
+        number: Boolean(password && /[0-9]/.test(password)),
+        special: Boolean(password && /[^A-Za-z0-9]/.test(password)),
     };
 
     const passed = [checks.length, checks.upper, checks.number, checks.special].filter(Boolean).length;
@@ -34,29 +37,42 @@ export default function PasswordStrengthBar({ password }) {
         { min: 4, color: 'bg-emerald-400', label: 'Strong' },
     ];
 
-    const current = levels[score - 1];
+    const current = levels[score - 1] || levels[0];
 
     return (
-        <div className="mt-2 space-y-1.5" aria-live="polite" aria-atomic="true">
-            {/* 4-segment bar */}
-            <div className="flex gap-1">
-                {[1, 2, 3, 4].map((seg) => (
-                    <div
-                        key={seg}
-                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                            seg <= score ? current.color : 'bg-[#10221C]/10'
-                        }`}
-                    />
-                ))}
-            </div>
+        <AnimatePresence>
+            {isVisible && (
+                <motion.div
+                    initial={shouldReduce ? false : { opacity: 0, height: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    className="space-y-1.5 overflow-hidden"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
+                    {/* 4-segment bar */}
+                    <div className="flex gap-1">
+                        {[1, 2, 3, 4].map((seg) => (
+                            <div
+                                key={seg}
+                                className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                                    seg <= score ? current.color : 'bg-[#10221C]/10'
+                                }`}
+                            />
+                        ))}
+                    </div>
 
-            {/* Label */}
-            <p className="text-[11px] font-semibold text-[#10221C]/55">
-                {current.label}
-                {score === 4 && (
-                    <span className="ml-1 text-emerald-600">✓</span>
-                )}
-            </p>
-        </div>
+                    {/* Label */}
+                    <p className="text-[11px] font-semibold text-[#10221C]/55">
+                        {current.label}
+                        {score === 4 && (
+                            <span className="ml-1 text-emerald-600 font-bold">✓</span>
+                        )}
+                    </p>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 }
+
