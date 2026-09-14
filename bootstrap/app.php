@@ -24,4 +24,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, Request $request) {
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Not Found.'], 404);
+            }
+            return \Inertia\Inertia::render('NotFound')
+                ->toResponse($request)
+                ->setStatusCode(404);
+        });
     })->create();

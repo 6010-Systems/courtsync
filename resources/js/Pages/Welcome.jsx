@@ -58,7 +58,7 @@ function useCountUp(target, durationMs = 1400) {
     return value;
 }
 
-export default function Welcome({ auth }) {
+export default function Welcome({ auth, facilities = [] }) {
     const bookingsToday = useCountUp(214);
 
     return (
@@ -203,6 +203,47 @@ export default function Welcome({ auth }) {
                         ))}
                     </div>
                 </section>
+
+                {/* Featured Facilities */}
+                {facilities.length > 0 && (
+                    <section className="mx-auto max-w-6xl px-6 py-16">
+                        <div className="flex items-center justify-between mb-10">
+                            <h2 className="font-display text-3xl tracking-tight text-[#10221C]">
+                                Featured Facilities
+                            </h2>
+                            <Link href={route('register')} className="text-[#FF5A36] font-medium hover:underline">
+                                View all &rarr;
+                            </Link>
+                        </div>
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                            {facilities.map((facility) => (
+                                <Link
+                                    key={facility.slug}
+                                    href={`/${facility.slug}`}
+                                    className="group rounded-xl border border-[#10221C]/10 bg-white p-6 shadow-sm transition hover:border-[#D6FF3F] hover:shadow-md block"
+                                >
+                                    <div className="mb-4 h-32 w-full rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                                      {facility.verification?.facility_photos?.[0] && <img src={facility.verification.facility_photos[0]} alt={facility.name} className="w-full h-full object-cover rounded-lg" />}
+                                    </div>
+                                    <h3 className="font-display text-xl tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition">
+                                        {facility.name}
+                                    </h3>
+                                    <p className="mt-2 text-sm text-[#10221C]/60 line-clamp-2">
+                                        {facility.city}, {facility.province}
+                                    </p>
+                                    <div className="mt-4 flex items-center justify-between">
+                                        <span className="text-sm font-semibold text-[#10221C]">Book Now</span>
+                                        <span className="text-[#D6FF3F] bg-[#10221C] rounded-full p-1 group-hover:bg-[#FF5A36] group-hover:text-white transition">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* How it works */}
                 <section className="mx-auto max-w-6xl px-6 py-16">

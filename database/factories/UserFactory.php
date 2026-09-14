@@ -42,4 +42,51 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * A player account, verified and free to join facilities.
+     */
+    public function player(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'PLAYER',
+            'status' => 'VERIFIED',
+            'mobile_number' => fake()->numerify('09#########'),
+        ]);
+    }
+
+    /**
+     * A facility owner account.
+     */
+    public function facilityOwner(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'FACILITY_OWNER',
+            'status' => 'VERIFIED',
+            'mobile_number' => fake()->numerify('09#########'),
+        ]);
+    }
+
+    /**
+     * A facility staff account, tied to a facility via facility_id.
+     */
+    public function facilityStaff(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'FACILITY_STAFF',
+            'status' => 'VERIFIED',
+            'mobile_number' => fake()->numerify('09#########'),
+        ]);
+    }
+
+    /**
+     * An admin account.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'ADMIN',
+            'status' => 'VERIFIED',
+        ]);
+    }
 }
