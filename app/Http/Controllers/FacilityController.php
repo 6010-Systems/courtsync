@@ -332,6 +332,13 @@ class FacilityController extends Controller
 
         return Inertia::render('Facility/Show', [
             'facility' => $facility
-        ]);
+        ])->withViewData([
+        'meta' => [
+            'title' => $facility->name,
+            'description' => $facility->description,
+            'image' => $facility->cover_image_url,
+            'url' => request()->url(),
+        ]
+    ]);
     }
 }
