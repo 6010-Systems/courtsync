@@ -14,7 +14,7 @@ export default function ShareButton({ title, text, url }) {
             url: url
         };
 
-        //  If Native Mobile Share
+        // 1. Try Native Mobile Share
         if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
             try {
                 await navigator.share(shareData);
@@ -22,7 +22,7 @@ export default function ShareButton({ title, text, url }) {
                 console.log('User cancelled share or error:', err);
             }
         } else {
-            //  Fallback to our Desktop Modal
+            // 2. Fallback to our Desktop Modal
             setIsOpen(true);
         }
     };
