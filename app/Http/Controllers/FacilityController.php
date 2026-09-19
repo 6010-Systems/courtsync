@@ -329,6 +329,10 @@ class FacilityController extends Controller
     {
         $facility->load('verification:id,facility_id,facility_photos');
         $facility->load('courts');
+        $facility->load(['bookings' => function($q) {
+            $q->whereIn('status', ['pending', 'confirmed'])
+              ->whereDate('date', '>=', now()->toDateString());
+        }]);
 
         return Inertia::render('Facility/Show', [
             'facility' => $facility
