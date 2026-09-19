@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PlayerRegisteredUserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
+use App\Http\Middleware\EnsureIdempotency;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -98,7 +99,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     // Bookings
     Route::get('/facility/bookings', [\App\Http\Controllers\BookingController::class, 'index'])->name('facility.bookings');
-    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
+    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
     Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
 });
 

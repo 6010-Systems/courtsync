@@ -55,6 +55,12 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
+    const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+    const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
+    const [processing, setProcessing] = useState(false);
+
+    const showModal = (type, message) => setModal({ isOpen: true, type, message });
+    const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
     
     const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
     const timeOptions = useMemo(() => {
@@ -89,7 +95,9 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     }, [selectedDate, selectedCourtId]);
 
     const handleBooking = () => {
-        if (!startTime || !endTime || !selectedCourtId) return;
+        if (!startTime || !endTime || !selectedCourtId || processing) return;
+
+        setProcessing(true);
 
         router.post(route('bookings.store'), {
             facility_id: facility.id,
@@ -99,14 +107,23 @@ export default function BookingWidget({ facility, user, courts = [] }) {
             end_time: endTime,
             total_price: price
         }, {
+            headers: {
+                'Idempotency-Key': idempotencyKey
+            },
+            onFinish: () => {
+                setProcessing(false);
+            },
             onSuccess: () => {
-                alert('Booking Confirmed!');
+                showModal('success', 'Booking Confirmed Successfully!');
                 setStartTime('');
                 setEndTime('');
+                setIdempotencyKey(crypto.randomUUID());
             },
             onError: (errors) => {
                 console.error(errors);
-                alert('Failed to create booking.');
+                const errorMsg = errors.idempotency || errors.conflict || 'Failed to process booking. Please try again.';
+                showModal('error', errorMsg);
+                setIdempotencyKey(crypto.randomUUID());
             }
         });
     };
@@ -271,10 +288,10 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                 {user ? (
                     <button
                         onClick={handleBooking}
-                        disabled={!startTime || !endTime || durationHours <= 0}
-                        className={`w-full font-black text-base sm:text-lg py-3.5 sm:py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 ${(startTime && endTime && durationHours > 0) ? 'bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] hover:-translate-y-1' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}`}
+                        disabled={!startTime || !endTime || durationHours <= 0 || processing}
+                        className={`w-full font-black text-base sm:text-lg py-3.5 sm:py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 ${(startTime && endTime && durationHours > 0 && !processing) ? 'bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] hover:-translate-y-1' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}`}
                     >
-                        Confirm Booking
+                        {processing ? 'Processing...' : 'Confirm Booking'}
                     </button>
                 ) : (
                     <Link
@@ -295,6 +312,37 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                     {facility.contact_number}
                 </p>
             </div>
+
+            {/* Custom Modal */}
+            {modal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-[#10221C] border border-white/10 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${modal.type === 'success' ? 'bg-[#D6FF3F]/20 text-[#D6FF3F]' : 'bg-red-500/20 text-red-500'}`}>
+                            {modal.type === 'success' ? (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            )}
+                        </div>
+                        <h4 className="text-xl font-bold text-white mb-2">
+                            {modal.type === 'success' ? 'Success!' : 'Error'}
+                        </h4>
+                        <p className="text-gray-400 text-sm mb-6">
+                            {modal.message}
+                        </p>
+                        <button 
+                            onClick={closeModal}
+                            className={`w-full py-3 rounded-xl font-bold transition-all ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#c4ec39]' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                        >
+                            Okay
+                        </button>
+                    </div>
+                </div>
+            )}
             <style dangerouslySetInnerHTML={{__html: `
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
