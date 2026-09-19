@@ -62,4 +62,9 @@ class Facility extends Model
     {
         return $this->hasMany(Court::class);
     }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 }
