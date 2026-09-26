@@ -72,7 +72,7 @@ class BookingController extends Controller
         $userId = !empty($validated['guest_name']) ? null : $user->id;
 
         // Create the booking
-        Booking::create([
+        $booking = Booking::create([
             'facility_id' => $validated['facility_id'],
             'user_id' => $userId,
             'guest_name' => $validated['guest_name'] ?? null,
@@ -83,6 +83,22 @@ class BookingController extends Controller
             'total_price' => $validated['total_price'],
             'status' => 'pending', 
         ]);
+
+        // Handle Payment if present
+        if ($request->has('payment_method')) {
+            $proofPath = null;
+            if ($request->hasFile('proof_file')) {
+                $proofPath = $request->file('proof_file')->store('payments', 'public');
+            }
+
+            $booking->payment()->create([
+                'user_id' => $userId,
+                'amount' => $validated['total_price'],
+                'payment_method' => $request->input('payment_method'),
+                'proof_path' => $proofPath,
+                'status' => 'pending',
+            ]);
+        }
 
         //  Register the player to the facility's player list
         $facility = \App\Models\Facility::findOrFail($validated['facility_id']);
@@ -140,5 +156,53 @@ class BookingController extends Controller
         $booking->delete();
 
         return redirect()->back()->with('success', 'Booking deleted successfully.');
+    }
+
+    public function verifyPayment(Request $request, Booking $booking)
+    {
+        $user = $request->user();
+
+        // Check permissions
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        }
+
+        if (!$facilityIds->contains($booking->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $booking->update(['status' => 'confirmed']);
+        if ($booking->payment) {
+            $booking->payment->update(['status' => 'verified']);
+        }
+
+        return redirect()->back()->with('success', 'Booking and payment verified successfully.');
+    }
+
+    public function rejectPayment(Request $request, Booking $booking)
+    {
+        $user = $request->user();
+
+        // Check permissions
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        }
+
+        if (!$facilityIds->contains($booking->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $booking->update(['status' => 'cancelled']);
+        if ($booking->payment) {
+            $booking->payment->update(['status' => 'rejected']);
+        }
+
+        return redirect()->back()->with('success', 'Booking rejected. The time slot is now available.');
     }
 }

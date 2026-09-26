@@ -64,7 +64,7 @@ const navSections = [
             { name: 'Owners',       href: 'admin.owners',              icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Staff',        href: 'admin.staff',               icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Customers',    href: '#',                         icon: Users,         badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
-            { name: 'Payments',     href: '#',                         icon: CreditCard,    badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Payments',     href: 'facility.payments',         icon: CreditCard,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
         ],
     },
     {

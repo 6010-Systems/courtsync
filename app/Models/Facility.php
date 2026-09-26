@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-#[Fillable(['user_id', 'slug', 'name', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'verification_status'])]
+#[Fillable(['user_id', 'slug', 'name', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'verification_status', 'gcash_name', 'gcash_number', 'gcash_qr_url', 'maya_name', 'maya_number', 'maya_qr_url'])]
 class Facility extends Model
 {
     /** @use HasFactory<FacilityFactory> */

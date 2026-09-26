@@ -99,8 +99,11 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     // Bookings
     Route::get('/facility/bookings', [\App\Http\Controllers\BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('facility.payments');
     Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
     Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
+    Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
 });
 
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
@@ -129,6 +132,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/{facility:slug}/login', [PlayerSessionController::class, 'store']);
     Route::get('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'create'])->name('player.register');
     Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store']);
+});
+
+// Book Route (Requires Authentication)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
 });
 
 // Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)
