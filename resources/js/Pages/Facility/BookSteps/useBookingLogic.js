@@ -7,6 +7,16 @@ export function useBookingLogic(facility) {
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
 
+    // SECURITY: If they switch to a different facility, wipe the old memory immediately!
+    if (sessionStorage.getItem('book_facility') && sessionStorage.getItem('book_facility') !== facility.id.toString()) {
+        sessionStorage.removeItem('book_facility');
+        sessionStorage.removeItem('book_court');
+        sessionStorage.removeItem('book_date');
+        sessionStorage.removeItem('book_start');
+        sessionStorage.removeItem('book_end');
+        sessionStorage.removeItem('book_step');
+    }
+
    const [selectedCourtId, setSelectedCourtId] = useState(() => sessionStorage.getItem('book_court') || null);
   const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem('book_date') || null);
    const [startTime, setStartTime] = useState(() => sessionStorage.getItem('book_start') || '');
@@ -17,7 +27,28 @@ export function useBookingLogic(facility) {
     const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
     const [processing, setProcessing] = useState(false);
     
+    // Keep track of our hidden timer
+    const lockTimerRef = useRef(null);
 
+    // This is the "Time Bomb" function that triggers when time is up
+    const expireBooking = () => {
+        showModal('error', 'Oops! You took a little too long. Please select your court again.');
+        
+        // Wipe everything out
+        setStartTime('');
+        setEndTime('');
+        setSelectedCourtId(null);
+        setSelectedDate(null);
+        setStep(1);
+        
+        sessionStorage.removeItem('book_facility');
+        sessionStorage.removeItem('book_court');
+        sessionStorage.removeItem('book_date');
+        sessionStorage.removeItem('book_start');
+        sessionStorage.removeItem('book_end');
+        sessionStorage.removeItem('book_step');
+        sessionStorage.removeItem('lock_expires_at');
+    };
 
     const showModal = (type, message) => setModal({ isOpen: true, type, message });
     const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
@@ -93,12 +124,40 @@ export function useBookingLogic(facility) {
 
     // Auto-save to browser memory whenever these variables change
     useEffect(() => {
+        sessionStorage.setItem('book_facility', facility.id);
         if (selectedCourtId) sessionStorage.setItem('book_court', selectedCourtId);
         if (selectedDate) sessionStorage.setItem('book_date', selectedDate);
         if (startTime) sessionStorage.setItem('book_start', startTime);
         if (endTime) sessionStorage.setItem('book_end', endTime);
         sessionStorage.setItem('book_step', step);
     }, [selectedCourtId, selectedDate, startTime, endTime, step]);
+
+    // Resilient 7-Minute Timer (Survives Page Refreshes!)
+    useEffect(() => {
+        if (step >= 3) {
+            let expiresAt = sessionStorage.getItem('lock_expires_at');
+            
+            // Start the timer for the first time
+            if (!expiresAt) {
+                expiresAt = Date.now() + 7 * 60 * 1000; // 7 minutes
+                sessionStorage.setItem('lock_expires_at', expiresAt);
+            }
+
+            const timeLeft = parseInt(expiresAt) - Date.now();
+            
+            if (timeLeft <= 0) {
+                expireBooking();
+            } else {
+                lockTimerRef.current = setTimeout(() => {
+                    expireBooking();
+                }, timeLeft);
+            }
+        }
+
+        return () => {
+            if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+        };
+    }, [step]);
 
     // Track if this is the first render
     const isFirstRender = useRef(true);
@@ -113,7 +172,36 @@ export function useBookingLogic(facility) {
         setEndTime('');
     }, [selectedDate, selectedCourtId]);
 
-    const goNext = () => setStep(s => Math.min(s + 1, 4));
+       const goNext = async () => {
+        // If we are leaving the Date & Time step (Step 2), try to lock it!
+        if (step === 2) {
+            setProcessing(true); // Spin the button
+            try {
+                await window.axios.post('/bookings/lock', {
+                    court_id: selectedCourtId,
+                    date: selectedDate,
+                    start_time: startTime,
+                    end_time: endTime
+                });
+                
+                // If it succeeds, let them proceed to Step 3!
+                setStep(3);
+                // The useEffect will automatically catch this step change and start the timer!
+            } catch (error) {
+                if (error.response?.status === 423) {
+                    showModal('error', 'Oops! Someone else just locked this exact time slot a second before you did. Please choose another time.');
+                } else {
+                    showModal('error', 'Failed to connect to the server. Please check your internet and try again.');
+                }
+            } finally {
+                setProcessing(false); // Stop the button spinning
+            }
+        } else {
+            // For all other steps, just go next normally
+            setStep(s => Math.min(s + 1, 4));
+        }
+    };
+
     const goPrev = () => setStep(s => Math.max(s - 1, 1));
 
     const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
@@ -149,14 +237,19 @@ export function useBookingLogic(facility) {
             headers: { 'Idempotency-Key': idempotencyKey },
             onFinish: () => setProcessing(false),
             onSuccess: () => {
+                // DEFUSE THE TIME BOMB!
+                if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+
                 showModal('success', 'Your court reservation has been secured. See you there!');
                 
                 // Clear the temporary memory!
+                sessionStorage.removeItem('book_facility');
                 sessionStorage.removeItem('book_court');
                 sessionStorage.removeItem('book_date');
                 sessionStorage.removeItem('book_start');
                 sessionStorage.removeItem('book_end');
                 sessionStorage.removeItem('book_step');
+                sessionStorage.removeItem('lock_expires_at');
                 
                 setStartTime('');
                 setEndTime('');

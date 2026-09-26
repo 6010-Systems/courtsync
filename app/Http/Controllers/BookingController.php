@@ -205,4 +205,40 @@ class BookingController extends Controller
 
         return redirect()->back()->with('success', 'Booking rejected. The time slot is now available.');
     }
+
+
+    public function lockSlot(Request $request)
+    {
+        $request->validate([
+            'court_id' => 'required',
+            'date' => 'required|date',
+            'start_time' => 'required',
+            'end_time' => 'required'
+        ]);
+
+        $startHour = (int) explode(':', $request->start_time)[0];
+        $endHour = (int) explode(':', $request->end_time)[0];
+
+        $keysToLock = [];
+
+        // Check if ANY hour in the range is already locked by someone else!
+        for ($i = $startHour; $i < $endHour; $i++) {
+            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
+            $cacheKey = "court_hold_{$request->court_id}_{$request->date}_{$formattedHour}";
+            
+            if (\Illuminate\Support\Facades\Cache::has($cacheKey) && \Illuminate\Support\Facades\Cache::get($cacheKey) !== auth()->id()) {
+                return response()->json(['locked' => true], 423); // 423 means Locked
+            }
+            $keysToLock[] = $cacheKey;
+        }
+        
+        // If we made it here, every single hour they requested is completely free!
+        // Lock all of them for exactly 7 minutes!
+        foreach ($keysToLock as $key) {
+            \Illuminate\Support\Facades\Cache::put($key, auth()->id(), now()->addMinutes(7));
+        }
+        
+        return response()->json(['locked' => false]);
+    }
+
 }

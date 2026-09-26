@@ -105,6 +105,8 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
     Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/lock', [\App\Http\Controllers\BookingController::class, 'lockSlot'])->name('bookings.lock');
+
 });
 
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
