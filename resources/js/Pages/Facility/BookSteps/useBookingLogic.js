@@ -160,6 +160,8 @@ export function useBookingLogic(facility) {
                 
                 setStartTime('');
                 setEndTime('');
+                setSelectedCourtId(null);
+                setSelectedDate(null);
                 setStep(1); // Send them back to step 1
                 setProofFile(null);
                 setIdempotencyKey(crypto.randomUUID());
