@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
 
@@ -7,15 +7,17 @@ export function useBookingLogic(facility) {
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
 
-    const [selectedCourtId, setSelectedCourtId] = useState(null);
-    const [selectedDate, setSelectedDate] = useState(null);
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
+   const [selectedCourtId, setSelectedCourtId] = useState(() => sessionStorage.getItem('book_court') || null);
+  const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem('book_date') || null);
+   const [startTime, setStartTime] = useState(() => sessionStorage.getItem('book_start') || '');
+    const [endTime, setEndTime] = useState(() => sessionStorage.getItem('book_end') || '');
     const [paymentMethod, setPaymentMethod] = useState('pay_at_facility');
-    const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => parseInt(sessionStorage.getItem('book_step')) || 1);
     const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
     const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
     const [processing, setProcessing] = useState(false);
+    
+
 
     const showModal = (type, message) => setModal({ isOpen: true, type, message });
     const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
@@ -89,8 +91,24 @@ export function useBookingLogic(facility) {
         return generatedDates;
     }, []);
 
-    // Clear times when court or date changes
+    // Auto-save to browser memory whenever these variables change
     useEffect(() => {
+        if (selectedCourtId) sessionStorage.setItem('book_court', selectedCourtId);
+        if (selectedDate) sessionStorage.setItem('book_date', selectedDate);
+        if (startTime) sessionStorage.setItem('book_start', startTime);
+        if (endTime) sessionStorage.setItem('book_end', endTime);
+        sessionStorage.setItem('book_step', step);
+    }, [selectedCourtId, selectedDate, startTime, endTime, step]);
+
+    // Track if this is the first render
+    const isFirstRender = useRef(true);
+
+    // Clear times when court or date changes (but NOT on first load!)
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         setStartTime('');
         setEndTime('');
     }, [selectedDate, selectedCourtId]);
@@ -132,8 +150,17 @@ export function useBookingLogic(facility) {
             onFinish: () => setProcessing(false),
             onSuccess: () => {
                 showModal('success', 'Your court reservation has been secured. See you there!');
+                
+                // Clear the temporary memory!
+                sessionStorage.removeItem('book_court');
+                sessionStorage.removeItem('book_date');
+                sessionStorage.removeItem('book_start');
+                sessionStorage.removeItem('book_end');
+                sessionStorage.removeItem('book_step');
+                
                 setStartTime('');
                 setEndTime('');
+                setStep(1); // Send them back to step 1
                 setProofFile(null);
                 setIdempotencyKey(crypto.randomUUID());
             },

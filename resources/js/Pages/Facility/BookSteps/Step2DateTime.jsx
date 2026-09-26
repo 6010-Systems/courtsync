@@ -1,5 +1,5 @@
 import React from 'react';
-
+import { Clock } from 'lucide-react';
 export default function Step2DateTime({ 
     selectedCourt, 
     price, 
@@ -91,7 +91,7 @@ export default function Step2DateTime({
                                         setStartTime(e.target.value);
                                         if (endTime && e.target.value >= endTime) setEndTime('');
                                     }}
-                                    className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none transition hover:border-gray-300 cursor-pointer"
+                                    className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none bg-none transition hover:border-gray-300 cursor-pointer"
                                 >
                                     <option value="">Select start</option>
                                     {timeOptions.slice(0, -1).map((opt) => (
@@ -101,7 +101,7 @@ export default function Step2DateTime({
                                     ))}
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <Clock className="w-4 h-4" />
                                 </div>
                             </div>
                         </div>
@@ -112,7 +112,7 @@ export default function Step2DateTime({
                                     value={endTime}
                                     onChange={(e) => setEndTime(e.target.value)}
                                     disabled={!startTime}
-                                    className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none transition hover:border-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none bg-none transition hover:border-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Select end</option>
                                     {(() => {
@@ -126,7 +126,7 @@ export default function Step2DateTime({
                                     })()}
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <Clock className="w-4 h-4" />
                                 </div>
                             </div>
                         </div>

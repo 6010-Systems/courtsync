@@ -359,4 +359,54 @@ class FacilityController extends Controller
             'facility' => $facility
         ]);
     }
+
+    public function paymentSettings(Request $request)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage payment settings.');
+        }
+
+        return inertia('Facility/PaymentSettings', [
+            'auth' => [
+                'user' => $request->user()->load('facilities')
+            ],
+        ]);
+    }
+
+    public function updatePaymentSettings(Request $request, Facility $facility)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER' || $facility->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'gcash_name' => 'nullable|string|max:255',
+            'gcash_number' => 'nullable|string|max:255',
+            'gcash_qr' => 'nullable|image|max:5120', // 5MB max
+            'maya_name' => 'nullable|string|max:255',
+            'maya_number' => 'nullable|string|max:255',
+            'maya_qr' => 'nullable|image|max:5120',
+        ]);
+
+        $updateData = [
+            'gcash_name' => $validated['gcash_name'],
+            'gcash_number' => $validated['gcash_number'],
+            'maya_name' => $validated['maya_name'],
+            'maya_number' => $validated['maya_number'],
+        ];
+
+        if ($request->hasFile('gcash_qr')) {
+            $path = $request->file('gcash_qr')->store('payments', 'public');
+            $updateData['gcash_qr_url'] = '/storage/' . $path;
+        }
+
+        if ($request->hasFile('maya_qr')) {
+            $path = $request->file('maya_qr')->store('payments', 'public');
+            $updateData['maya_qr_url'] = '/storage/' . $path;
+        }
+
+        $facility->update($updateData);
+
+        return back()->with('success', 'Payment settings updated successfully.');
+    }
 }

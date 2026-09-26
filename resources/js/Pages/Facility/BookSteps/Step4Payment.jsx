@@ -10,13 +10,13 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
     };
 
     // Fallback static details if facility owner hasn't set them yet
-    const gcashName = facility?.gcash_name || 'Mark Joseph Potot';
-    const gcashNumber = facility?.gcash_number || '0936 991 0528';
-    const gcashQrUrl = facility?.gcash_qr_url || '/assets/gcashqr.jpg';
+    const gcashName = facility?.gcash_name;
+    const gcashNumber = facility?.gcash_number;
+    const gcashQrUrl = facility?.gcash_qr_url;
     
-    const mayaName = facility?.maya_name || 'Mark Joseph Potot';
-    const mayaNumber = facility?.maya_number || '0936 991 0528';
-    const mayaQrUrl = facility?.maya_qr_url || '/assets/mayaqr.jpg';
+    const mayaName = facility?.maya_name;
+    const mayaNumber = facility?.maya_number;
+    const mayaQrUrl = facility?.maya_qr_url;
 
     return (
         <div className="p-6 sm:p-10">
@@ -59,9 +59,10 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
                         </button>
                     </div>
 
-                    <div className="bg-white rounded-[2rem]  shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden w-full max-w-[340px] relative transition-transform duration-300 ">
+                    <div className="bg-white rounded-[2rem]  shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden w-full max-w-[340px] relative transition-transform duration-300 min-h-[350px]">
                         {/* Body */}
-                        <div className="p-8 flex flex-col items-center bg-gradient-to-b from-white to-[#F8FAFC]">
+                        {paymentMethod === 'gcash' || paymentMethod === 'maya' ? (
+                        <div className="p-8 flex flex-col items-center bg-gradient-to-b from-white to-[#F8FAFC] h-full">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-5">Scan to Pay</p>
                             
                             <div className={`bg-white p-3 rounded-3xl shadow-[0_0_20px_rgba(0,0,0,0.05)] mb-8 ring-1 flex items-center justify-center ${paymentMethod === 'gcash' ? 'shadow-[0_0_20px_rgba(0,92,238,0.1)] ring-blue-50' : 'shadow-[0_0_20px_rgba(1,201,111,0.1)] ring-green-50'}`} style={{ width: '250px', height: '250px' }}>
@@ -107,6 +108,14 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
                                 </div>
                             </div>
                         </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center p-8 bg-gray-50 h-full min-h-[350px] border-2 border-dashed border-gray-200">
+                                <svg className="w-12 h-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                                <p className="text-sm font-bold text-gray-400 text-center">Please select a payment method above</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
