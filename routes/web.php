@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PlayerRegisteredUserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
+use App\Http\Middleware\EnsureIdempotency;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -95,6 +96,18 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility/courts', [CourtController::class, 'store'])->name('facility.courts.store');
     Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
+
+    Route::get('/facility/payment-settings', [FacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
+    Route::post('/facility/payment-settings/{facility}', [FacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::get('/facility/bookings', [\App\Http\Controllers\BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('facility.payments');
+    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
+    Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
+    Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/lock', [\App\Http\Controllers\BookingController::class, 'lockSlot'])->name('bookings.lock');
+    Route::post('/bookings/unlock', [\App\Http\Controllers\BookingController::class, 'unlockSlot'])->name('bookings.unlock');
+
 });
 
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
@@ -123,6 +136,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/{facility:slug}/login', [PlayerSessionController::class, 'store']);
     Route::get('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'create'])->name('player.register');
     Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store']);
+});
+
+// Book Route (Requires Authentication)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/courts/{court}/locked-slots', [App\Http\Controllers\BookingController::class, 'getLockedSlots']);
+    Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
 });
 
 // Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)

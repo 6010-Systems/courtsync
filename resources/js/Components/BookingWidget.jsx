@@ -1,24 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from '@inertiajs/react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, router } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES_DARK, courtIsBookable } from '@/Utils/courtStatus';
 
 export default function BookingWidget({ facility, user, courts = [] }) {
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
 
-    const mockSlots = [
-        { start_time: '08:00', end_time: '09:00', formatted: '08:00 AM - 09:00 AM' },
-        { start_time: '09:00', end_time: '10:00', formatted: '09:00 AM - 10:00 AM' },
-        { start_time: '10:00', end_time: '11:00', formatted: '10:00 AM - 11:00 AM' },
-        { start_time: '14:00', end_time: '15:00', formatted: '02:00 PM - 03:00 PM' },
-        { start_time: '16:00', end_time: '17:00', formatted: '04:00 PM - 05:00 PM' },
-        { start_time: '18:00', end_time: '19:00', formatted: '06:00 PM - 07:00 PM' }
-    ];
+    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
+        let startHour = 6;
+        let endHour = 22;
+
+        if (timeRange) {
+            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
+            if (match) {
+                let sH = parseInt(match[1]);
+                const sM = match[2];
+                let eH = parseInt(match[3]);
+                const eM = match[4];
+
+                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
+                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
+                
+                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
+                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
+
+                startHour = sH;
+                endHour = eH;
+            }
+        }
+
+        const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
+        
+        const bookedHours = new Set();
+        courtBookings.forEach(b => {
+            const bStart = parseInt(b.start_time.split(':')[0]);
+            const bEnd = parseInt(b.end_time.split(':')[0]);
+            for (let i = bStart; i < bEnd; i++) {
+                bookedHours.add(i);
+            }
+        });
+
+        const options = [];
+        for (let i = startHour; i <= endHour; i++) {
+            const timeValue = `${i.toString().padStart(2, '0')}:00`;
+            const date = new Date();
+            date.setHours(i, 0);
+            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
+        }
+        return options;
+    };
 
     const [selectedCourtId, setSelectedCourtId] = useState(selectableCourts[0]?.id ?? null);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [availableSlots, setAvailableSlots] = useState(mockSlots);
-    const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+    const [startTime, setStartTime] = useState('');
+    const [endTime, setEndTime] = useState('');
+    const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+    const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
+    const [processing, setProcessing] = useState(false);
+
+    const showModal = (type, message) => setModal({ isOpen: true, type, message });
+    const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
+    
+    const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
+    const timeOptions = useMemo(() => {
+        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || []);
+    }, [selectedCourt, selectedDate, facility.bookings]);
 
     // Generate next 14 days
     const dates = [];
@@ -41,22 +88,65 @@ export default function BookingWidget({ facility, user, courts = [] }) {
         }
     }, []);
 
-    // Simulate changing availability based on date (Mock logic)
+    // Clear times when court changes
     useEffect(() => {
-        setSelectedTimeSlot(null);
-        // Randomly hide some slots for the mock effect
-        const randomSlots = mockSlots.filter(() => Math.random() > 0.3);
-        setAvailableSlots(randomSlots);
+        setStartTime('');
+        setEndTime('');
     }, [selectedDate, selectedCourtId]);
 
     const handleBooking = () => {
-        if (!selectedTimeSlot) return;
-        alert(`Booking Confirmed!\nCourt: ${selectedCourt?.name}\nDate: ${selectedDate}\nTime: ${selectedTimeSlot.formatted}`);
-        setSelectedTimeSlot(null);
+        if (!startTime || !endTime || !selectedCourtId || processing) return;
+
+        setProcessing(true);
+
+        router.post(route('bookings.store'), {
+            facility_id: facility.id,
+            court_id: selectedCourtId,
+            date: selectedDate,
+            start_time: startTime,
+            end_time: endTime,
+            total_price: price
+        }, {
+            headers: {
+                'Idempotency-Key': idempotencyKey
+            },
+            onFinish: () => {
+                setProcessing(false);
+            },
+            onSuccess: () => {
+                showModal('success', 'Booking Confirmed Successfully!');
+                setStartTime('');
+                setEndTime('');
+                setIdempotencyKey(crypto.randomUUID());
+            },
+            onError: (errors) => {
+                console.error(errors);
+                const errorMsg = errors.idempotency || errors.conflict || 'Failed to process booking. Please try again.';
+                showModal('error', errorMsg);
+                setIdempotencyKey(crypto.randomUUID());
+            }
+        });
     };
 
-    const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
     const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
+    // Calculate total price based on duration
+    const durationHours = useMemo(() => {
+        if (!startTime || !endTime) return 0;
+        const [sH] = startTime.split(':').map(Number);
+        const [eH] = endTime.split(':').map(Number);
+        const diff = eH - sH;
+        return diff > 0 ? diff : 0;
+    }, [startTime, endTime]);
+    
+    const totalPrice = price * durationHours;
+
+    const formatTimeString = (timeString) => {
+        if (!timeString) return '';
+        const [hour, minute] = timeString.split(':');
+        const date = new Date();
+        date.setHours(hour, minute);
+        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    };
 
     if (selectableCourts.length === 0) {
         return (
@@ -120,42 +210,77 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                 </div>
 
                 {/* Time Selection */}
-                <div>
-                    <label className="block text-sm font-bold text-gray-300 mb-3">Select Time</label>
-                    
-                    {availableSlots.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                            {availableSlots.map((slot, i) => (
-                                <button 
-                                    key={i} 
-                                    onClick={() => setSelectedTimeSlot(slot)}
-                                    className={`py-3 text-sm font-bold rounded-xl border-2 transition-all ${selectedTimeSlot?.start_time === slot.start_time ? 'border-[#D6FF3F] bg-[#D6FF3F] text-[#10221C] shadow-md' : 'border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-white hover:bg-white/10'}`}
-                                >
-                                    {slot.formatted}
-                                </button>
-                            ))}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-300 mb-2">Start Time</label>
+                        <div className="relative">
+                            <select
+                                value={startTime}
+                                onChange={(e) => {
+                                    setStartTime(e.target.value);
+                                    if (endTime && e.target.value >= endTime) {
+                                        setEndTime('');
+                                    }
+                                }}
+                                className="block w-full pl-4 pr-10 py-3 sm:py-3.5 text-sm sm:text-base font-medium text-white border-2 border-white/10 bg-white/5 focus:outline-none focus:ring-0 focus:border-[#D6FF3F] rounded-xl appearance-none !bg-none transition hover:border-white/20 cursor-pointer"
+                            >
+                                <option value="" className="text-gray-900">--:--</option>
+                                {timeOptions.slice(0, -1).map((opt) => (
+                                    <option key={opt.value} value={opt.value} disabled={opt.isBooked} className="text-gray-900">
+                                        {opt.label} {opt.isBooked ? '(Booked)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="text-gray-400 text-sm py-4 text-center border-2 border-white/5 border-dashed rounded-xl">
-                            No available slots for this date.
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-300 mb-2">End Time</label>
+                        <div className="relative">
+                            <select
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                                disabled={!startTime}
+                                className="block w-full pl-4 pr-10 py-3 sm:py-3.5 text-sm sm:text-base font-medium text-white border-2 border-white/10 bg-white/5 focus:outline-none focus:ring-0 focus:border-[#D6FF3F] rounded-xl appearance-none !bg-none transition hover:border-white/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <option value="" className="text-gray-900">--:--</option>
+                                {(() => {
+                                    const startIndex = timeOptions.findIndex(o => o.value === startTime);
+                                    let firstBookedAfterStart = timeOptions.findIndex((o, index) => index >= startIndex && o.isBooked);
+                                    if (firstBookedAfterStart === -1) firstBookedAfterStart = timeOptions.length - 1;
+                                    
+                                    return timeOptions.filter((opt, index) => startTime && index > startIndex && index <= firstBookedAfterStart).map((opt) => (
+                                        <option key={opt.value} value={opt.value} className="text-gray-900">{opt.label}</option>
+                                    ));
+                                })()}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Order Summary */}
-                {selectedTimeSlot && (
+                {startTime && endTime && durationHours > 0 && (
                     <div className="bg-[#1A332B] rounded-2xl p-4 sm:p-5 mt-6 sm:mt-8 border border-white/5">
                         <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-300 font-medium">{selectedCourt?.name} (1 hr)</span>
-                            <span className="font-bold text-white">₱{price.toFixed(2)}</span>
+                            <span className="text-gray-300 font-medium">{selectedCourt?.name} ({durationHours} hr)</span>
+                            <span className="font-bold text-white">₱{price.toFixed(2)}/hr</span>
                         </div>
                         <div className="flex justify-between text-sm mb-2">
                             <span className="text-gray-300 font-medium">Time</span>
-                            <span className="font-bold text-white">{selectedTimeSlot.formatted}</span>
+                            <span className="font-bold text-white">{formatTimeString(startTime)} - {formatTimeString(endTime)}</span>
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
                             <span className="text-white font-medium">Total</span>
-                            <span className="text-[#D6FF3F] text-2xl font-black">₱{price.toFixed(2)}</span>
+                            <span className="text-[#D6FF3F] text-2xl font-black">₱{totalPrice.toFixed(2)}</span>
                         </div>
                     </div>
                 )}
@@ -163,10 +288,10 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                 {user ? (
                     <button
                         onClick={handleBooking}
-                        disabled={!selectedTimeSlot}
-                        className={`w-full font-black text-base sm:text-lg py-3.5 sm:py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 ${selectedTimeSlot ? 'bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] hover:-translate-y-1' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}`}
+                        disabled={!startTime || !endTime || durationHours <= 0 || processing}
+                        className={`w-full font-black text-base sm:text-lg py-3.5 sm:py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 ${(startTime && endTime && durationHours > 0 && !processing) ? 'bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] hover:-translate-y-1' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}`}
                     >
-                        Confirm Booking
+                        {processing ? 'Processing...' : 'Confirm Booking'}
                     </button>
                 ) : (
                     <Link
@@ -178,15 +303,37 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                 )}
             </div>
 
-            {/* Contact Info Footer */}
-            <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-white/10 text-center">
-                <p className="text-sm font-medium text-gray-400 flex items-center justify-center gap-2">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    {facility.contact_number}
-                </p>
-            </div>
+
+            {/* Custom Modal */}
+            {modal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-[#10221C] border border-white/10 rounded-2xl p-6 sm:p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${modal.type === 'success' ? 'bg-[#D6FF3F]/20 text-[#D6FF3F]' : 'bg-red-500/20 text-red-500'}`}>
+                            {modal.type === 'success' ? (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            )}
+                        </div>
+                        <h4 className="text-xl font-bold text-white mb-2">
+                            {modal.type === 'success' ? 'Success!' : 'Error'}
+                        </h4>
+                        <p className="text-gray-400 text-sm mb-6">
+                            {modal.message}
+                        </p>
+                        <button 
+                            onClick={closeModal}
+                            className={`w-full py-3 rounded-xl font-bold transition-all ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#c4ec39]' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                        >
+                            Okay
+                        </button>
+                    </div>
+                </div>
+            )}
             <style dangerouslySetInnerHTML={{__html: `
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;

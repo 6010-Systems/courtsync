@@ -1,17 +1,24 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import BookingWidget from '@/Components/BookingWidget';
+import ShareButton from '@/Components/ShareButton';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 
 export default function Show({ facility }) {
+    const currentUrl = window.location.href;
     const { auth } = usePage().props;
     const user = auth.user;
-    
     const coverPhoto = facility.verification?.facility_photos?.[0] || '/path/to/default-image.png';
     const photos = facility.verification?.facility_photos || [];
 
     return (
         <div className="min-h-screen bg-[#F5F2EA] font-sans selection:bg-[#D6FF3F] selection:text-[#10221C]">
-            <Head title={facility.name} />
+              <Head>
+                <title>{facility.name}</title>
+                <meta property="og:title" content={facility.name} />
+                <meta property="og:description" content={facility.description} />
+                <meta property="og:image" content={facility.cover_image_url} />
+                <meta property="og:url" content={currentUrl} />
+                <meta property="og:type" content="website" />
+            </Head>
 
             {/* Immersive Hero Section */}
             <header
@@ -27,6 +34,12 @@ export default function Show({ facility }) {
                 
                 {/* Navbar elements integrated into hero */}
                 <div className="absolute top-0 left-0 right-0 p-4 sm:p-6 lg:p-8 flex justify-end items-center gap-2 sm:gap-4 z-30">
+                    <ShareButton 
+                        title={facility.name} 
+                        text={`Book your court on ${facility.name} now!`} 
+                        url={currentUrl} 
+                    />
+
                     {user ? (
                         <>
                             <div className="text-white text-xs sm:text-sm font-medium flex items-center gap-2 sm:gap-3 bg-[#10221C]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 shadow-xl backdrop-blur-md">
@@ -51,7 +64,7 @@ export default function Show({ facility }) {
                     ) : (
                         <Link
                             href={`/${facility.slug}/login`}
-                            className="text-[#10221C] text-xs sm:text-sm font-black flex items-center gap-2 sm:gap-3 bg-[#D6FF3F] hover:bg-[#c4ec39] transition px-4 sm:px-6 py-2 sm:py-2.5 rounded-full shadow-lg shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
+                            className="text-[#10221C] text-xs sm:text-sm font-black flex items-center gap-2 sm:gap-3 bg-[#D6FF3F] hover:bg-[#c4ec39] transition px-4 sm:px-6 py-1.5 sm:py-2.5 rounded-full shadow-lg shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
                         >
                             Sign In
                         </Link>
@@ -59,22 +72,32 @@ export default function Show({ facility }) {
                 </div>
 
                 <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 lg:pb-24">
-                    <div className="max-w-3xl">
-                        <div className="flex items-center gap-3 mb-3 sm:mb-4">
-                            <span className="px-2.5 sm:px-3 py-1 bg-[#D6FF3F]/20 text-[#D6FF3F] border border-[#D6FF3F]/30 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
-                                Verified Partner
-                            </span>
+                    <div className="flex flex-row items-end justify-start gap-4 sm:gap-6 lg:gap-10 w-full">
+                        <div className="max-w-[70%] sm:max-w-3xl">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+                                <span className="px-2 sm:px-3 py-1 bg-[#D6FF3F]/20 text-[#D6FF3F] border border-[#D6FF3F]/30 rounded-full text-[9px] sm:text-xs font-bold uppercase tracking-wider backdrop-blur-sm">
+                                    Verified Partner
+                                </span>
+                            </div>
+                            <h1 className="text-2xl sm:text-5xl lg:text-7xl font-black text-white tracking-tight mb-2 sm:mb-4 drop-shadow-lg break-words">
+                                {facility.name}
+                            </h1>
+                            <p className="text-xs sm:text-xl lg:text-2xl text-gray-200 font-medium flex items-center gap-1 sm:gap-2 drop-shadow-md">
+                                <svg className="w-4 h-4 sm:w-6 sm:h-6 shrink-0 text-[#D6FF3F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {facility.city}, {facility.province}
+                            </p>
+                            {facility.contact_number && (
+                                <p className="text-xs sm:text-xl lg:text-2xl text-gray-200 font-medium flex items-center gap-1 sm:gap-2 drop-shadow-md mt-1">
+                                    <svg className="w-4 h-4 sm:w-6 sm:h-6 shrink-0 text-[#D6FF3F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    {facility.contact_number}
+                                </p>
+                            )}
                         </div>
-                        <h1 className="text-3xl sm:text-5xl lg:text-7xl font-black text-white tracking-tight mb-3 sm:mb-4 drop-shadow-lg break-words">
-                            {facility.name}
-                        </h1>
-                        <p className="text-base sm:text-xl lg:text-2xl text-gray-200 font-medium flex items-center gap-2 drop-shadow-md">
-                            <svg className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[#D6FF3F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {facility.city}, {facility.province}
-                        </p>
                     </div>
                 </div>
             </header>
@@ -84,27 +107,6 @@ export default function Show({ facility }) {
 
                     {/* Left Column - Details & Gallery */}
                     <div className="lg:col-span-7 xl:col-span-8 space-y-8 sm:space-y-10 lg:space-y-12">
-                        {/* About Section - Dark Card */}
-                        <section className="bg-[#10221C] p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5">
-                            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">About the Facility</h2>
-                            <div className="prose prose-lg text-gray-300 leading-relaxed text-sm sm:text-base">
-                                {facility.description ? (
-                                    <p>{facility.description}</p>
-                                ) : (
-                                    <p className="italic opacity-50">No description provided by the facility owner yet.</p>
-                                )}
-                            </div>
-                            
-                            <hr className="my-6 sm:my-8 border-white/10" />
-
-                            <h3 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Location Details</h3>
-                            <p className="text-base sm:text-lg text-gray-400 flex flex-col gap-1">
-                                <span className="text-gray-300">{facility.address}</span>
-                                <span>{facility.city}, {facility.province}</span>
-                                <span className="opacity-70">{facility.country}</span>
-                            </p>
-                        </section>
-
                         {/* Courts */}
                         <section>
                             <h2 className="text-2xl sm:text-3xl font-bold text-[#10221C] mb-5 sm:mb-8 px-1 sm:px-2">Courts</h2>
@@ -165,11 +167,51 @@ export default function Show({ facility }) {
                                 </div>
                             )}
                         </section>
+
+                        {/* About Section - Dark Card */}
+                        <section className="bg-[#10221C] p-6 sm:p-8 lg:p-12 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5">
+                            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">About the Facility</h2>
+                            <div className="prose prose-lg text-gray-300 leading-relaxed text-sm sm:text-base">
+                                {facility.description ? (
+                                    <p>{facility.description}</p>
+                                ) : (
+                                    <p className="italic opacity-50">No description provided by the facility owner yet.</p>
+                                )}
+                            </div>
+                            
+                            <hr className="my-6 sm:my-8 border-white/10" />
+
+                            <h3 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Location Details</h3>
+                            <p className="text-base sm:text-lg text-gray-400 flex flex-col gap-1">
+                                <span className="text-gray-300">{facility.address}</span>
+                                <span>{facility.city}, {facility.province}</span>
+                                <span className="opacity-70">{facility.country}</span>
+                            </p>
+                        </section>
                     </div>
 
-                    {/* Right Column - Booking Widget */}
+                    {/* Right Column - Booking CTA */}
                     <div className="lg:col-span-5 xl:col-span-4">
-                        <BookingWidget facility={facility} user={user} courts={facility.courts || []} />
+                        <div className="bg-[#10221C] p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5 sticky top-8">
+                            <h2 className="text-2xl font-bold text-white mb-4">Ready to play?</h2>
+                            <p className="text-gray-400 mb-6">Book a court now at {facility.name}.</p>
+                            
+                            {user ? (
+                                <Link
+                                    href={route('facility.book', facility.slug)}
+                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
+                                >
+                                    Book a Court
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={`/${facility.slug}/login`}
+                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
+                                >
+                                    Sign In to Book
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
             </main>
