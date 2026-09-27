@@ -12,6 +12,7 @@ import {
     ShieldCheck,
     UserCheck,
     Users,
+    Wallet,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -48,7 +49,7 @@ const navSections = [
     {
         title: 'Management',
         items: [
-            { name: 'Bookings',     href: '#',                         icon: CalendarCheck, badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Bookings',     href: 'facility.bookings',         icon: CalendarCheck, badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
             { name: 'Calendar',     href: '#',                         icon: Calendar,      badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
             { name: 'Facilities',   href: 'facilities.index',          icon: Building2,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Facilities',   href: 'admin.facilities',          icon: Building2,     badge: null, roles: ['ADMIN'] },
@@ -64,7 +65,8 @@ const navSections = [
             { name: 'Owners',       href: 'admin.owners',              icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Staff',        href: 'admin.staff',               icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Customers',    href: '#',                         icon: Users,         badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
-            { name: 'Payments',     href: '#',                         icon: CreditCard,    badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Payments',     href: 'facility.payments',         icon: CreditCard,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Payment Settings', href: 'facility.payment-settings', icon: Wallet, badge: null, roles: ['FACILITY_OWNER'] },
         ],
     },
     {

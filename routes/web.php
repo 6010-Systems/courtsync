@@ -1,26 +1,29 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Auth\PlayerRegisteredUserController;
+use App\Http\Controllers\Auth\PlayerSessionController;
+use App\Http\Controllers\Auth\SocialiteController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\FacilityController as RootFacilityController;
 use App\Http\Controllers\FacilityOwner\CourtController;
 use App\Http\Controllers\FacilityOwner\FacilityController;
-use App\Http\Controllers\FacilityOwner\StaffController;
 use App\Http\Controllers\FacilityOwner\PlayerController;
-use App\Http\Controllers\Player\FacilityShowController;
-use App\Http\Controllers\Auth\SocialiteController;
-use App\Http\Controllers\Auth\PlayerSessionController;
-use App\Http\Controllers\Auth\PlayerRegisteredUserController;
+use App\Http\Controllers\FacilityOwner\StaffController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
+use App\Http\Middleware\EnsureIdempotency;
+use App\Models\Facility;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Models\Facility;
 
 // ── Public Platform Landing ───────────────────────────────────────────
 Route::get('/', function () {
-    $facilities = Facility::select('id','name', 'slug', 'city', 'province', 'description')
+    $facilities = Facility::select('id', 'name', 'slug', 'city', 'province', 'description')
         ->with('verification:id,facility_id,facility_photos')
         ->where('verification_status', 'APPROVED')
         ->latest()
@@ -67,7 +70,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility', [FacilityController::class, 'store'])->name('facility.store');
     Route::delete('/facility/{facility}', [FacilityController::class, 'destroy'])->name('facility.destroy');
     Route::post('/facility/verification', [FacilityController::class, 'storeVerification'])->name('facility.verification.store');
-    
+
     // Facility Staff Routes
     Route::get('/facility/staff', [StaffController::class, 'index'])->name('facility.staff');
     Route::post('/facility/staff', [StaffController::class, 'store'])->name('facility.staff.store');
@@ -85,19 +88,30 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility/courts', [CourtController::class, 'store'])->name('facility.courts.store');
     Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
+
+    Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
+    Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
+    Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
+    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/verify', [BookingController::class, 'verifyPayment'])->name('bookings.verify');
+    Route::post('/bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])->name('bookings.lock');
+
 });
 
 // ── Platform Administrator Routes ─────────────────────────────────────
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/owners', [AdminController::class, 'owners'])->name('owners');
     Route::post('/owners', [AdminController::class, 'storeOwner'])->name('owners.store');
-    
+
     Route::get('/staff', [AdminController::class, 'staff'])->name('staff');
     Route::post('/staff', [AdminController::class, 'storeStaff'])->name('staff.store');
-    
+
     Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');
-    
+
     Route::get('/verifications', [AdminController::class, 'verifications'])->name('verifications');
     Route::post('/verifications/{facility_id}/status', [AdminController::class, 'updateVerificationStatus'])->name('verifications.status');
 
@@ -116,5 +130,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store']);
 });
 
-// ── Tenant Public / Player Facility Profile ───────────────────────────
-Route::get('/{facility:slug}', [FacilityShowController::class, 'show'])->name('facility.show');
+// Book Route (Requires Authentication)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->name('facility.book');
+});
+
+// Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)
+Route::get('/{facility:slug}', [RootFacilityController::class, 'show'])->name('facility.show');
