@@ -18,21 +18,66 @@ export function useBookingLogic(facility) {
     }
 
    const [selectedCourtId, setSelectedCourtId] = useState(() => sessionStorage.getItem('book_court') || null);
+   
+   const handleCourtChange = async (courtId) => {
+       // If they had a court locked, explicitly unlock it immediately!
+       if (selectedCourtId && selectedDate && startTime && endTime) {
+           try {
+               await window.axios.post('/bookings/unlock', {
+                   court_id: selectedCourtId,
+                   date: selectedDate,
+                   start_time: startTime,
+                   end_time: endTime,
+                   idempotency_key: idempotencyKey
+               });
+           } catch (e) {} // fail silently
+       }
+
+       setSelectedCourtId(courtId);
+       setStartTime('');
+       setEndTime('');
+       setSelectedDate(null);
+       sessionStorage.removeItem('book_date');
+       sessionStorage.removeItem('book_start');
+       sessionStorage.removeItem('book_end');
+   };
+
   const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem('book_date') || null);
    const [startTime, setStartTime] = useState(() => sessionStorage.getItem('book_start') || '');
     const [endTime, setEndTime] = useState(() => sessionStorage.getItem('book_end') || '');
     const [paymentMethod, setPaymentMethod] = useState('pay_at_facility');
   const [step, setStep] = useState(() => parseInt(sessionStorage.getItem('book_step')) || 1);
-    const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
-    const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
+    const [idempotencyKey, setIdempotencyKey] = useState(() => {
+        let key = sessionStorage.getItem('book_idempotency_key');
+        if (!key) {
+            key = crypto.randomUUID();
+            sessionStorage.setItem('book_idempotency_key', key);
+        }
+        return key;
+    });
+    const [modal, setModal] = useState({ isOpen: false, type: '', message: '', title: '' });
     const [processing, setProcessing] = useState(false);
+    const [lockedSlots, setLockedSlots] = useState([]);
     
     // Keep track of our hidden timer
     const lockTimerRef = useRef(null);
 
     // This is the "Time Bomb" function that triggers when time is up
-    const expireBooking = () => {
-        showModal('error', 'Oops! You took a little too long. Please select your court again.');
+    const expireBooking = async () => {
+        // Unlock immediately
+        if (selectedCourtId && selectedDate && startTime && endTime) {
+            try {
+                await window.axios.post('/bookings/unlock', {
+                    court_id: selectedCourtId,
+                    date: selectedDate,
+                    start_time: startTime,
+                    end_time: endTime,
+                    idempotency_key: idempotencyKey
+                });
+            } catch (e) {}
+        }
+
+        showModal('timer', 'Oops! You took a little too long. Please select your court again.', 'Session Expired');
         
         // Wipe everything out
         setStartTime('');
@@ -48,14 +93,37 @@ export function useBookingLogic(facility) {
         sessionStorage.removeItem('book_end');
         sessionStorage.removeItem('book_step');
         sessionStorage.removeItem('lock_expires_at');
+        sessionStorage.removeItem('book_idempotency_key');
     };
 
-    const showModal = (type, message) => setModal({ isOpen: true, type, message });
-    const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
+    const showModal = (type, message, title = '') => setModal({ isOpen: true, type, message, title });
+    const closeModal = () => setModal({ isOpen: false, type: '', message: '', title: '' });
     
     const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
+    useEffect(() => {
+        if (!selectedCourtId || !selectedDate) {
+            setLockedSlots([]);
+            return;
+        }
+
+        const fetchLocks = () => {
+            fetch(`/api/courts/${selectedCourtId}/locked-slots?date=${selectedDate}&idempotency_key=${idempotencyKey}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.locked_slots) {
+                        setLockedSlots(data.locked_slots);
+                    }
+                })
+                .catch(err => console.error("Error fetching locked slots", err));
+        };
+
+        // Fetch immediately on mount or when court/date changes
+        fetchLocks();
+        
+    }, [selectedCourtId, selectedDate, idempotencyKey]);
+
+    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = [], currentLockedSlots = []) => {
         let startHour = 6;
         let endHour = 22;
 
@@ -88,6 +156,10 @@ export function useBookingLogic(facility) {
                 bookedHours.add(i);
             }
         });
+        const lockedHours = new Set();
+        currentLockedSlots.forEach(slot => {
+            lockedHours.add(parseInt(slot.split(':')[0]));
+        });
 
         const options = [];
         for (let i = startHour; i <= endHour; i++) {
@@ -95,15 +167,24 @@ export function useBookingLogic(facility) {
             const date = new Date();
             date.setHours(i, 0);
             const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
+            
+            const isUnavailable = bookedHours.has(i) || lockedHours.has(i);
+            const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
+            
+            options.push({ 
+                value: timeValue, 
+                label: formatted, 
+                isBooked: isUnavailable, 
+                labelSuffix: labelSuffix 
+            });
         }
         return options;
     };
     
     const timeOptions = useMemo(() => {
         if (!selectedCourt || !selectedDate) return [];
-        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || []);
-    }, [selectedCourt, selectedDate, facility.bookings]);
+        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || [], lockedSlots);
+    }, [selectedCourt, selectedDate, facility.bookings, lockedSlots]);
 
     // Generate next 14 days
     const dates = useMemo(() => {
@@ -137,11 +218,7 @@ export function useBookingLogic(facility) {
         if (step >= 3) {
             let expiresAt = sessionStorage.getItem('lock_expires_at');
             
-            // Start the timer for the first time
-            if (!expiresAt) {
-                expiresAt = Date.now() + 7 * 60 * 1000; // 7 minutes
-                sessionStorage.setItem('lock_expires_at', expiresAt);
-            }
+            if (expiresAt) {
 
             const timeLeft = parseInt(expiresAt) - Date.now();
             
@@ -151,6 +228,7 @@ export function useBookingLogic(facility) {
                 lockTimerRef.current = setTimeout(() => {
                     expireBooking();
                 }, timeLeft);
+            }
             }
         }
 
@@ -181,15 +259,25 @@ export function useBookingLogic(facility) {
                     court_id: selectedCourtId,
                     date: selectedDate,
                     start_time: startTime,
-                    end_time: endTime
+                    end_time: endTime,
+                    idempotency_key: idempotencyKey
                 });
-                
-                // If it succeeds, let them proceed to Step 3!
+                // If it succeeds, set the exact 7-minute expiration time!
+                sessionStorage.setItem('lock_expires_at', Date.now() + 7 * 60 * 1000);
+                // Then let them proceed to Step 3!
                 setStep(3);
                 // The useEffect will automatically catch this step change and start the timer!
             } catch (error) {
                 if (error.response?.status === 423) {
-                    showModal('error', 'Oops! Someone else just locked this exact time slot a second before you did. Please choose another time.');
+                    const formatTime = (time24) => {
+                        let [h, m] = time24.split(':');
+                        h = parseInt(h);
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        h = h % 12 || 12;
+                        return `${h}:${m} ${ampm}`;
+                    };
+                    const rangeStr = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+                    showModal('timer', `Oops! Someone else is currently booking your requested time (${rangeStr}). Please choose another time, or try checking back in a few minutes to see if it becomes available!`, 'Slot Unavailable');
                 } else {
                     showModal('error', 'Failed to connect to the server. Please check your internet and try again.');
                 }
@@ -202,7 +290,23 @@ export function useBookingLogic(facility) {
         }
     };
 
-    const goPrev = () => setStep(s => Math.max(s - 1, 1));
+    const goPrev = async () => {
+        if (step === 3) {
+            // Unlocking because they are backing out of the review step
+            if (selectedCourtId && selectedDate && startTime && endTime) {
+                try {
+                    await window.axios.post('/bookings/unlock', {
+                        court_id: selectedCourtId,
+                        date: selectedDate,
+                        start_time: startTime,
+                        end_time: endTime,
+                        idempotency_key: idempotencyKey
+                    });
+                } catch (e) {} // fail silently
+            }
+        }
+        setStep(s => Math.max(s - 1, 1));
+    };
 
     const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
     
@@ -294,7 +398,7 @@ export function useBookingLogic(facility) {
 
     return {
         selectableCourts,
-        selectedCourtId, setSelectedCourtId,
+        selectedCourtId, setSelectedCourtId: handleCourtChange,
         selectedDate, setSelectedDate,
         startTime, setStartTime,
         endTime, setEndTime,
