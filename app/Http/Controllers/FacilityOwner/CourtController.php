@@ -34,7 +34,7 @@ class CourtController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->hasPermission('view_courts')) {
+        if (! $user->hasPermission('view_courts')) {
             abort(403, 'You do not have permission to view courts.');
         }
 
@@ -56,7 +56,7 @@ class CourtController extends Controller
 
     public function store(Request $request)
     {
-        if (!$request->user()->hasPermission('create_courts')) {
+        if (! $request->user()->hasPermission('create_courts')) {
             abort(403, 'You do not have permission to create courts.');
         }
 
@@ -67,10 +67,10 @@ class CourtController extends Controller
             'time_range' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'hourly_rate' => 'nullable|numeric|min:0',
-            'status' => 'nullable|string|in:' . implode(',', Court::STATUSES),
+            'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
         ]);
 
-        if (!$this->allowedFacilityIds($request)->contains((int) $request->facility_id)) {
+        if (! $this->allowedFacilityIds($request)->contains((int) $request->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -89,11 +89,11 @@ class CourtController extends Controller
 
     public function update(Request $request, Court $court)
     {
-        if (!$request->user()->hasPermission('edit_courts')) {
+        if (! $request->user()->hasPermission('edit_courts')) {
             abort(403, 'You do not have permission to edit courts.');
         }
 
-        if (!$this->allowedFacilityIds($request)->contains($court->facility_id)) {
+        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -103,7 +103,7 @@ class CourtController extends Controller
             'time_range' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'hourly_rate' => 'nullable|numeric|min:0',
-            'status' => 'nullable|string|in:' . implode(',', Court::STATUSES),
+            'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
         ]);
 
         $court->update([
@@ -120,11 +120,11 @@ class CourtController extends Controller
 
     public function destroy(Request $request, Court $court)
     {
-        if (!$request->user()->hasPermission('delete_courts')) {
+        if (! $request->user()->hasPermission('delete_courts')) {
             abort(403, 'You do not have permission to delete courts.');
         }
 
-        if (!$this->allowedFacilityIds($request)->contains($court->facility_id)) {
+        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 

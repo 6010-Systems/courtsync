@@ -1,14 +1,16 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
 import { Head, useForm, router } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Modal from '@/Components/Modal';
-import { Search, Plus, Trash2, Calendar, Clock, MapPin, User, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Calendar, Clock, MapPin, User, ChevronRight, LayoutGrid, List } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
+import BookingCard from '@/Components/BookingCard';
 
 function BookingStatusBadge({ status }) {
     const s = status?.toLowerCase() || 'pending';
@@ -24,9 +26,31 @@ function BookingStatusBadge({ status }) {
     return <span className={base}>{status}</span>;
 }
 
-export default function Bookings({ bookings, facilities }) {
-    const [searchQuery, setSearchQuery] = useState('');
+export default function Bookings({ bookings, facilities, filters }) {
+    const [searchQuery, setSearchQuery] = useState(filters?.search || '');
+    const [activeFilter, setActiveFilter] = useState(filters?.filter || 'All');
+    const [viewMode, setViewMode] = useState('table');
+    const [selectedBooking, setSelectedBooking] = useState(null);
     const [isAdding, setIsAdding] = useState(false);
+
+    const isInitialRender = useRef(true);
+
+    useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            router.get(
+                route('facility.bookings'),
+                { search: searchQuery, filter: activeFilter },
+                { preserveState: true, replace: true, preserveScroll: true }
+            );
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery, activeFilter]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         facility_id: facilities[0]?.id || '',
@@ -78,17 +102,7 @@ export default function Bookings({ bookings, facilities }) {
         return formatDate(dateString);
     };
 
-    const filteredBookings = useMemo(() => {
-        return bookings.filter(b => {
-            const query = searchQuery.toLowerCase();
-            return (
-                b.user?.name.toLowerCase().includes(query) ||
-                b.court?.name.toLowerCase().includes(query) ||
-                b.facility?.name.toLowerCase().includes(query) ||
-                b.status.toLowerCase().includes(query)
-            );
-        });
-    }, [bookings, searchQuery]);
+    const filteredBookings = bookings;
 
     // Group bookings by date
     const groupedBookings = useMemo(() => {
@@ -217,27 +231,40 @@ export default function Bookings({ bookings, facilities }) {
                         />
                     </div>
                     
-                    <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar w-full sm:w-auto">
-                        {['All', 'Today', 'Upcoming', 'Pending'].map((filter, i) => (
+                    <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar w-full sm:w-auto items-center">
+                        {['All', 'Today', 'Upcoming', 'Pending'].map((filterItem) => (
                             <button 
-                                key={filter}
+                                key={filterItem}
+                                onClick={() => setActiveFilter(filterItem)}
                                 className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
-                                    i === 0 
+                                    activeFilter === filterItem 
                                     ? 'bg-[#10221C] text-white shadow-subtle' 
                                     : 'bg-white text-gray-600 border border-[#10221C]/12 hover:border-[#10221C]/30 hover:text-[#10221C]'
                                 }`}
                             >
-                                {filter}
+                                {filterItem}
                             </button>
                         ))}
+                        <div className="hidden sm:flex border border-[#10221C]/12 rounded-lg bg-white p-1 gap-1 ml-2 h-full items-center">
+                            <button 
+                                onClick={() => setViewMode('table')}
+                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                            >
+                                <List size={18} />
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('card')}
+                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                            >
+                                <LayoutGrid size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
-                {/* Bookings Data Grid */}
-                <div className="bg-white shadow-subtle rounded-xl border border-[#10221C]/12 overflow-hidden">
-
-                    {filteredBookings.length === 0 ? (
-                        <div className="p-16 flex flex-col items-center justify-center text-center">
+                {/* Bookings Data Grid / Cards */}
+                {filteredBookings.length === 0 ? (
+                    <div className="bg-white shadow-subtle rounded-xl border border-[#10221C]/12 overflow-hidden p-16 flex flex-col items-center justify-center text-center">
                             <div className="w-16 h-16 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center mb-4">
                                 <Calendar className="text-gray-300" size={32} />
                             </div>
@@ -252,7 +279,18 @@ export default function Bookings({ bookings, facilities }) {
                                 Create First Booking
                             </PrimaryButton>
                         </div>
-                    ) : (
+                ) : viewMode === 'card' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filteredBookings.map(booking => (
+                            <BookingCard 
+                                key={booking.id} 
+                                booking={booking} 
+                                onClick={() => setSelectedBooking(booking)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-white shadow-subtle rounded-xl border border-[#10221C]/12 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-[#10221C]/5">
                                 <thead className="bg-[#10221C]/[0.02]">
@@ -282,6 +320,7 @@ export default function Bookings({ bookings, facilities }) {
                                         {group.bookings.map((booking) => (
                                             <tr 
                                                 key={booking.id} 
+                                                onClick={() => setSelectedBooking(booking)}
                                                 className="group hover:bg-[#10221C]/[0.02] transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -344,9 +383,15 @@ export default function Bookings({ bookings, facilities }) {
                                 ))}
                             </table>
                         </div>
-                    )}
+                    </div>
+                )}
                 </div>
-            </div>
+
+            <BookingDetailDrawer 
+                isOpen={!!selectedBooking}
+                booking={selectedBooking}
+                onClose={() => setSelectedBooking(null)}
+            />
 
             <Modal show={isAdding} onClose={closeModal} maxWidth="2xl">
                 <div className="p-6 sm:p-8">

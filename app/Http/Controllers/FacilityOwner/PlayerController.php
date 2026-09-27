@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\FacilityOwner;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Facility;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -27,7 +27,7 @@ class PlayerController extends Controller
 
     public function index(Request $request)
     {
-        if (!$request->user()->hasPermission('view_players')) {
+        if (! $request->user()->hasPermission('view_players')) {
             abort(403, 'You do not have permission to view players.');
         }
 
@@ -60,7 +60,7 @@ class PlayerController extends Controller
 
         return Inertia::render('FacilityOwner/Players', [
             'auth' => [
-                'user' => $request->user()->load('facilities')
+                'user' => $request->user()->load('facilities'),
             ],
             'players' => $players,
             'canManage' => $request->user()->hasPermission('manage_players'),
@@ -69,20 +69,20 @@ class PlayerController extends Controller
 
     public function toggleBan(Request $request, User $user)
     {
-        if (!$request->user()->hasPermission('manage_players')) {
+        if (! $request->user()->hasPermission('manage_players')) {
             abort(403, 'You do not have permission to manage players.');
         }
 
         $facilityId = $request->input('facility_id');
         $facilityIds = $this->allowedFacilityIds($request);
 
-        if (!$facilityIds->contains((int) $facilityId)) {
+        if (! $facilityIds->contains((int) $facilityId)) {
             abort(403, 'Unauthorized action.');
         }
 
         $pivot = $user->joinedFacilities()->where('facility_id', $facilityId)->first();
 
-        if (!$pivot) {
+        if (! $pivot) {
             abort(404, 'Player not found in this facility.');
         }
 

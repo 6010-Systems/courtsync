@@ -4,7 +4,6 @@ namespace App\Http\Controllers\FacilityOwner;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Facility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -19,7 +18,7 @@ class StaffController extends Controller
 
         return Inertia::render('FacilityOwner/Staff/Index', [
             'auth' => [
-                'user' => $request->user()->load('facilities.staff')
+                'user' => $request->user()->load('facilities.staff'),
             ],
         ]);
     }
@@ -35,7 +34,7 @@ class StaffController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(User::STAFF_PERMISSIONS)),
         ]);
 
         $facility = $request->user()->facilities()->findOrFail($request->facility_id);
@@ -61,7 +60,7 @@ class StaffController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -80,13 +79,13 @@ class StaffController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
         $request->validate([
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(User::STAFF_PERMISSIONS)),
         ]);
 
         $user->update(['permissions' => $request->permissions ?? []]);
@@ -102,7 +101,7 @@ class StaffController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -110,7 +109,7 @@ class StaffController extends Controller
             'facility_id' => 'required|exists:facilities,id',
         ]);
 
-        if (!$facilityIds->contains((int) $request->facility_id)) {
+        if (! $facilityIds->contains((int) $request->facility_id)) {
             abort(403, 'You can only assign staff to one of your own facilities.');
         }
 
@@ -127,7 +126,7 @@ class StaffController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if (!$facilityIds->contains($user->facility_id)) {
+        if (! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 

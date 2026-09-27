@@ -14,7 +14,7 @@ class FacilityShowController extends Controller
         $facility->load('courts');
 
         return Inertia::render('Player/Show', [
-            'facility' => $facility
+            'facility' => $facility,
         ]);
     }
 }
