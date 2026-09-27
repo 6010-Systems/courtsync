@@ -31,6 +31,7 @@ export default function Bookings({ bookings, facilities, filters }) {
     const [activeFilter, setActiveFilter] = useState(filters?.filter || 'All');
     const [viewMode, setViewMode] = useState('table');
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [modalMode, setModalMode] = useState('view');
     const [isAdding, setIsAdding] = useState(false);
 
     const isInitialRender = useRef(true);
@@ -126,9 +127,21 @@ export default function Bookings({ bookings, facilities, filters }) {
         e.preventDefault();
         post(route('bookings.store'), {
             onSuccess: () => {
+                const court = facilities.flatMap(f => f.courts).find(c => c.id == data.court_id);
+                setSelectedBooking({
+                    id: 'NEW',
+                    status: 'pending',
+                    user: null,
+                    guest_name: data.guest_name || 'Walk-in',
+                    date: data.date,
+                    start_time: data.start_time,
+                    end_time: data.end_time,
+                    total_price: data.total_price,
+                    court: court
+                });
+                setModalMode('success');
                 reset();
                 setIsAdding(false);
-                alert('Booking successfully added!');
             }
         });
     };
@@ -285,7 +298,7 @@ export default function Bookings({ bookings, facilities, filters }) {
                             <BookingCard 
                                 key={booking.id} 
                                 booking={booking} 
-                                onClick={() => setSelectedBooking(booking)}
+                                onClick={() => { setSelectedBooking(booking); setModalMode('view'); }}
                             />
                         ))}
                     </div>
@@ -320,7 +333,7 @@ export default function Bookings({ bookings, facilities, filters }) {
                                         {group.bookings.map((booking) => (
                                             <tr 
                                                 key={booking.id} 
-                                                onClick={() => setSelectedBooking(booking)}
+                                                onClick={() => { setSelectedBooking(booking); setModalMode('view'); }}
                                                 className="group hover:bg-[#10221C]/[0.02] transition-colors cursor-pointer"
                                             >
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -359,22 +372,37 @@ export default function Bookings({ bookings, facilities, filters }) {
                                                     ₱{Number(booking.total_price).toFixed(2)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (confirm('Are you sure you want to delete this booking?')) {
-                                                                    router.delete(route('bookings.destroy', booking.id), { preserveScroll: true });
-                                                                }
-                                                            }}
-                                                            className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                                                            title="Delete Booking"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                        <button className="text-gray-400 hover:text-[#10221C] p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                                            <ChevronRight size={16} />
-                                                        </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {booking.status === 'pending' && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); }}
+                                                                className="px-3 py-1.5 bg-[#10221C] text-[#D6FF3F] text-xs font-bold rounded-lg hover:bg-[#1a352b] transition-colors"
+                                                            >
+                                                                Verify
+                                                            </button>
+                                                        )}
+                                                        {booking.status !== 'cancelled' && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); }}
+                                                                className="px-3 py-1.5 bg-gray-100 text-gray-500 hover:text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 border-l border-gray-200 pl-2 ml-1">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (confirm('Are you sure you want to delete this booking?')) {
+                                                                        router.delete(route('bookings.destroy', booking.id), { preserveScroll: true });
+                                                                    }
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                                                title="Delete Booking"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -390,6 +418,7 @@ export default function Bookings({ bookings, facilities, filters }) {
             <BookingDetailDrawer 
                 isOpen={!!selectedBooking}
                 booking={selectedBooking}
+                mode={modalMode}
                 onClose={() => setSelectedBooking(null)}
             />
 

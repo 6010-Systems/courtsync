@@ -58,6 +58,26 @@ export default function BookingCard({ booking, onClick }) {
                     <p className="text-sm font-black text-[#10221C]">₱{Number(booking.total_price).toLocaleString()}</p>
                 </div>
             </div>
+            
+            {/* CTAs */}
+            <div className="flex flex-row items-center gap-2 pt-2 border-t border-[#10221C]/5 mt-1">
+                {booking.status === 'pending' && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); }}
+                        className="flex-[2] py-2 bg-[#10221C] text-[#D6FF3F] text-xs font-bold rounded-lg hover:bg-[#1a352b] transition-colors text-center"
+                    >
+                        Verify Payment
+                    </button>
+                )}
+                {booking.status !== 'cancelled' && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); }}
+                        className="flex-1 py-2 bg-gray-50 text-gray-500 hover:text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors text-center"
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
         </motion.div>
     );
 }
