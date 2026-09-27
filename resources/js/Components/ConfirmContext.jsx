@@ -6,43 +6,44 @@ import {
 } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ConfirmContext = createContext(null);
 
 const TYPE_CONFIG = {
     success: {
         icon: Check,
-        haloBg: 'bg-[#EEF4FF]',
-        innerBg: 'bg-[#3B82F6] text-white shadow-[#3B82F6]/30',
-        confirmBtn: 'bg-[#3B82F6] text-white hover:bg-[#2563EB] shadow-md shadow-[#3B82F6]/25',
-        singleBtn: 'bg-[#F3F6FD] text-[#3B82F6] hover:bg-[#E8F0FD]',
+        headerBg: 'bg-[#101F1A]',
+        iconBg: 'bg-white/10',
+        iconColor: 'text-[#D6FF3F]',
+        confirmBtn: 'bg-[#10221C] text-[#D6FF3F] hover:bg-[#1C2E24]',
     },
     danger: {
         icon: Trash2,
-        haloBg: 'bg-[#FFF0ED]',
-        innerBg: 'bg-[#FF5A36] text-white shadow-[#FF5A36]/30',
-        confirmBtn: 'bg-[#FF5A36] text-white hover:bg-[#E04522] shadow-md shadow-[#FF5A36]/25',
-        singleBtn: 'bg-[#FFF0ED] text-[#FF5A36] hover:bg-[#FFE2DC]',
+        headerBg: 'bg-[#FF5A36]',
+        iconBg: 'bg-white/20',
+        iconColor: 'text-white',
+        confirmBtn: 'bg-[#FF5A36] text-white hover:bg-[#E04522]',
     },
     warning: {
         icon: AlertTriangle,
-        haloBg: 'bg-[#FFFBEB]',
-        innerBg: 'bg-[#F59E0B] text-white shadow-[#F59E0B]/30',
-        confirmBtn: 'bg-[#F59E0B] text-white hover:bg-[#D97706] shadow-md shadow-[#F59E0B]/25',
-        singleBtn: 'bg-[#FFFBEB] text-[#D97706] hover:bg-[#FEF3C7]',
+        headerBg: 'bg-[#F59E0B]',
+        iconBg: 'bg-white/20',
+        iconColor: 'text-white',
+        confirmBtn: 'bg-[#F59E0B] text-white hover:bg-[#D97706]',
     },
     info: {
         icon: HelpCircle,
-        haloBg: 'bg-[#F5F2EA]',
-        innerBg: 'bg-[#101F1A] text-[#D6FF3F] shadow-[#101F1A]/20',
-        confirmBtn: 'bg-[#101F1A] text-[#D6FF3F] hover:bg-[#1C2E24] shadow-md shadow-[#101F1A]/20',
-        singleBtn: 'bg-[#F5F2EA] text-[#101F1A] hover:bg-[#EAE5D9]',
+        headerBg: 'bg-[#101F1A]',
+        iconBg: 'bg-white/10',
+        iconColor: 'text-[#D6FF3F]',
+        confirmBtn: 'bg-[#10221C] text-[#D6FF3F] hover:bg-[#1C2E24]',
     },
 };
 
 /**
  * Global Confirm & Alert Dialog Provider for CourtSync.
- * Matches Sidebar's rounded-xl border radius with clean soft-halo badge theme.
+ * Uses the new centered Dialog layout style (split header/body).
  */
 export function ConfirmProvider({ children }) {
     const [dialogState, setDialogState] = useState(null);
@@ -96,7 +97,8 @@ export function ConfirmProvider({ children }) {
     // Auto-focus primary confirm button on mount
     useEffect(() => {
         if (dialogState) {
-            confirmBtnRef.current?.focus();
+            // small timeout to ensure DOM is ready during animation
+            setTimeout(() => confirmBtnRef.current?.focus(), 100);
         }
     }, [dialogState]);
 
@@ -108,100 +110,76 @@ export function ConfirmProvider({ children }) {
         <ConfirmContext.Provider value={{ confirm }}>
             {children}
 
-            {dialogState && typeof document !== 'undefined' && createPortal(
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="cs-confirm-title"
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                >
-                    {/* Backdrop */}
-                    <div
-                        onClick={handleCancel}
-                        className="fixed inset-0 bg-[#101F1A]/50 backdrop-blur-xs transition-opacity duration-200"
-                        style={{ animation: 'cs-backdrop-in 0.2s ease-out' }}
-                    />
-
-                    {/* Dialog Card Container matching rounded-2xl */}
-                    <div
-                        style={{ animation: 'cs-dialog-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
-                        className="relative z-10 flex w-full max-w-[360px] flex-col items-center rounded-2xl border border-black/[0.06] bg-white px-6 pt-6 pb-5 text-center shadow-[0_24px_50px_-12px_rgba(16,31,26,0.18)] ring-1 ring-black/[0.03]"
-                    >
-                        {/* Outer Soft Halo with Solid Inner Circle Icon */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {dialogState && (
                         <div
-                            style={{ animation: 'cs-icon-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
-                            className={['flex h-18 w-18 items-center justify-center rounded-full', config.haloBg].join(' ')}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="cs-confirm-title"
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
                         >
-                            <div className={['flex h-11 w-11 items-center justify-center rounded-full shadow-md', config.innerBg].join(' ')}>
-                                <IconComponent size={20} strokeWidth={2.8} />
-                            </div>
-                        </div>
+                            {/* Backdrop */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={handleCancel}
+                                className="fixed inset-0 bg-[#10221C]/40 backdrop-blur-sm transition-opacity"
+                            />
 
-                        {/* Heading Title */}
-                        <h3 id="cs-confirm-title" className="mt-4 text-[17px] font-bold tracking-tight text-[#101F1A]">
-                            {dialogState.title}
-                        </h3>
-
-                        {/* Subtext Description */}
-                        <p className="mt-1.5 text-[13px] leading-relaxed text-[#101F1A]/60 max-w-[280px]">
-                            {dialogState.message}
-                        </p>
-
-                        {/* Action Buttons */}
-                        {isSingleButton ? (
-                            <button
-                                ref={confirmBtnRef}
-                                type="button"
-                                onClick={handleConfirm}
-                                className={[
-                                    'mt-5 h-10 w-full rounded-xl font-semibold text-xs tracking-wide transition-all active:scale-[0.98] focus:outline-none',
-                                    config.singleBtn,
-                                ].join(' ')}
+                            {/* Dialog Card Container matching BookingDetailDrawer */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                className="relative z-10 flex w-full max-w-sm flex-col bg-white overflow-hidden rounded-3xl shadow-2xl pointer-events-auto"
                             >
-                                {dialogState.confirmText || 'Close'}
-                            </button>
-                        ) : (
-                            <div className="mt-5 flex w-full items-center gap-2.5">
-                                <button
-                                    type="button"
-                                    onClick={handleCancel}
-                                    className="flex-1 h-10 rounded-xl bg-[#F5F2EA] text-[#101F1A]/70 hover:bg-[#EAE5D9] hover:text-[#101F1A] font-semibold text-xs transition-all active:scale-95 focus:outline-none"
-                                >
-                                    {dialogState.cancelText}
-                                </button>
-                                <button
-                                    ref={confirmBtnRef}
-                                    type="button"
-                                    onClick={handleConfirm}
-                                    className={[
-                                        'flex-1 h-10 rounded-xl font-bold text-xs tracking-wide transition-all active:scale-95 focus:outline-none',
-                                        config.confirmBtn,
-                                    ].join(' ')}
-                                >
-                                    {dialogState.confirmText}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>,
+                                {/* Top Section (Header) */}
+                                <div className={`${config.headerBg} px-5 py-6 flex flex-col items-center text-center relative`}>
+                                    <div className={`w-14 h-14 ${config.iconBg} rounded-full flex items-center justify-center mb-3 ${config.iconColor} shadow-inner`}>
+                                        <IconComponent size={28} strokeWidth={2.5} />
+                                    </div>
+                                    
+                                    <h3 id="cs-confirm-title" className="text-xl font-bold text-white mb-0 tracking-tight leading-tight">
+                                        {dialogState.title}
+                                    </h3>
+                                </div>
+
+                                {/* Bottom Section (Details & CTAs) */}
+                                <div className="px-5 py-6 bg-white flex flex-col items-center text-center">
+                                    <p className="text-[#10221C]/70 text-sm leading-relaxed mb-6">
+                                        {dialogState.message}
+                                    </p>
+
+                                    {/* Action Buttons */}
+                                    <div className="w-full pt-4 mt-2 border-t border-[#10221C]/10 flex flex-row items-center gap-2">
+                                        {!isSingleButton && (
+                                            <button
+                                                type="button"
+                                                onClick={handleCancel}
+                                                className="flex-1 py-2.5 text-center text-xs font-bold text-gray-400 hover:text-red-600 bg-transparent hover:bg-gray-50 rounded-xl transition-colors focus:outline-none"
+                                            >
+                                                {dialogState.cancelText}
+                                            </button>
+                                        )}
+                                        <button
+                                            ref={confirmBtnRef}
+                                            type="button"
+                                            onClick={handleConfirm}
+                                            className={`flex-[2] py-2.5 flex justify-center text-xs tracking-wide rounded-xl font-bold transition-transform active:scale-[0.98] focus:outline-none ${config.confirmBtn}`}
+                                        >
+                                            {dialogState.confirmText}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
                 document.body
             )}
-
-            <style>{`
-                @keyframes cs-backdrop-in {
-                    from { opacity: 0; }
-                    to   { opacity: 1; }
-                }
-                @keyframes cs-dialog-in {
-                    from { opacity: 0; transform: scale(0.92) translateY(10px); }
-                    to   { opacity: 1; transform: scale(1) translateY(0); }
-                }
-                @keyframes cs-icon-pop {
-                    0%   { opacity: 0; transform: scale(0.6); }
-                    70%  { transform: scale(1.08); }
-                    100% { opacity: 1; transform: scale(1); }
-                }
-            `}</style>
         </ConfirmContext.Provider>
     );
 }
