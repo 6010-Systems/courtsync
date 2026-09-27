@@ -89,6 +89,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
 
+<<<<<<< HEAD
     Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
@@ -98,6 +99,18 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/bookings/{booking}/verify', [BookingController::class, 'verifyPayment'])->name('bookings.verify');
     Route::post('/bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
     Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])->name('bookings.lock');
+=======
+    Route::get('/facility/payment-settings', [FacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
+    Route::post('/facility/payment-settings/{facility}', [FacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::get('/facility/bookings', [\App\Http\Controllers\BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('facility.payments');
+    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
+    Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
+    Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/lock', [\App\Http\Controllers\BookingController::class, 'lockSlot'])->name('bookings.lock');
+    Route::post('/bookings/unlock', [\App\Http\Controllers\BookingController::class, 'unlockSlot'])->name('bookings.unlock');
+>>>>>>> 8acfc7af117debbe6f1ed9833f735535016f8e4b
 
 });
 
@@ -134,8 +147,14 @@ Route::middleware('guest')->group(function () use ($facilitySlugPattern) {
 });
 
 // Book Route (Requires Authentication)
+<<<<<<< HEAD
 Route::middleware(['auth'])->group(function () use ($facilitySlugPattern) {
     Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->where('facility', $facilitySlugPattern)->name('facility.book');
+=======
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/courts/{court}/locked-slots', [App\Http\Controllers\BookingController::class, 'getLockedSlots']);
+    Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
+>>>>>>> 8acfc7af117debbe6f1ed9833f735535016f8e4b
 });
 
 // Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)

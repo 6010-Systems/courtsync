@@ -400,7 +400,7 @@ export default function Bookings({ bookings, facilities, filters }) {
                                                                         title: 'Cancel Booking',
                                                                         message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
                                                                         confirmText: 'Cancel Booking',
-                                                                        type: 'warning'
+                                                                        type: 'danger'
                                                                     });
                                                                     if (ok) router.patch(route('bookings.update', booking.id), { status: 'cancelled' }, { preserveScroll: true });
                                                                 }}

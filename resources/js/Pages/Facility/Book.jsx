@@ -6,6 +6,7 @@ import Step2DateTime from './BookSteps/Step2DateTime';
 import Step3Confirm from './BookSteps/Step3Confirm';
 import Step4Payment from './BookSteps/Step4Payment';
 import { useBookingLogic } from './BookSteps/useBookingLogic';
+import TimerIcon from '@/Components/TimerIcon';
 
 export default function Book({ facility }) {
     const {
@@ -212,15 +213,21 @@ export default function Book({ facility }) {
             {modal.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#10221C]/40 backdrop-blur-sm transition-all">
                     <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] shadow-lg shadow-[#D6FF3F]/30' : 'bg-red-100 text-red-600 shadow-lg shadow-red-100/50'}`}>
-                            {modal.type === 'success' ? (
-                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                            ) : (
-                                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                            )}
-                        </div>
+                        {modal.type === 'timer' ? (
+                            <div className="mb-2">
+                                <TimerIcon className="w-32 h-32 drop-shadow-xl" />
+                            </div>
+                        ) : (
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-5 ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] shadow-lg shadow-[#D6FF3F]/30' : 'bg-red-100 text-red-600 shadow-lg shadow-red-100/50'}`}>
+                                {modal.type === 'success' ? (
+                                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                ) : (
+                                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+                                )}
+                            </div>
+                        )}
                         <h4 className="text-2xl font-black text-[#10221C] mb-2">
-                            {modal.type === 'success' ? 'Booking Confirmed!' : 'Booking Failed'}
+                            {modal.title ? modal.title : (modal.type === 'success' ? 'Booking Confirmed!' : 'Booking Failed')}
                         </h4>
                         <p className="text-gray-500 text-sm mb-8 leading-relaxed px-2">{modal.message}</p>
                         

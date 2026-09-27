@@ -16,10 +16,10 @@ const TYPE_CONFIG = {
         headerBg: 'bg-[#101F1A]',
         iconBg: 'bg-white/10',
         iconColor: 'text-[#D6FF3F]',
-        confirmBtn: 'bg-[#10221C] text-[#D6FF3F] hover:bg-[#1C2E24]',
+        confirmBtn: 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#c2f026]',
     },
     danger: {
-        icon: Trash2,
+        icon: AlertTriangle,
         headerBg: 'bg-[#FF5A36]',
         iconBg: 'bg-white/20',
         iconColor: 'text-white',
