@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Facility;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
@@ -63,24 +64,24 @@ class BookingController extends Controller
             ],
         ]);
     }
-    
+
     public function getLockedSlots(Request $request, $courtId)
     {
         $date = $request->query('date');
         $clientId = $request->query('idempotency_key');
-        if (!$date) {
+        if (! $date) {
             return response()->json(['locked_slots' => []]);
         }
 
         $locked = [];
-        \Illuminate\Support\Facades\Log::info("getLockedSlots called! URL clientId: " . ($clientId ?? 'NULL'));
+        Log::info('getLockedSlots called! URL clientId: '.($clientId ?? 'NULL'));
 
         for ($i = 0; $i < 24; $i++) {
-            $hour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
+            $hour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
             $key = "court_hold_{$courtId}_{$date}_{$hour}";
-            if (\Illuminate\Support\Facades\Cache::has($key)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($key);
-                \Illuminate\Support\Facades\Log::info("Slot {$hour} is held by: {$heldBy}. Does it match? " . ($heldBy === $clientId ? 'YES' : 'NO'));
+            if (Cache::has($key)) {
+                $heldBy = Cache::get($key);
+                Log::info("Slot {$hour} is held by: {$heldBy}. Does it match? ".($heldBy === $clientId ? 'YES' : 'NO'));
                 if ($heldBy !== $clientId) {
                     $locked[] = $hour;
                 }
@@ -92,7 +93,6 @@ class BookingController extends Controller
             'debug_clientId' => $clientId,
         ]);
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -267,7 +267,7 @@ class BookingController extends Controller
 
     public function lockSlot(Request $request)
     {
-        \Illuminate\Support\Facades\Log::info("lockSlot called with payload: ", $request->all());
+        Log::info('lockSlot called with payload: ', $request->all());
 
         $request->validate([
             'court_id' => 'required',
@@ -286,82 +286,40 @@ class BookingController extends Controller
         for ($i = $startHour; $i < $endHour; $i++) {
             $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
             $cacheKey = "court_hold_{$request->court_id}_{$request->date}_{$formattedHour}";
-<<<<<<< HEAD
 
-            if (Cache::has($cacheKey) && Cache::get($cacheKey) !== auth()->id()) {
-                return response()->json(['locked' => true], 423); // 423 means Locked
-            }
-            $keysToLock[] = $cacheKey;
-        }
-
-        // If we made it here, every single hour they requested is completely free!
-        // Lock all of them for exactly 7 minutes!
-        foreach ($keysToLock as $key) {
-            Cache::put($key, auth()->id(), now()->addMinutes(7));
-=======
-            
-            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if (Cache::has($cacheKey)) {
+                $heldBy = Cache::get($cacheKey);
                 if ($heldBy !== $clientId) {
                     return response()->json(['locked' => true], 423); // 423 means Locked
                 }
             }
             $keysToLock[] = $cacheKey;
         }
-        
+
         // If we made it here, every single hour they requested is completely free (or already held by them)!
-        
+
         // Prevent Slot Hoarding!
         // Clear any previous times this user was holding that are not in their new selection
         if ($clientId !== 'unknown') {
-            $previousLocks = \Illuminate\Support\Facades\Cache::get("active_locks_{$clientId}", []);
+            $previousLocks = Cache::get("active_locks_{$clientId}", []);
             foreach ($previousLocks as $oldKey) {
-                if (!in_array($oldKey, $keysToLock)) {
-                    $oldHeldBy = \Illuminate\Support\Facades\Cache::get($oldKey);
+                if (! in_array($oldKey, $keysToLock)) {
+                    $oldHeldBy = Cache::get($oldKey);
                     if ($oldHeldBy === $clientId) {
-                        \Illuminate\Support\Facades\Cache::forget($oldKey);
+                        Cache::forget($oldKey);
                     }
                 }
             }
             // Save their new active locks
-            \Illuminate\Support\Facades\Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
+            Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
         }
 
+        // If we made it here, every single hour they requested is completely free!
         // Lock all of them for exactly 7 minutes!
         foreach ($keysToLock as $key) {
-            \Illuminate\Support\Facades\Cache::put($key, $clientId, now()->addMinutes(7));
->>>>>>> 8acfc7af117debbe6f1ed9833f735535016f8e4b
+            Cache::put($key, $clientId, now()->addMinutes(7));
         }
 
         return response()->json(['locked' => false]);
     }
-<<<<<<< HEAD
-=======
-
-    public function unlockSlot(Request $request)
-    {
-        $courtId = $request->court_id;
-        $date = $request->date;
-        $startHour = (int) explode(':', $request->start_time)[0];
-        $endHour = (int) explode(':', $request->end_time)[0];
-        $clientId = $request->idempotency_key;
-
-        if (!$clientId) {
-            return response()->json(['success' => false], 400);
-        }
-
-        for ($i = $startHour; $i < $endHour; $i++) {
-            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
-            $cacheKey = "court_hold_{$courtId}_{$date}_{$formattedHour}";
-            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($cacheKey);
-                if ($heldBy === $clientId) {
-                    \Illuminate\Support\Facades\Cache::forget($cacheKey);
-                }
-            }
-        }
-
-        return response()->json(['success' => true]);
-    }
->>>>>>> 8acfc7af117debbe6f1ed9833f735535016f8e4b
 }
