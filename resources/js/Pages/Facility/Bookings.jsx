@@ -11,6 +11,7 @@ import { Search, Plus, Trash2, Calendar, Clock, MapPin, User, ChevronRight, Layo
 import { motion, AnimatePresence } from 'framer-motion';
 import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 import BookingCard from '@/Components/BookingCard';
+import { useConfirm } from '@/Components/ConfirmContext';
 
 function BookingStatusBadge({ status }) {
     const s = status?.toLowerCase() || 'pending';
@@ -27,6 +28,7 @@ function BookingStatusBadge({ status }) {
 }
 
 export default function Bookings({ bookings, facilities, filters }) {
+    const { confirm } = useConfirm();
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [activeFilter, setActiveFilter] = useState(filters?.filter || 'All');
     const [viewMode, setViewMode] = useState('table');
@@ -375,7 +377,16 @@ export default function Bookings({ bookings, facilities, filters }) {
                                                     <div className="flex items-center justify-end gap-2">
                                                         {booking.status === 'pending' && (
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); }}
+                                                                onClick={async (e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    const ok = await confirm({
+                                                                        title: 'Verify Payment',
+                                                                        message: 'Are you sure you want to mark this booking as paid and confirmed?',
+                                                                        confirmText: 'Verify Payment',
+                                                                        type: 'success'
+                                                                    });
+                                                                    if (ok) router.patch(route('bookings.update', booking.id), { status: 'confirmed' }, { preserveScroll: true });
+                                                                }}
                                                                 className="px-3 py-1.5 bg-[#10221C] text-[#D6FF3F] text-xs font-bold rounded-lg hover:bg-[#1a352b] transition-colors"
                                                             >
                                                                 Verify
@@ -383,7 +394,16 @@ export default function Bookings({ bookings, facilities, filters }) {
                                                         )}
                                                         {booking.status !== 'cancelled' && (
                                                             <button
-                                                                onClick={(e) => { e.stopPropagation(); }}
+                                                                onClick={async (e) => { 
+                                                                    e.stopPropagation();
+                                                                    const ok = await confirm({
+                                                                        title: 'Cancel Booking',
+                                                                        message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
+                                                                        confirmText: 'Cancel Booking',
+                                                                        type: 'warning'
+                                                                    });
+                                                                    if (ok) router.patch(route('bookings.update', booking.id), { status: 'cancelled' }, { preserveScroll: true });
+                                                                }}
                                                                 className="px-3 py-1.5 bg-gray-100 text-gray-500 hover:text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors"
                                                             >
                                                                 Cancel
@@ -391,9 +411,15 @@ export default function Bookings({ bookings, facilities, filters }) {
                                                         )}
                                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 border-l border-gray-200 pl-2 ml-1">
                                                             <button
-                                                                onClick={(e) => {
+                                                                onClick={async (e) => {
                                                                     e.stopPropagation();
-                                                                    if (confirm('Are you sure you want to delete this booking?')) {
+                                                                    const ok = await confirm({
+                                                                        title: 'Delete Booking',
+                                                                        message: 'Are you sure you want to permanently delete this booking?',
+                                                                        confirmText: 'Delete',
+                                                                        type: 'danger'
+                                                                    });
+                                                                    if (ok) {
                                                                         router.delete(route('bookings.destroy', booking.id), { preserveScroll: true });
                                                                     }
                                                                 }}

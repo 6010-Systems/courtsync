@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, User, ChevronRight } from 'lucide-react';
+import { useConfirm } from '@/Components/ConfirmContext';
+import { router } from '@inertiajs/react';
 
 export default function BookingCard({ booking, onClick }) {
+    const { confirm } = useConfirm();
     const statusColors = {
         pending: 'bg-amber-50 text-amber-700 border-amber-200',
         confirmed: 'bg-[#D6FF3F]/20 text-[#10221C] border-[#D6FF3F]/50',
@@ -63,7 +66,16 @@ export default function BookingCard({ booking, onClick }) {
             <div className="flex flex-row items-center gap-2 pt-2 border-t border-[#10221C]/5 mt-1">
                 {booking.status === 'pending' && (
                     <button
-                        onClick={(e) => { e.stopPropagation(); }}
+                        onClick={async (e) => { 
+                            e.stopPropagation();
+                            const ok = await confirm({
+                                title: 'Verify Payment',
+                                message: 'Are you sure you want to mark this booking as paid and confirmed?',
+                                confirmText: 'Verify Payment',
+                                type: 'success'
+                            });
+                            if (ok) router.patch(route('bookings.update', booking.id), { status: 'confirmed' }, { preserveScroll: true });
+                        }}
                         className="flex-[2] py-2 bg-[#10221C] text-[#D6FF3F] text-xs font-bold rounded-lg hover:bg-[#1a352b] transition-colors text-center"
                     >
                         Verify Payment
@@ -71,7 +83,16 @@ export default function BookingCard({ booking, onClick }) {
                 )}
                 {booking.status !== 'cancelled' && (
                     <button
-                        onClick={(e) => { e.stopPropagation(); }}
+                        onClick={async (e) => { 
+                            e.stopPropagation();
+                            const ok = await confirm({
+                                title: 'Cancel Booking',
+                                message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
+                                confirmText: 'Cancel Booking',
+                                type: 'warning'
+                            });
+                            if (ok) router.patch(route('bookings.update', booking.id), { status: 'cancelled' }, { preserveScroll: true });
+                        }}
                         className="flex-1 py-2 bg-gray-50 text-gray-500 hover:text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors text-center"
                     >
                         Cancel
