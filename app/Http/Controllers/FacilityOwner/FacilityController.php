@@ -5,6 +5,8 @@ namespace App\Http\Controllers\FacilityOwner;
 use App\Http\Controllers\Controller;
 use App\Models\Facility;
 use App\Models\FacilityVerification;
+use App\Models\User;
+use App\Support\FacilityDashboardMetrics;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,13 +23,44 @@ class FacilityController extends Controller
 
         return Inertia::render('FacilityOwner/Dashboard', [
             'user' => $user,
+            'metrics' => $this->dashboardMetrics($user),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function dashboardMetrics(User $user): ?array
+    {
+        $metrics = new FacilityDashboardMetrics;
+
+        if ($user->role === 'FACILITY_OWNER' && $user->status === 'VERIFIED') {
+            $approved = $user->facilities->where('verification_status', 'APPROVED');
+
+            if ($approved->isEmpty()) {
+                return null;
+            }
+
+            return $metrics->summarize(
+                $approved->pluck('id')->all(),
+                (int) $approved->sum('players_count'),
+            );
+        }
+
+        if ($user->role === 'FACILITY_STAFF' && $user->workFacility) {
+            return $metrics->summarize(
+                [$user->workFacility->id],
+                (int) $user->workFacility->players_count,
+            );
+        }
+
+        return null;
     }
 
     public function index(Request $request)
     {
         return Inertia::render('FacilityOwner/Facilities', [
-            'facilities' => $request->user()->facilities()->with('verification')->withCount('courts')->get()
+            'facilities' => $request->user()->facilities()->with('verification')->withCount('courts')->get(),
         ]);
     }
 
@@ -36,7 +69,7 @@ class FacilityController extends Controller
         $request->validate([
             'facility_id' => 'nullable|exists:facilities,id',
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:facilities,slug,' . $request->facility_id,
+            'slug' => 'nullable|string|max:255|unique:facilities,slug,'.$request->facility_id,
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
@@ -47,7 +80,7 @@ class FacilityController extends Controller
 
         if ($request->facility_id) {
             $facility = $request->user()->facilities()->findOrFail($request->facility_id);
-            
+
             $updateData = [
                 'name' => $request->name,
                 'address' => $request->address,
@@ -84,7 +117,7 @@ class FacilityController extends Controller
     {
         $facility = $request->user()->facilities()->findOrFail($id);
         $facility->delete();
-        
+
         return redirect()->back();
     }
 
@@ -116,7 +149,7 @@ class FacilityController extends Controller
                 'facility_photos' => $request->facility_photos,
             ]
         );
-        
+
         // Update status to SUBMITTED since new documents were uploaded
         $facility->update(['verification_status' => 'SUBMITTED']);
 

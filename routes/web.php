@@ -123,17 +123,20 @@ Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admi
 });
 
 // ── Tenant Player Auth Routes ─────────────────────────────────────────
-Route::middleware('guest')->group(function () {
-    Route::get('/{facility:slug}/login', [PlayerSessionController::class, 'create'])->name('player.login');
-    Route::post('/{facility:slug}/login', [PlayerSessionController::class, 'store']);
-    Route::get('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'create'])->name('player.register');
-    Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store']);
+$reservedFacilitySlugs = 'admin|api|auth|bookings|confirm-password|dashboard|email|facilities|facility|forgot-password|login|logout|password|profile|register|reset-password|storage|up|verify-email';
+$facilitySlugPattern = sprintf('(?!(%s)$)[a-z0-9-]+', $reservedFacilitySlugs);
+
+Route::middleware('guest')->group(function () use ($facilitySlugPattern) {
+    Route::get('/{facility:slug}/login', [PlayerSessionController::class, 'create'])->where('facility', $facilitySlugPattern)->name('player.login');
+    Route::post('/{facility:slug}/login', [PlayerSessionController::class, 'store'])->where('facility', $facilitySlugPattern);
+    Route::get('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'create'])->where('facility', $facilitySlugPattern)->name('player.register');
+    Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store'])->where('facility', $facilitySlugPattern);
 });
 
 // Book Route (Requires Authentication)
-Route::middleware(['auth'])->group(function () {
-    Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->name('facility.book');
+Route::middleware(['auth'])->group(function () use ($facilitySlugPattern) {
+    Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->where('facility', $facilitySlugPattern)->name('facility.book');
 });
 
 // Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)
-Route::get('/{facility:slug}', [RootFacilityController::class, 'show'])->name('facility.show');
+Route::get('/{facility:slug}', [RootFacilityController::class, 'show'])->where('facility', $facilitySlugPattern)->name('facility.show');
