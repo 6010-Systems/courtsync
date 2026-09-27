@@ -106,6 +106,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
     Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
     Route::post('/bookings/lock', [\App\Http\Controllers\BookingController::class, 'lockSlot'])->name('bookings.lock');
+    Route::post('/bookings/unlock', [\App\Http\Controllers\BookingController::class, 'unlockSlot'])->name('bookings.unlock');
 
 });
 
@@ -139,6 +140,7 @@ Route::middleware('guest')->group(function () {
 
 // Book Route (Requires Authentication)
 Route::middleware(['auth'])->group(function () {
+    Route::get('/api/courts/{court}/locked-slots', [App\Http\Controllers\BookingController::class, 'getLockedSlots']);
     Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
 });
 

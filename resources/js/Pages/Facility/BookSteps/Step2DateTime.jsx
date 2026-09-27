@@ -96,7 +96,7 @@ export default function Step2DateTime({
                                     <option value="">Select start</option>
                                     {timeOptions.slice(0, -1).map((opt) => (
                                         <option key={opt.value} value={opt.value} disabled={opt.isBooked}>
-                                            {opt.label} {opt.isBooked ? '(Booked)' : ''}
+                                            {opt.label} {opt.labelSuffix}
                                         </option>
                                     ))}
                                 </select>
