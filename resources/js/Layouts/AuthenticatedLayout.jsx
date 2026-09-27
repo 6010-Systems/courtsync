@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children, inset = 'default' }) {
     const isDashboard = inset === 'dashboard';
-    const horizontalPad = isDashboard ? 'px-2' : 'px-3 sm:px-5 lg:px-6';
+    const horizontalPad = 'px-3';
     const page = usePage();
     const user = page.props.auth.user;
     const [mobileNavOpen, setMobileNavOpen] = useState(false);

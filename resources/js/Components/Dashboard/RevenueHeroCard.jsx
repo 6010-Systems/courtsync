@@ -126,9 +126,9 @@ function RevenueHeroCardComponent({
       </div>
 
       {/* Sparkline — full-width, bleeds into card */}
-      <div className="h-16 -mx-0 relative z-0 flex-1 min-h-[64px]">
-        <ResponsiveContainer width="100%" height={64}>
-          <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+      <div className="relative z-0 flex-1 min-h-[80px] w-full mt-auto flex items-end">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 15, right: 0, left: 0, bottom: 25 }}>
             <defs>
               <linearGradient id="heroRevGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={DASHBOARD_THEME.LIME} stopOpacity={0.45} />
