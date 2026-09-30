@@ -15,6 +15,34 @@ export const DASHBOARD_THEME = {
   BORDER_COLOR: 'rgba(16, 34, 28, 0.12)',
 };
 
+// ---------------------------------------------------------------------------
+// Card Shell Tokens — shared across all Dashboard cards
+// ---------------------------------------------------------------------------
+
+/** Standard card padding variants */
+export const CARD_PADDING = {
+  default: 'p-4 md:p-5',
+  compact: 'p-3.5',
+  hero:    'p-5 md:p-6',
+};
+
+/** Shared card structural classes */
+export const CARD_BASE   = 'rounded-xl border border-[#10221C]/12 bg-white shadow-subtle';
+export const CARD_HOVER  = 'transition-all duration-200 hover:border-[#10221C]/25';
+export const CARD_DARK   = `rounded-xl border border-white/8 shadow-subtle`;
+
+// ---------------------------------------------------------------------------
+// GitHub-style Heatmap — 5 intensity levels (near-black → lime)
+// ---------------------------------------------------------------------------
+
+export const HEATMAP_LEVELS = [
+  '#1a2e26', // level 0 — empty / near-black
+  '#2a4a36', // level 1 — low
+  '#3d6b4a', // level 2 — medium-low
+  '#7ab85c', // level 3 — medium-high
+  '#D6FF3F', // level 4 — high (lime)
+];
+
 export const DEFAULT_DATE_RANGES = ['Today', 'This Week', 'This Month', 'This Year'];
 
 // Dynamic Revenue Data mapped by Date Range with expressive visual variations & peaks

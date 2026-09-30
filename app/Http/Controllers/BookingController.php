@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Facility;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
@@ -19,39 +22,66 @@ class BookingController extends Controller
             $facilityIds = collect([$user->facility_id]);
         }
 
-        $bookings = Booking::whereIn('facility_id', $facilityIds)
-            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name'])
-            ->orderBy('date', 'desc')
+        $search = $request->input('search');
+        $filter = $request->input('filter', 'All');
+
+        $query = Booking::whereIn('facility_id', $facilityIds)
+            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%");
+                })->orWhereHas('court', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%");
+                })->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        if ($filter === 'Today') {
+            $query->where('date', now()->toDateString());
+        } elseif ($filter === 'Upcoming') {
+            $query->where('date', '>', now()->toDateString());
+        } elseif ($filter === 'Pending') {
+            $query->where('status', 'pending');
+        }
+
+        $bookings = $query->orderBy('date', 'desc')
             ->orderBy('start_time', 'desc')
             ->get();
 
-        $facilities = \App\Models\Facility::whereIn('id', $facilityIds)
+        $facilities = Facility::whereIn('id', $facilityIds)
             ->with('courts')
             ->get();
 
         return inertia('Facility/Bookings', [
             'bookings' => $bookings,
             'facilities' => $facilities,
+            'filters' => [
+                'search' => $search,
+                'filter' => $filter,
+            ],
         ]);
     }
-    
+
     public function getLockedSlots(Request $request, $courtId)
     {
         $date = $request->query('date');
         $clientId = $request->query('idempotency_key');
-        if (!$date) {
+        if (! $date) {
             return response()->json(['locked_slots' => []]);
         }
 
         $locked = [];
-        \Illuminate\Support\Facades\Log::info("getLockedSlots called! URL clientId: " . ($clientId ?? 'NULL'));
+        Log::info('getLockedSlots called! URL clientId: '.($clientId ?? 'NULL'));
 
         for ($i = 0; $i < 24; $i++) {
-            $hour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
+            $hour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
             $key = "court_hold_{$courtId}_{$date}_{$hour}";
-            if (\Illuminate\Support\Facades\Cache::has($key)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($key);
-                \Illuminate\Support\Facades\Log::info("Slot {$hour} is held by: {$heldBy}. Does it match? " . ($heldBy === $clientId ? 'YES' : 'NO'));
+            if (Cache::has($key)) {
+                $heldBy = Cache::get($key);
+                Log::info("Slot {$hour} is held by: {$heldBy}. Does it match? ".($heldBy === $clientId ? 'YES' : 'NO'));
                 if ($heldBy !== $clientId) {
                     $locked[] = $hour;
                 }
@@ -63,7 +93,6 @@ class BookingController extends Controller
             'debug_clientId' => $clientId,
         ]);
     }
-
 
     /**
      * Store a newly created resource in storage.
@@ -89,7 +118,7 @@ class BookingController extends Controller
             ->where(function ($query) use ($validated) {
                 // A requested time [A, B] overlaps with an existing time [C, D] if A < D and B > C.
                 $query->where('start_time', '<', $validated['end_time'])
-                      ->where('end_time', '>', $validated['start_time']);
+                    ->where('end_time', '>', $validated['start_time']);
             })
             ->where('status', '!=', 'cancelled')
             ->exists();
@@ -99,7 +128,7 @@ class BookingController extends Controller
         }
 
         // Determine user_id based on whether a guest name is provided
-        $userId = !empty($validated['guest_name']) ? null : $user->id;
+        $userId = ! empty($validated['guest_name']) ? null : $user->id;
 
         // Create the booking
         $booking = Booking::create([
@@ -111,7 +140,7 @@ class BookingController extends Controller
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
             'total_price' => $validated['total_price'],
-            'status' => 'pending', 
+            'status' => 'pending',
         ]);
 
         // Handle Payment if present
@@ -131,9 +160,9 @@ class BookingController extends Controller
         }
 
         //  Register the player to the facility's player list
-        $facility = \App\Models\Facility::findOrFail($validated['facility_id']);
+        $facility = Facility::findOrFail($validated['facility_id']);
         $facility->players()->syncWithoutDetaching([
-            $user->id => ['status' => 'ACTIVE']
+            $user->id => ['status' => 'ACTIVE'],
         ]);
 
         //  Return success
@@ -179,7 +208,7 @@ class BookingController extends Controller
             $facilityIds = collect([$user->facility_id]);
         }
 
-        if (!$facilityIds->contains($booking->facility_id)) {
+        if (! $facilityIds->contains($booking->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -200,7 +229,7 @@ class BookingController extends Controller
             $facilityIds = collect([$user->facility_id]);
         }
 
-        if (!$facilityIds->contains($booking->facility_id)) {
+        if (! $facilityIds->contains($booking->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -224,7 +253,7 @@ class BookingController extends Controller
             $facilityIds = collect([$user->facility_id]);
         }
 
-        if (!$facilityIds->contains($booking->facility_id)) {
+        if (! $facilityIds->contains($booking->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -236,16 +265,15 @@ class BookingController extends Controller
         return redirect()->back()->with('success', 'Booking rejected. The time slot is now available.');
     }
 
-
     public function lockSlot(Request $request)
     {
-        \Illuminate\Support\Facades\Log::info("lockSlot called with payload: ", $request->all());
+        Log::info('lockSlot called with payload: ', $request->all());
 
         $request->validate([
             'court_id' => 'required',
             'date' => 'required|date',
             'start_time' => 'required',
-            'end_time' => 'required'
+            'end_time' => 'required',
         ]);
 
         $startHour = (int) explode(':', $request->start_time)[0];
@@ -256,67 +284,42 @@ class BookingController extends Controller
 
         // Check if ANY hour in the range is already locked by someone else!
         for ($i = $startHour; $i < $endHour; $i++) {
-            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
+            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
             $cacheKey = "court_hold_{$request->court_id}_{$request->date}_{$formattedHour}";
-            
-            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($cacheKey);
+
+            if (Cache::has($cacheKey)) {
+                $heldBy = Cache::get($cacheKey);
                 if ($heldBy !== $clientId) {
                     return response()->json(['locked' => true], 423); // 423 means Locked
                 }
             }
             $keysToLock[] = $cacheKey;
         }
-        
+
         // If we made it here, every single hour they requested is completely free (or already held by them)!
-        
+
         // Prevent Slot Hoarding!
         // Clear any previous times this user was holding that are not in their new selection
         if ($clientId !== 'unknown') {
-            $previousLocks = \Illuminate\Support\Facades\Cache::get("active_locks_{$clientId}", []);
+            $previousLocks = Cache::get("active_locks_{$clientId}", []);
             foreach ($previousLocks as $oldKey) {
-                if (!in_array($oldKey, $keysToLock)) {
-                    $oldHeldBy = \Illuminate\Support\Facades\Cache::get($oldKey);
+                if (! in_array($oldKey, $keysToLock)) {
+                    $oldHeldBy = Cache::get($oldKey);
                     if ($oldHeldBy === $clientId) {
-                        \Illuminate\Support\Facades\Cache::forget($oldKey);
+                        Cache::forget($oldKey);
                     }
                 }
             }
             // Save their new active locks
-            \Illuminate\Support\Facades\Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
+            Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
         }
 
+        // If we made it here, every single hour they requested is completely free!
         // Lock all of them for exactly 7 minutes!
         foreach ($keysToLock as $key) {
-            \Illuminate\Support\Facades\Cache::put($key, $clientId, now()->addMinutes(7));
+            Cache::put($key, $clientId, now()->addMinutes(7));
         }
-        
+
         return response()->json(['locked' => false]);
-    }
-
-    public function unlockSlot(Request $request)
-    {
-        $courtId = $request->court_id;
-        $date = $request->date;
-        $startHour = (int) explode(':', $request->start_time)[0];
-        $endHour = (int) explode(':', $request->end_time)[0];
-        $clientId = $request->idempotency_key;
-
-        if (!$clientId) {
-            return response()->json(['success' => false], 400);
-        }
-
-        for ($i = $startHour; $i < $endHour; $i++) {
-            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT) . ':00';
-            $cacheKey = "court_hold_{$courtId}_{$date}_{$formattedHour}";
-            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
-                $heldBy = \Illuminate\Support\Facades\Cache::get($cacheKey);
-                if ($heldBy === $clientId) {
-                    \Illuminate\Support\Facades\Cache::forget($cacheKey);
-                }
-            }
-        }
-
-        return response()->json(['success' => true]);
     }
 }

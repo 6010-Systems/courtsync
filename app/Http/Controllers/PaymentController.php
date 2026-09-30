@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use App\Models\Payment;
 use App\Models\Facility;
+use App\Models\Payment;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
@@ -25,12 +24,12 @@ class PaymentController extends Controller
         $payments = Payment::whereHas('booking', function ($query) use ($facilityIds) {
             $query->whereIn('facility_id', $facilityIds);
         })
-        ->with(['booking.court', 'booking.facility', 'user'])
-        ->latest()
-        ->get();
+            ->with(['booking.court', 'booking.facility', 'user'])
+            ->latest()
+            ->get();
 
         return Inertia::render('Facility/Payments', [
-            'payments' => $payments
+            'payments' => $payments,
         ]);
     }
 }

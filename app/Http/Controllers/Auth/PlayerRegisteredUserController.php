@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Facility;
+use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +22,8 @@ class PlayerRegisteredUserController extends Controller
     public function create($facilitySlug): Response
     {
         $facility = Facility::with('verification')->where('slug', $facilitySlug)->firstOrFail();
-        
-        return Inertia::render('Players/Register', [
+
+        return Inertia::render('Player/Auth/Register', [
             'facility' => $facility,
         ]);
     }
@@ -34,7 +34,7 @@ class PlayerRegisteredUserController extends Controller
     public function store(Request $request, $facilitySlug): RedirectResponse
     {
         $facility = Facility::where('slug', $facilitySlug)->firstOrFail();
-        
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
@@ -56,6 +56,6 @@ class PlayerRegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect('/' . $facilitySlug);
+        return redirect('/'.$facilitySlug);
     }
 }

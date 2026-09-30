@@ -20,7 +20,7 @@ class CourtFactory extends Factory
     {
         return [
             'facility_id' => Facility::factory(),
-            'name' => 'Court ' . fake()->unique()->numberBetween(1, 999),
+            'name' => 'Court '.fake()->unique()->numberBetween(1, 999),
             'type' => fake()->randomElement(['Badminton', 'Basketball', 'Tennis', 'Futsal', 'Volleyball']),
             'time_range' => fake()->randomElement(['6:00 AM - 10:00 PM', '7:00 AM - 9:00 PM', '24 Hours', '8:00 AM - 11:00 PM']),
             'description' => fake()->optional()->sentence(),

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, router } from '@inertiajs/react';
 import { Check, X, Eye, FileText, AlertCircle } from 'lucide-react';
 
@@ -60,12 +61,11 @@ export default function Payments({ auth, payments }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Payments Tracking</h2>}
+            header={<PageHeader title="Payments Tracking" showSearch={false} showNotifications={false} />}
         >
             <Head title="Payments Tracking" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 md:gap-6">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 bg-white border-b border-gray-200">
                             
@@ -183,8 +183,6 @@ export default function Payments({ auth, payments }) {
                             )}
 
                         </div>
-                    </div>
-                </div>
             </div>
 
             {/* Image Preview Modal */}
@@ -241,6 +239,7 @@ export default function Payments({ auth, payments }) {
                     </div>
                 </div>
             )}
+            </div>
         </AuthenticatedLayout>
     );
 }

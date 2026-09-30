@@ -32,11 +32,11 @@ export default function Dialog({
         md: 'max-w-md',
         lg: 'max-w-lg',
         xl: 'max-w-xl',
-        '2xl': 'max-w-2xl sm:min-h-[500px]',
-        '3xl': 'max-w-3xl sm:min-h-[560px]',
-        '4xl': 'max-w-4xl sm:min-h-[640px]',
-        '5xl': 'max-w-5xl sm:min-h-[680px]',
-        full: 'max-w-[95vw] sm:min-h-[700px]',
+        '2xl': 'max-w-2xl',
+        '3xl': 'max-w-3xl',
+        '4xl': 'max-w-4xl',
+        '5xl': 'max-w-5xl',
+        full: 'max-w-[95vw]',
     }[size] || 'max-w-2xl';
 
     const getIconStyles = () => {
@@ -95,7 +95,7 @@ export default function Dialog({
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 bg-black/60 transition-opacity" />
+                    <div className="fixed inset-0 bg-[#101F1A]/50 backdrop-blur-xs transition-opacity" />
                 </TransitionChild>
 
                 <div className="fixed inset-0 z-10 overflow-y-auto">
