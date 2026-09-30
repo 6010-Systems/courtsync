@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('status')->default('ACTIVE'); // 'ACTIVE' or 'BANNED'
             $table->timestamps();
-            
+
             // A player can only join a specific facility once
             $table->unique(['facility_id', 'user_id']);
         });

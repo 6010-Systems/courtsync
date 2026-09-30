@@ -93,7 +93,7 @@ export default function BookingsPage({
     };
 
     return (
-        <div className="space-y-4 pb-20">
+        <div className="space-y-4 pb-2">
             {/* ── 1. Top Bar / Toolbar ────────────────────────────────────── */}
             <CalendarToolbar
                 currentDate={currentDate}

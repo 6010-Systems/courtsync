@@ -9,9 +9,11 @@ import {
     LayoutGrid,
     LogOut,
     Settings,
+    X,
     ShieldCheck,
     UserCheck,
     Users,
+    Wallet,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -48,7 +50,7 @@ const navSections = [
     {
         title: 'Management',
         items: [
-            { name: 'Bookings',     href: '#',                         icon: CalendarCheck, badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Bookings',     href: 'facility.bookings',         icon: CalendarCheck, badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
             { name: 'Calendar',     href: '#',                         icon: Calendar,      badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
             { name: 'Facilities',   href: 'facilities.index',          icon: Building2,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Facilities',   href: 'admin.facilities',          icon: Building2,     badge: null, roles: ['ADMIN'] },
@@ -64,7 +66,8 @@ const navSections = [
             { name: 'Owners',       href: 'admin.owners',              icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Staff',        href: 'admin.staff',               icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Customers',    href: '#',                         icon: Users,         badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
-            { name: 'Payments',     href: '#',                         icon: CreditCard,    badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Payments',     href: 'facility.payments',         icon: CreditCard,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Payment Settings', href: 'facility.payment-settings', icon: Wallet, badge: null, roles: ['FACILITY_OWNER'] },
         ],
     },
     {
@@ -535,5 +538,136 @@ export default function Sidebar({ collapsed, onToggle }) {
 
             </aside>
         </>
+    );
+}
+
+function MobileNavLink({ item, onNavigate }) {
+    const disabled = item.href === '#';
+    const IconComponent = item.icon;
+
+    let isActive = false;
+    try {
+        if (!disabled) {
+            isActive = route().current(item.href);
+        }
+    } catch (_) {}
+
+    let href = item.href;
+    try {
+        if (!disabled) {
+            href = route(item.href);
+        }
+    } catch (_) {}
+
+    return (
+        <Link
+            href={href}
+            aria-disabled={disabled || undefined}
+            aria-current={isActive ? 'page' : undefined}
+            onClick={(event) => {
+                if (disabled) {
+                    event.preventDefault();
+                    return;
+                }
+                onNavigate();
+            }}
+            className={[
+                'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium',
+                disabled
+                    ? 'cursor-not-allowed text-[#F5F2EA]/30'
+                    : isActive
+                        ? 'badge-volt glow-volt-sm'
+                        : 'text-[#F5F2EA]/80 hover:bg-[#F5F2EA]/[0.08] hover:text-[#F5F2EA]',
+            ].join(' ')}
+        >
+            <IconComponent size={18} strokeWidth={2} className="shrink-0" />
+            <span className="truncate">{item.name}</span>
+            {item.badge !== null && (
+                <span
+                    className={[
+                        'ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                        isActive ? 'bg-[#101F1A]/20 text-[#101F1A]' : 'bg-[#D6FF3F]/15 text-[#D6FF3F]',
+                    ].join(' ')}
+                >
+                    {item.badge}
+                </span>
+            )}
+        </Link>
+    );
+}
+
+export function MobileMenu({ open, onClose }) {
+    const { auth } = usePage().props;
+    const sections = navForRole(auth?.user?.role);
+    const closeRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        closeRef.current?.focus();
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [open, onClose]);
+
+    if (!open || typeof document === 'undefined') {
+        return null;
+    }
+
+    return createPortal(
+        <div className="md:hidden">
+            <div
+                className="fixed inset-0 z-40 bg-[#101F1A]/40"
+                onClick={onClose}
+            />
+            <aside
+                id="mobile-nav"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Navigation"
+                className="fixed bottom-2 left-2 top-2 z-50 flex w-[min(18rem,calc(100vw-1rem))] flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#101F1A] shadow-elevated"
+            >
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-[#F5F2EA]/10 px-3">
+                    <span className="text-[15px] font-bold tracking-tight text-[#F5F2EA]">
+                        Court<span className="text-[#D6FF3F]">Sync</span>
+                    </span>
+                    <button
+                        ref={closeRef}
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close menu"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-[#F5F2EA]/70 hover:bg-[#F5F2EA]/10 hover:text-[#F5F2EA] focus-ring-volt"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+                <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-3">
+                    {sections.map((section) => (
+                        <div key={section.title} className="flex flex-col gap-1">
+                            <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#F5F2EA]/35">
+                                {section.title}
+                            </p>
+                            {section.items.map((item) => (
+                                <MobileNavLink key={`${section.title}-${item.name}`} item={item} onNavigate={onClose} />
+                            ))}
+                        </div>
+                    ))}
+                </nav>
+            </aside>
+        </div>,
+        document.body,
     );
 }

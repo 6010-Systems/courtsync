@@ -1,8 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { Building2, MapPin, ArrowRight, Sparkles } from 'lucide-react';
+import { useCountUp } from '@/hooks/useCountUp';
 
 const SPORTS = [
-    'Pickeball',
+    'Pickleball',
     'Basketball',
     'Badminton',
     'Tennis',
@@ -26,37 +27,14 @@ const STEPS = [
     },
 ];
 
-function useCountUp(target, durationMs = 1400) {
-    const [value, setValue] = useState(0);
-    const ref = useRef(null);
-
-    useEffect(() => {
-        const prefersReduced = window.matchMedia(
-            '(prefers-reduced-motion: reduce)',
-        ).matches;
-
-        if (prefersReduced) {
-            setValue(target);
-            return;
-        }
-
-        const start = performance.now();
-
-        const tick = (now) => {
-            const progress = Math.min((now - start) / durationMs, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setValue(Math.round(eased * target));
-            if (progress < 1) {
-                ref.current = requestAnimationFrame(tick);
-            }
-        };
-
-        ref.current = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(ref.current);
-    }, [target, durationMs]);
-
-    return value;
-}
+const MOCK_FACILITY_IMAGES = [
+    'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80',
+];
 
 export default function Welcome({ auth, facilities = [] }) {
     const bookingsToday = useCountUp(214);
@@ -74,8 +52,8 @@ export default function Welcome({ auth, facilities = [] }) {
                             'polygon(0 0, 100% 0, 100% 92%, 0 100%)',
                     }}
                 >
-                    <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-                        <span className="font-display text-2xl tracking-tight">
+                    <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 animate-fade-in">
+                        <span className="font-display text-2xl font-black tracking-tight">
                             Court<span className="text-[#D6FF3F]">Sync</span>
                         </span>
 
@@ -83,7 +61,7 @@ export default function Welcome({ auth, facilities = [] }) {
                             {auth.user ? (
                                 <Link
                                     href={route('dashboard')}
-                                    className="rounded-md px-4 py-2 font-medium text-[#F5F2EA] transition hover:text-[#D6FF3F]"
+                                    className="rounded-md px-4 py-2 font-semibold text-[#F5F2EA] transition hover:text-[#D6FF3F]"
                                 >
                                     Dashboard
                                 </Link>
@@ -91,13 +69,13 @@ export default function Welcome({ auth, facilities = [] }) {
                                 <>
                                     <Link
                                         href={route('login')}
-                                        className="font-medium text-[#F5F2EA]/80 transition hover:text-[#F5F2EA]"
+                                        className="font-semibold text-[#F5F2EA]/70 transition hover:text-[#F5F2EA]"
                                     >
                                         Log in
                                     </Link>
                                     <Link
                                         href={route('register')}
-                                        className="rounded-md bg-[#D6FF3F] px-4 py-2 font-display text-sm tracking-wide text-[#101F1A] transition hover:bg-[#c2ea2e]"
+                                        className="rounded-md bg-[#D6FF3F] px-4 py-2 font-bold text-sm tracking-wide text-[#101F1A] transition hover:bg-[#c2ea2e]"
                                     >
                                         Get started
                                     </Link>
@@ -109,7 +87,11 @@ export default function Welcome({ auth, facilities = [] }) {
                     <section className="mx-auto max-w-6xl px-6 pb-28 pt-10 lg:pt-16">
                         <div className="grid gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:items-end">
                             <div>
-                                <h1 className="font-display text-[3.4rem] leading-[0.95] tracking-tight sm:text-[4.6rem] lg:text-[5.2rem]">
+                                {/* Eyebrow label */}
+                                <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-[#D6FF3F]/70 animate-fade-up delay-75">
+                                    Philippines #1 Court Booking Platform
+                                </p>
+                                <h1 className="font-display text-[3.4rem] font-black leading-[0.95] tracking-tight sm:text-[4.6rem] lg:text-[5.2rem] animate-fade-up delay-100">
                                     BOOK A
                                     <br />
                                     COURT BEFORE
@@ -119,23 +101,23 @@ export default function Welcome({ auth, facilities = [] }) {
                                     </span>{' '}
                                     DOES.
                                 </h1>
-                                <p className="mt-7 max-w-md text-lg leading-relaxed text-[#F5F2EA]/70">
-                                    Real-time availability across Pickleball,
+                                <p className="mt-7 max-w-md text-lg font-medium leading-relaxed text-[#F5F2EA]/65 animate-fade-up delay-200">
+                                    Real-time availability across <strong className="font-bold text-[#F5F2EA]/90">Pickleball</strong>,
                                     basketball, badminton, tennis, futsal,
-                                    volleyball, and padel facilities. No
-                                    phone calls, no group chats.
+                                    volleyball, and padel facilities.
+                                    <span className="block mt-1 text-base font-normal text-[#F5F2EA]/50">No phone calls. No group chats.</span>
                                 </p>
 
-                                <div className="mt-9 flex flex-wrap items-center gap-4">
+                                <div className="mt-9 flex flex-wrap items-center gap-4 animate-fade-up delay-300">
                                     <Link
                                         href={route('register')}
-                                        className="rounded-md bg-[#D6FF3F] px-7 py-3.5 font-display text-lg tracking-wide text-[#101F1A] transition hover:bg-[#c2ea2e]"
+                                        className="rounded-md bg-[#D6FF3F] px-7 py-3.5 font-display font-bold text-lg tracking-wide text-[#101F1A] transition-all hover:bg-[#c2ea2e] hover:scale-[1.03] hover:shadow-lg hover:shadow-[#D6FF3F]/20 active:scale-[0.98]"
                                     >
                                         Find a court
                                     </Link>
                                     <a
                                         href="#owners"
-                                        className="rounded-md border border-[#F5F2EA]/25 px-7 py-3.5 font-medium text-[#F5F2EA] transition hover:border-[#F5F2EA]/50"
+                                        className="rounded-md border border-[#F5F2EA]/25 px-7 py-3.5 font-semibold text-[#F5F2EA] transition-all hover:border-[#F5F2EA]/50 hover:bg-[#F5F2EA]/5"
                                     >
                                         List your facility
                                     </a>
@@ -143,37 +125,43 @@ export default function Welcome({ auth, facilities = [] }) {
                             </div>
 
                             <div className="flex flex-col gap-4 lg:items-end">
-                                <div className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 px-6 py-5">
-                                    <p className="font-display text-5xl text-[#D6FF3F]">
+                                {/* Stat card */}
+                                <div className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 px-6 py-5 animate-fade-up delay-400 transition-all duration-300 hover:border-[#D6FF3F]/30 hover:bg-[#F5F2EA]/8">
+                                    <p className="font-display text-5xl font-black text-[#D6FF3F]">
                                         {bookingsToday}
                                     </p>
-                                    <p className="mt-1 text-sm text-[#F5F2EA]/60">
+                                    <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#F5F2EA]/50">
                                         courts booked today
                                     </p>
                                 </div>
 
-                                <div className="w-56 -rotate-3 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl">
-                                    <p className="font-display text-base">
-                                        Court 3 · Pickleball
-                                    </p>
-                                    <p className="mt-1 text-sm text-[#10221C]/60">
-                                        6:00 – 7:00 PM · ₱450
-                                    </p>
-                                    <span className="mt-2 inline-block rounded-full bg-[#D6FF3F]/30 px-2.5 py-1 text-xs font-semibold text-[#10221C]">
-                                        Open
-                                    </span>
-                                </div>
+                                {/* Floating Cards Container with subtle ambient floating motion */}
+                                <div className="animate-float flex flex-col gap-4 lg:items-end">
+                                    {/* Card 1 — tilted -3deg */}
+                                    <div className="w-56 -rotate-3 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-2xl animate-fade-only delay-500 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-default">
+                                        <p className="font-display text-sm font-bold tracking-tight">
+                                            Court 3 · Pickleball
+                                        </p>
+                                        <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
+                                            6:00 – 7:00 PM · ₱450
+                                        </p>
+                                        <span className="mt-2.5 inline-block rounded-full bg-[#D6FF3F]/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#10221C]">
+                                            Open
+                                        </span>
+                                    </div>
 
-                                <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl">
-                                    <p className="font-display text-base">
-                                        Court A · Badminton
-                                    </p>
-                                    <p className="mt-1 text-sm text-[#10221C]/60">
-                                        8:00 – 9:00 PM · ₱320
-                                    </p>
-                                    <span className="mt-2 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-1 text-xs font-semibold text-[#B8391D]">
-                                        2 left
-                                    </span>
+                                    {/* Card 2 — tilted +2deg */}
+                                    <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-2xl animate-fade-only delay-600 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-default">
+                                        <p className="font-display text-sm font-bold tracking-tight">
+                                            Court A · Badminton
+                                        </p>
+                                        <p className="mt-0.5 text-xs font-medium text-[#10221C]/55">
+                                            8:00 – 9:00 PM · ₱320
+                                        </p>
+                                        <span className="mt-2.5 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#B8391D]">
+                                            2 left
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -182,21 +170,22 @@ export default function Welcome({ auth, facilities = [] }) {
 
                 {/* Sports filter pills */}
                 <section className="mx-auto max-w-6xl px-6 pb-16 pt-14">
-                    <p className="font-display text-sm tracking-wide text-[#10221C]/50">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#10221C]/40 animate-fade-up">
                         Sports on CourtSync
                     </p>
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-4 flex flex-wrap gap-3">
                         {SPORTS.map((sport, i) => (
                             <span
                                 key={sport}
                                 className={
-                                    'rounded-full border-2 px-5 py-2 font-display text-base tracking-wide ' +
+                                    'animate-scale-in rounded-full border-2 px-5 py-2 font-display text-base tracking-wide transition-all duration-200 hover:scale-105 hover:shadow-sm active:scale-95 cursor-default ' +
                                     (i % 3 === 0
                                         ? 'border-[#101F1A] bg-[#101F1A] text-[#F5F2EA]'
                                         : i % 3 === 1
                                           ? 'border-[#101F1A] text-[#101F1A]'
                                           : 'border-[#FF5A36] text-[#FF5A36]')
                                 }
+                                style={{ animationDelay: `${i * 60}ms` }}
                             >
                                 {sport}
                             </span>
@@ -204,40 +193,90 @@ export default function Welcome({ auth, facilities = [] }) {
                     </div>
                 </section>
 
-                {/* Featured Facilities */}
+                {/* Featured Facilities — calibrated so 2 rows fit cleanly in the overall viewport height */}
                 {facilities.length > 0 && (
-                    <section className="mx-auto max-w-6xl px-6 py-16">
-                        <div className="flex items-center justify-between mb-10">
-                            <h2 className="font-display text-3xl tracking-tight text-[#10221C]">
-                                Featured Facilities
-                            </h2>
-                            <Link href={route('register')} className="text-[#FF5A36] font-medium hover:underline">
-                                View all &rarr;
+                    <section className="mx-auto max-w-6xl px-6 py-6 sm:py-8">
+                        <div className="flex items-center justify-between mb-4 sm:mb-5">
+                            <div>
+                                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#10221C]/40 flex items-center gap-1.5">
+                                    <Sparkles size={12} className="text-[#FF5A36]" />
+                                    Featured Venues
+                                </p>
+                                <h2 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-[#10221C] mt-0.5">
+                                    Top Facilities
+                                </h2>
+                            </div>
+                            <Link href={route('register')} className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#FF5A36] hover:text-[#e64d2b] transition-colors">
+                                <span>View all</span>
+                                <ArrowRight size={13} className="transition-transform duration-200 group-hover:translate-x-1" />
                             </Link>
                         </div>
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {facilities.map((facility) => (
+                        <div className="grid gap-3 sm:gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                            {facilities.map((facility, i) => (
                                 <Link
                                     key={facility.slug}
                                     href={`/${facility.slug}`}
-                                    className="group rounded-xl border border-[#10221C]/10 bg-white p-6 shadow-sm transition hover:border-[#D6FF3F] hover:shadow-md block"
+                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#10221C]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
+                                    style={{ animationDelay: `${i * 60}ms` }}
                                 >
-                                    <div className="mb-4 h-32 w-full rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
-                                      {facility.verification?.facility_photos?.[0] && <img src={facility.verification.facility_photos[0]} alt={facility.name} className="w-full h-full object-cover rounded-lg" />}
+                                    {/* Top Image: Edge-to-edge with smooth gradient overlay integrating into card background */}
+                                    <div className="relative h-36 sm:h-40 lg:h-44 w-full shrink-0 overflow-hidden bg-white">
+                                        <img
+                                            src={facility.verification?.facility_photos?.[0] || MOCK_FACILITY_IMAGES[(facility.id || i) % MOCK_FACILITY_IMAGES.length]}
+                                            alt={facility.name}
+                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                                            style={{
+                                                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                                            }}
+                                            onError={(e) => {
+                                                e.currentTarget.src = MOCK_FACILITY_IMAGES[i % MOCK_FACILITY_IMAGES.length];
+                                            }}
+                                        />
+
+                                        {/* Floating Venue Status Badge */}
+                                        <div className="absolute top-3 left-3 z-10">
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#101F1A] bg-white/90 backdrop-blur-md shadow-2xs border border-white/60 transition-transform duration-300 group-hover:scale-105">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                Partner Venue
+                                            </span>
+                                        </div>
+
+                                        {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
+                                        <div
+                                            className="absolute inset-0 pointer-events-none"
+                                            style={{
+                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
+                                            }}
+                                        />
                                     </div>
-                                    <h3 className="font-display text-xl tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition">
-                                        {facility.name}
-                                    </h3>
-                                    <p className="mt-2 text-sm text-[#10221C]/60 line-clamp-2">
-                                        {facility.city}, {facility.province}
-                                    </p>
-                                    <div className="mt-4 flex items-center justify-between">
-                                        <span className="text-sm font-semibold text-[#10221C]">Book Now</span>
-                                        <span className="text-[#D6FF3F] bg-[#10221C] rounded-full p-1 group-hover:bg-[#FF5A36] group-hover:text-white transition">
-                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </span>
+
+                                    {/* Card Body — flex-1 flex flex-col justify-between ensures footer is pinned identically */}
+                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors duration-200 truncate h-6 sm:h-7 flex items-center" title={facility.name}>
+                                                {facility.name}
+                                            </h3>
+
+                                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#10221C]/60 truncate h-5">
+                                                <MapPin size={12} className="text-[#FF5A36]/80 shrink-0" />
+                                                <span className="truncate">{facility.city}, {facility.province}</span>
+                                            </p>
+
+                                            <p className="mt-1.5 text-xs text-[#10221C]/50 line-clamp-2 leading-relaxed h-9 overflow-hidden">
+                                                {facility.description || 'Verified premier sports facility with top-tier playing courts.'}
+                                            </p>
+                                        </div>
+
+                                        {/* Fixed Footer — pinned to bottom and identical across cards */}
+                                        <div className="mt-3 pt-2.5 border-t border-[#10221C]/6 flex items-center justify-between shrink-0 h-10">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#10221C]/75 group-hover:text-[#10221C] transition-colors">
+                                                Book Courts
+                                            </span>
+                                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F] shadow-xs transition-all duration-300 group-hover:bg-[#FF5A36] group-hover:text-white group-hover:scale-105 group-hover:shadow-sm">
+                                                <ArrowRight size={14} strokeWidth={2.5} className="shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+                                            </span>
+                                        </div>
                                     </div>
                                 </Link>
                             ))}
@@ -247,7 +286,8 @@ export default function Welcome({ auth, facilities = [] }) {
 
                 {/* How it works */}
                 <section className="mx-auto max-w-6xl px-6 py-16">
-                    <h2 className="font-display text-3xl tracking-tight text-[#10221C]">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#10221C]/40">Simple process</p>
+                    <h2 className="mt-1 font-display text-3xl font-black tracking-tight text-[#10221C]">
                         How it works
                     </h2>
                     <div className="relative mt-10 grid gap-10 sm:grid-cols-3">
@@ -256,14 +296,14 @@ export default function Welcome({ auth, facilities = [] }) {
                             aria-hidden="true"
                         />
                         {STEPS.map((step, i) => (
-                            <div key={step.title} className="relative">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#101F1A] font-display text-xl text-[#D6FF3F]">
+                            <div key={step.title} className="relative animate-fade-up" style={{ animationDelay: `${i * 120}ms` }}>
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#101F1A] font-display text-xl font-black text-[#D6FF3F] transition-transform hover:scale-110 hover:shadow-lg hover:shadow-[#D6FF3F]/20">
                                     {i + 1}
                                 </div>
-                                <h3 className="mt-4 font-display text-xl tracking-tight text-[#10221C]">
+                                <h3 className="mt-4 font-display text-xl font-bold tracking-tight text-[#10221C]">
                                     {step.title}
                                 </h3>
-                                <p className="mt-2 leading-relaxed text-[#10221C]/65">
+                                <p className="mt-2 text-sm font-medium leading-relaxed text-[#10221C]/60">
                                     {step.body}
                                 </p>
                             </div>
@@ -281,24 +321,25 @@ export default function Welcome({ auth, facilities = [] }) {
                 >
                     <div className="mx-auto grid max-w-6xl gap-10 px-6 py-24 pt-32 lg:grid-cols-[1fr,0.8fr] lg:items-center">
                         <div>
-                            <h2 className="font-display text-4xl tracking-tight sm:text-5xl">
+                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#FF5A36]/70 animate-fade-up">For facility owners</p>
+                            <h2 className="mt-2 font-display text-4xl font-black tracking-tight sm:text-5xl animate-fade-up delay-100">
                                 RUN YOUR FACILITY
                                 <br />
                                 LIKE A{' '}
                                 <span className="text-[#FF5A36]">PRO</span>.
                             </h2>
-                            <p className="mt-5 max-w-lg leading-relaxed text-[#F5F2EA]/70">
+                            <p className="mt-5 max-w-lg text-base font-medium leading-relaxed text-[#F5F2EA]/65 animate-fade-up delay-200">
                                 A live booking calendar, walk-in check-in,
                                 staff approval workflows, and payouts from
-                                GCash, Maya, QR Ph, and card payments — all
+                                <strong className="font-bold text-[#F5F2EA]/90"> GCash, Maya, QR Ph, and card</strong> — all
                                 in one dashboard.
                             </p>
-                            <a
-                                href="#"
-                                className="mt-8 inline-block rounded-md bg-[#FF5A36] px-7 py-3.5 font-display text-lg tracking-wide text-[#101F1A] transition hover:bg-[#e64d2b]"
+                            <Link
+                                href={route('register')}
+                                className="mt-8 inline-block rounded-md bg-[#FF5A36] px-7 py-3.5 font-display font-bold text-lg tracking-wide text-white transition-all hover:bg-[#e64d2b] hover:scale-[1.02] hover:shadow-lg hover:shadow-[#FF5A36]/20 active:scale-[0.98] animate-fade-up delay-300"
                             >
                                 List your facility
-                            </a>
+                            </Link>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -307,15 +348,16 @@ export default function Welcome({ auth, facilities = [] }) {
                                 ['Walk-ins', 'Log on-site bookings alongside online ones.'],
                                 ['PH payouts', 'GCash, Maya, QR Ph, and cards, settled to you.'],
                                 ['Staff roles', 'Approvals and check-in without owner bottlenecks.'],
-                            ].map(([title, body]) => (
+                            ].map(([title, body], i) => (
                                 <div
                                     key={title}
-                                    className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 p-5"
+                                    className="rounded-lg border border-[#F5F2EA]/10 bg-[#F5F2EA]/5 p-5 transition-all hover:bg-[#F5F2EA]/10 hover:border-[#F5F2EA]/20 hover:-translate-y-0.5 animate-fade-up"
+                                    style={{ animationDelay: `${i * 80}ms` }}
                                 >
-                                    <p className="font-display text-2xl">
+                                    <p className="font-display text-lg font-bold text-[#F5F2EA]">
                                         {title}
                                     </p>
-                                    <p className="mt-1 text-sm text-[#F5F2EA]/60">
+                                    <p className="mt-1 text-xs font-medium text-[#F5F2EA]/55">
                                         {body}
                                     </p>
                                 </div>
@@ -326,23 +368,17 @@ export default function Welcome({ auth, facilities = [] }) {
 
                 {/* Footer */}
                 <footer className="border-t border-[#10221C]/10">
-                    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-[#10221C]/60 sm:flex-row">
-                        <span className="font-display text-base text-[#10221C]">
-                            Court<span className="text-[#FF5A36]">Sync</span>
+                    <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-[#10221C]/50 sm:flex-row">
+                        <span className="font-display text-base font-black text-[#10221C]">
+                            Court<span className="text-[#D6FF3F] bg-[#10221C] px-1 rounded">Sync</span>
                         </span>
-                        <span>
+                        <span className="font-medium">
                             &copy; {new Date().getFullYear()} CourtSync.
                             Built for courts across the Philippines.
                         </span>
                     </div>
                 </footer>
             </div>
-
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap');
-                .courtsync { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-                .font-display { font-family: 'Anton', ui-sans-serif, system-ui, sans-serif; }
-            `}</style>
         </>
     );
 }
