@@ -1,12 +1,49 @@
+import { useState } from 'react';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import { ButtonSpinner } from '@/Components/LoadingContext';
-import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import AuthBrandPanel from '@/Components/Auth/AuthBrandPanel';
+import GoogleIcon from '@/Components/Auth/GoogleIcon';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { 
+    Eye, 
+    EyeOff, 
+    Mail, 
+    Lock, 
+    ArrowRight,
+    Calendar,
+    ShieldCheck, 
+    TrendingUp, 
+    CheckCircle2,
+    XCircle
+} from 'lucide-react';
+
+const formContainerVariants = {
+    hidden: {},
+    visible: {
+        transition: {
+            staggerChildren: 0.04,
+            delayChildren: 0.05,
+        },
+    },
+};
+
+const formItemVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    },
+};
 
 export default function Login({ status, canResetPassword, lastLoginMethod }) {
+    const [showPassword, setShowPassword] = useState(false);
+    const shouldReduce = useReducedMotion();
+
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -23,214 +60,283 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
 
     return (
         <>
-            <Head title="Log in" />
+            <Head title="Log In — CourtSync" />
 
-            <div className="courtsync grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.1fr,1fr]">
-                {/* Left — dark diagonal-cut branding panel, mirrors the hero. Full-bleed background, content rail centers against the shared 1280 line. */}
-                <div
-                    className="relative hidden flex-col justify-between bg-[#101F1A] py-10 text-[#F5F2EA] lg:flex"
-                    style={{
-                        clipPath: 'polygon(0 0, 100% 0, 88% 100%, 0 100%)',
-                    }}
+            <div className="grid min-h-screen bg-[#F5F2EA] text-[#10221C] lg:grid-cols-[1.08fr,1fr] overflow-x-hidden">
+                <AuthBrandPanel
+                    badge="Facility Owner & Staff Portal"
+                    titleNode={
+                        <>
+                            ELEVATE YOUR <br />
+                            <span className="text-[#D6FF3F]">COURT MANAGEMENT.</span>
+                        </>
+                    }
+                    subtitle="Log in to monitor live reservations, manage multi-court schedules, assign staff permissions, and scale your sports venue seamlessly."
+                    bottomLeft={
+                        <span className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-[#D6FF3F]" />
+                            Bank-grade SSL & Role Security
+                        </span>
+                    }
                 >
-                    <div className="ml-auto w-full max-w-[704px] px-10">
-                        <Link
-                            href="/"
-                            className="font-display text-2xl tracking-tight"
-                        >
-                            Court<span className="text-[#D6FF3F]">Sync</span>
-                        </Link>
-                    </div>
+                    {/* Floating Live Metric Cards */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition hover:bg-white/[0.07]">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-[#D6FF3F]">
+                                <span className="flex h-2 w-2 rounded-full bg-[#D6FF3F] animate-pulse" />
+                                LIVE ACTIVITY
+                            </div>
+                            <p className="mt-2 font-display text-2xl font-bold text-white">98.4%</p>
+                            <p className="text-xs text-[#F5F2EA]/60">Weekend Peak Occupancy</p>
+                        </div>
 
-                    <div className="ml-auto w-full max-w-[704px] px-10">
-                        <div className="max-w-sm">
-                            <h1 className="font-display text-5xl leading-[0.95] tracking-tight">
-                                WELCOME
-                                <br />
-                                <span className="text-[#D6FF3F]">
-                                    BACK.
-                                </span>
-                            </h1>
-                            <p className="mt-6 leading-relaxed text-[#F5F2EA]/70">
-                                Log in to your account to manage your bookings and find your favorite courts.
-                            </p>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md transition hover:bg-white/[0.07]">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                                <TrendingUp className="h-3.5 w-3.5" />
+                                INSTANT PAYOUTS
+                            </div>
+                            <p className="mt-2 font-display text-2xl font-bold text-white">₱0 Fee</p>
+                            <p className="text-xs text-[#F5F2EA]/60">Direct GCash / Maya Sync</p>
                         </div>
                     </div>
+                </AuthBrandPanel>
 
-                    <div className="ml-auto w-full max-w-[704px] px-10">
-                        <div className="w-56 rotate-2 rounded-lg bg-[#F5F2EA] p-4 text-[#10221C] shadow-xl">
-                            <p className="font-display text-base">
-                                Welcome Back!
-                            </p>
-                            <p className="mt-1 text-sm text-[#10221C]/60">
-                                Ready for your next game?
-                            </p>
-                            <span className="mt-2 inline-block rounded-full bg-[#FF5A36]/20 px-2.5 py-1 text-xs font-semibold text-[#B8391D]">
-                                Let's go
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right — form. Full-bleed background, content rail centers against the shared 1280 line. */}
-                <div className="flex flex-col justify-center px-6 py-16 sm:px-12 lg:px-10">
-                    <div className="mr-auto w-full max-w-[576px] px-0 lg:pr-10">
-                    <div className="mx-auto w-full max-w-sm">
-                        <Link
-                            href="/"
-                            className="font-display text-2xl tracking-tight text-[#10221C] lg:hidden"
-                        >
-                            Court
-                            <span className="text-[#FF5A36]">Sync</span>
-                        </Link>
-
-                        <h2 className="mt-8 font-display text-3xl tracking-tight text-[#10221C] lg:mt-0">
-                            Log in to your account
-                        </h2>
-                        <p className="mt-2 text-[#10221C]/60">
-                            This is for <span className="font-medium text-[#10221C]">facility owners &amp; staff</span>. Don't have an account?{' '}
-                            <Link
-                                href={route('register')}
-                                className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
-                            >
-                                Sign up
-                            </Link>
-                        </p>
-
-                        <p className="mt-3 rounded-md border border-[#10221C]/10 bg-[#10221C]/[0.03] px-4 py-3 text-sm text-[#10221C]/70">
-                            Looking to book a court instead?{' '}
+                {/* Right — Form Container with Staggered Entrance */}
+                <div className="flex flex-col justify-center px-6 py-12 sm:px-12 md:px-16 lg:px-12 xl:px-20">
+                    <motion.div
+                        className="mx-auto w-full max-w-[440px]"
+                        variants={formContainerVariants}
+                        initial={shouldReduce ? false : 'hidden'}
+                        animate="visible"
+                    >
+                        {/* Mobile Brand Logo */}
+                        <motion.div variants={formItemVariants} className="mb-8 flex items-center justify-between lg:hidden">
                             <Link
                                 href="/"
-                                className="font-medium text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-2"
+                                className="inline-flex items-center gap-2 font-display text-2xl font-bold tracking-tight text-[#10221C]"
                             >
-                                Find your facility
-                            </Link>{' '}
-                            to log in as a player.
-                        </p>
+                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#101F1A] text-[#D6FF3F] font-black text-sm">
+                                    C
+                                </span>
+                                <span>Court<span className="text-[#FF5A36]">Sync</span></span>
+                            </Link>
+                            <span className="rounded-full bg-[#101F1A]/5 px-2.5 py-1 text-[11px] font-bold text-[#101F1A]/70 uppercase tracking-wider">
+                                Portal
+                            </span>
+                        </motion.div>
 
-                        {status && (
-                            <div className={`mb-4 text-sm font-medium ${status.toLowerCase().includes('banned') ? 'text-red-600' : 'text-green-600'}`}>
-                                {status}
+                        {/* Title & Subtext */}
+                        <motion.div variants={formItemVariants} className="mb-8">
+                            <h2 className="font-display text-3xl font-extrabold tracking-tight text-[#10221C] sm:text-4xl">
+                                Welcome back
+                            </h2>
+                            <p className="mt-2 text-sm text-[#10221C]/65 font-medium">
+                                Sign in to your facility dashboard. Don't have an account yet?{' '}
+                                <Link
+                                    href={route('register')}
+                                    className="font-bold text-[#10221C] underline decoration-[#D6FF3F] decoration-2 underline-offset-4 hover:text-black transition"
+                                >
+                                    Register now
+                                </Link>
+                            </p>
+                        </motion.div>
+
+                        {/* Player Portal Callout */}
+                        <motion.div variants={formItemVariants} className="mb-6 flex items-center justify-between rounded-xl border border-[#10221C]/10 bg-white/70 p-3.5 shadow-xs backdrop-blur-sm">
+                            <div className="flex items-center gap-2.5 text-xs text-[#10221C]/75">
+                                <Calendar className="h-4 w-4 text-[#10221C]/50 shrink-0" />
+                                <span>Looking to book courts as a <strong>player</strong>?</span>
                             </div>
-                        )}
+                            <Link
+                                href="/"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[#10221C] hover:underline"
+                            >
+                                Find court <ArrowRight className="h-3 w-3" />
+                            </Link>
+                        </motion.div>
 
-                        <form onSubmit={submit} className="mt-8">
-                            <div>
+                        {/* Flash Status Message */}
+                        <AnimatePresence>
+                            {status && (
+                                <motion.div
+                                    initial={shouldReduce ? false : { opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.25 }}
+                                    className={`mb-6 flex items-center gap-2.5 rounded-xl border p-3.5 text-xs font-semibold ${
+                                        status.toLowerCase().includes('banned') 
+                                            ? 'border-red-200 bg-red-50 text-red-700' 
+                                            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                    }`}
+                                >
+                                    {status.toLowerCase().includes('banned') ? (
+                                        <XCircle className="h-4 w-4 shrink-0" />
+                                    ) : (
+                                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    )}
+                                    <span>{status}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Login Form */}
+                        <form onSubmit={submit} className="space-y-4">
+                            {/* Email */}
+                            <motion.div variants={formItemVariants}>
                                 <InputLabel
                                     htmlFor="email"
-                                    value="Email"
-                                    className="font-medium text-[#10221C]"
+                                    value="Email address"
+                                    className="block text-xs font-bold uppercase tracking-wider text-[#101F1A]/80 mb-1.5"
                                 />
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#101F1A]/40">
+                                        <Mail className="h-4 w-4" />
+                                    </div>
+                                    <TextInput
+                                        id="email"
+                                        type="email"
+                                        name="email"
+                                        value={data.email}
+                                        placeholder="owner@facility.com"
+                                        className="h-11 w-full rounded-xl border-[#101F1A]/15 bg-white/80 pl-10 pr-3.5 text-sm font-medium text-[#101F1A] placeholder-[#101F1A]/35 shadow-xs transition-all focus:border-[#101F1A] focus:bg-white focus:ring-2 focus:ring-[#101F1A]/10"
+                                        autoComplete="username"
+                                        isFocused={true}
+                                        onChange={(e) => setData('email', e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <InputError message={errors.email} className="mt-1.5" />
+                            </motion.div>
 
-                                <TextInput
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={data.email}
-                                    className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
-                                    autoComplete="username"
-                                    isFocused={true}
-                                    onChange={(e) =>
-                                        setData('email', e.target.value)
-                                    }
-                                />
-
-                                <InputError
-                                    message={errors.email}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            <div className="mt-5">
-                                <div className="flex items-center justify-between">
+                            {/* Password */}
+                            <motion.div variants={formItemVariants}>
+                                <div className="flex items-center justify-between mb-1.5">
                                     <InputLabel
                                         htmlFor="password"
                                         value="Password"
-                                        className="font-medium text-[#10221C]"
+                                        className="block text-xs font-bold uppercase tracking-wider text-[#101F1A]/80"
                                     />
                                     {canResetPassword && (
                                         <Link
                                             href={route('password.request')}
-                                            className="text-sm font-medium text-[#10221C] underline decoration-[#10221C]/30 decoration-2 underline-offset-2 hover:decoration-[#10221C]"
+                                            className="text-xs font-semibold text-[#101F1A]/70 hover:text-[#101F1A] hover:underline"
                                         >
                                             Forgot password?
                                         </Link>
                                     )}
                                 </div>
-                                <TextInput
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    value={data.password}
-                                    className="mt-1.5 block w-full rounded-md border-[#10221C]/15 bg-white focus:border-[#101F1A] focus:ring-[#101F1A]"
-                                    autoComplete="current-password"
-                                    onChange={(e) =>
-                                        setData('password', e.target.value)
-                                    }
-                                />
+                                <div className="relative">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#101F1A]/40">
+                                        <Lock className="h-4 w-4" />
+                                    </div>
+                                    <TextInput
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="password"
+                                        value={data.password}
+                                        placeholder="••••••••"
+                                        className="h-11 w-full rounded-xl border-[#101F1A]/15 bg-white/80 pl-10 pr-10 text-sm font-medium text-[#101F1A] placeholder-[#101F1A]/35 shadow-xs transition-all focus:border-[#101F1A] focus:bg-white focus:ring-2 focus:ring-[#101F1A]/10"
+                                        autoComplete="current-password"
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-[#101F1A]/40 hover:text-[#101F1A] transition focus:outline-none"
+                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <motion.span
+                                            key={showPassword ? 'hide' : 'show'}
+                                            initial={shouldReduce ? false : { opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.15 }}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </motion.span>
+                                    </button>
+                                </div>
+                                <InputError message={errors.password} className="mt-1.5" />
+                            </motion.div>
 
-                                <InputError
-                                    message={errors.password}
-                                    className="mt-2"
-                                />
-                            </div>
-
-                            <div className="mt-5 block">
-                                <label className="flex items-center">
+                            {/* Remember Me */}
+                            <motion.div variants={formItemVariants} className="pt-1 flex items-center justify-between">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
                                     <Checkbox
                                         name="remember"
                                         checked={data.remember}
-                                        onChange={(e) =>
-                                            setData('remember', e.target.checked)
-                                        }
-                                        className="rounded border-[#10221C]/15 text-[#101F1A] focus:ring-[#101F1A]"
+                                        onChange={(e) => setData('remember', e.target.checked)}
+                                        className="h-4 w-4 rounded border-[#10221C]/20 text-[#101F1A] focus:ring-[#101F1A]"
                                     />
-                                    <span className="ml-2 text-sm text-[#10221C]/80">
-                                        Remember me
+                                    <span className="text-xs font-semibold text-[#10221C]/80">
+                                        Keep me signed in
                                     </span>
                                 </label>
-                            </div>
+                            </motion.div>
 
-                            <PrimaryButton
-                                className="mt-7 flex w-full items-center justify-center gap-2 !rounded-md !bg-[#D6FF3F] !px-7 !py-3.5 font-display text-lg tracking-wide !text-[#101F1A] transition hover:!bg-[#c2ea2e] focus:!ring-[#101F1A]"
-                                disabled={processing}
-                            >
-                                Log in {lastLoginMethod === 'email' && <span className="bg-[#10221C] text-[#D6FF3F] text-[10px] font-sans font-bold px-2 py-0.5 rounded-full tracking-normal">LAST USED</span>}
-                            </PrimaryButton>
+                            {/* Submit Button */}
+                            <motion.div variants={formItemVariants}>
+                                <motion.button
+                                    type="submit"
+                                    disabled={processing}
+                                    whileHover={processing ? {} : { scale: 1.01 }}
+                                    whileTap={processing ? {} : { scale: 0.985 }}
+                                    className="group relative mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#D6FF3F] px-6 font-display text-sm font-bold tracking-wider uppercase text-[#101F1A] shadow-sm transition-colors hover:bg-[#c4ec32] hover:shadow-md hover:shadow-[#D6FF3F]/20 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {processing ? (
+                                        <span className="flex items-center gap-2">
+                                            <ButtonSpinner /> Signing in...
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span>Sign In to Dashboard</span>
+                                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                        </>
+                                    )}
+                                    {lastLoginMethod === 'email' && (
+                                        <span className="absolute right-3 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] tracking-tight">
+                                            LAST USED
+                                        </span>
+                                    )}
+                                </motion.button>
+                            </motion.div>
 
-                            <div className="relative mt-8 flex items-center justify-center">
-                                <div className="absolute inset-x-0 h-px bg-[#10221C]/10"></div>
-                                <span className="relative bg-[#F5F2EA] px-4 text-sm text-[#10221C]/50">or log in with</span>
-                            </div>
+                            {/* Divider */}
+                            <motion.div variants={formItemVariants} className="relative my-6 flex items-center justify-center">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-[#10221C]/10"></div>
+                                </div>
+                                <span className="relative bg-[#F5F2EA] px-3 text-xs font-bold uppercase tracking-wider text-[#10221C]/40">
+                                    or continue with
+                                </span>
+                            </motion.div>
 
-                            <div className="mt-6 flex flex-col gap-3">
-                                <a
+                            {/* Google OAuth */}
+                            <motion.div variants={formItemVariants}>
+                                <motion.a
                                     href={route('google.redirect', { tenant: 'owner' })}
-                                    className="relative flex w-full items-center justify-center gap-3 rounded-md border border-[#10221C]/15 bg-white px-7 py-3.5 font-medium text-[#10221C] transition hover:bg-gray-50 focus:ring-[#101F1A]"
+                                    whileHover={{ scale: 1.01 }}
+                                    whileTap={{ scale: 0.985 }}
+                                    className="relative flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#10221C]/15 bg-white px-5 text-xs font-bold text-[#10221C] shadow-xs transition-colors hover:bg-white hover:border-[#10221C]/30 hover:shadow-sm"
                                 >
                                     {lastLoginMethod === 'google' && (
-                                        <span className="absolute -top-3 right-4 bg-[#10221C] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm tracking-wide">LAST USED</span>
+                                        <span className="absolute -top-2.5 right-4 rounded-full bg-[#10221C] px-2 py-0.5 text-[9px] font-bold text-[#D6FF3F] shadow-sm">
+                                            LAST USED
+                                        </span>
                                     )}
-                                    <svg className="h-5 w-5" viewBox="0 0 24 24">
-                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                    </svg>
-                                    Continue with Google
-                                </a>
-                            </div>
+                                    <GoogleIcon />
+                                    <span>Sign in with Google</span>
+                                </motion.a>
+                            </motion.div>
                         </form>
-                    </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap');
-                .courtsync { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-                .font-display { font-family: 'Anton', ui-sans-serif, system-ui, sans-serif; }
-            `}</style>
         </>
     );
 }
+

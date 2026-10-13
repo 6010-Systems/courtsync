@@ -35,7 +35,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false))
-                         ->withCookie(cookie('last_login_method', 'email', 60 * 24 * 365));
+            ->withCookie(cookie('last_login_method', 'email', 60 * 24 * 365));
     }
 
     /**

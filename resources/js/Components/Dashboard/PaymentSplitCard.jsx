@@ -55,14 +55,14 @@ function PaymentSplitCardComponent({
             <h3 className="text-sm font-bold text-[#101F1A]">Revenue by Payment</h3>
           </div>
           {topMethod && (
-            <span className="text-[10px] font-black text-[#101F1A] bg-[#D6FF3F] px-2 py-0.5 rounded-md border border-[#101F1A]/20 shadow-xs flex items-center gap-1">
+            <span className="text-[10px] font-black text-[#101F1A] bg-[#D6FF3F] px-1.5 py-[3px] rounded-md border border-[#101F1A]/20 shadow-xs flex items-center gap-1">
               <Sparkles size={10} className="text-[#101F1A]" />
               {topMethod.label} Top ({topMethod.pct}%)
             </span>
           )}
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5">
           {paymentSplit.map((p) => {
             const isTop = p.isPrimary || (topMethod && topMethod.label === p.label);
 
@@ -73,7 +73,7 @@ function PaymentSplitCardComponent({
                     <span
                       className={`w-2.5 h-2.5 rounded-full shrink-0 shadow-xs transition-transform group-hover:scale-125 ${
                         isTop ? 'ring-1 ring-[#101F1A]/30' : ''
-                      }`}
+                      } ${isTop ? 'animate-pulse' : ''}`}
                       style={{ backgroundColor: p.color }}
                     />
                     <span className={`text-xs ${isTop ? 'font-black text-[#101F1A]' : 'font-bold text-stone-700'}`}>
@@ -90,16 +90,14 @@ function PaymentSplitCardComponent({
                   </div>
                 </div>
                 <div
-                  className={`h-2.5 rounded-full overflow-hidden p-[1px] border ${
+                  className={`h-2 rounded-full overflow-hidden ${
                     isTop
-                      ? 'bg-[#101F1A]/10 border-[#101F1A]/15'
-                      : 'bg-stone-100 border-stone-200/60'
+                      ? 'bg-[#101F1A]/10'
+                      : 'bg-stone-100'
                   }`}
                 >
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ease-out ${
-                      isTop ? 'shadow-xs border border-[#101F1A]/20' : ''
-                    }`}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${p.pct}%`, backgroundColor: p.color }}
                   />
                 </div>
@@ -111,7 +109,7 @@ function PaymentSplitCardComponent({
 
       <div className="mt-4 pt-3 border-t border-[#10221C]/10 flex items-center justify-between text-xs font-semibold text-[#10221C]">
         <span className="text-stone-600 font-bold text-xs">Total Processed</span>
-        <span className="text-base font-black text-[#101F1A] tracking-tight">
+        <span className="text-sm font-black text-[#101F1A] tracking-tight">
           ₱{totalAmount.toLocaleString()}
         </span>
       </div>

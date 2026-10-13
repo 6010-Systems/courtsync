@@ -2,21 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Facility;
 use App\Models\FacilityVerification;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Illuminate\Validation\ValidationException;
 
 class FacilityController extends Controller
 {
     public function index(Request $request)
     {
         return Inertia::render('Facility/Facilities', [
-            'facilities' => $request->user()->facilities()->with('verification')->withCount('courts')->get()
+            'facilities' => $request->user()->facilities()->with('verification')->withCount('courts')->get(),
         ]);
     }
 
@@ -25,7 +23,7 @@ class FacilityController extends Controller
         $request->validate([
             'facility_id' => 'nullable|exists:facilities,id',
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:facilities,slug,' . $request->facility_id,
+            'slug' => 'nullable|string|max:255|unique:facilities,slug,'.$request->facility_id,
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
@@ -36,7 +34,7 @@ class FacilityController extends Controller
 
         if ($request->facility_id) {
             $facility = $request->user()->facilities()->findOrFail($request->facility_id);
-            
+
             $updateData = [
                 'name' => $request->name,
                 'address' => $request->address,
@@ -73,7 +71,7 @@ class FacilityController extends Controller
     {
         $facility = $request->user()->facilities()->findOrFail($id);
         $facility->delete();
-        
+
         return redirect()->back();
     }
 
@@ -105,7 +103,7 @@ class FacilityController extends Controller
                 'facility_photos' => $request->facility_photos,
             ]
         );
-        
+
         // Update status to SUBMITTED since new documents were uploaded
         $facility->update(['verification_status' => 'SUBMITTED']);
 
@@ -142,7 +140,7 @@ class FacilityController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(User::STAFF_PERMISSIONS)),
         ]);
 
         $facility = $request->user()->facilities()->findOrFail($request->facility_id);
@@ -168,7 +166,7 @@ class FacilityController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -187,13 +185,13 @@ class FacilityController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
         $request->validate([
             'permissions' => 'nullable|array',
-            'permissions.*' => 'string|in:' . implode(',', array_keys(User::STAFF_PERMISSIONS)),
+            'permissions.*' => 'string|in:'.implode(',', array_keys(User::STAFF_PERMISSIONS)),
         ]);
 
         $user->update(['permissions' => $request->permissions ?? []]);
@@ -209,7 +207,7 @@ class FacilityController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if ($user->role !== 'FACILITY_STAFF' || !$facilityIds->contains($user->facility_id)) {
+        if ($user->role !== 'FACILITY_STAFF' || ! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -217,7 +215,7 @@ class FacilityController extends Controller
             'facility_id' => 'required|exists:facilities,id',
         ]);
 
-        if (!$facilityIds->contains((int) $request->facility_id)) {
+        if (! $facilityIds->contains((int) $request->facility_id)) {
             abort(403, 'You can only assign staff to one of your own facilities.');
         }
 
@@ -234,7 +232,7 @@ class FacilityController extends Controller
 
         return inertia('Facility/Staff', [
             'auth' => [
-                'user' => $request->user()->load('facilities.staff')
+                'user' => $request->user()->load('facilities.staff'),
             ],
         ]);
     }
@@ -247,7 +245,7 @@ class FacilityController extends Controller
 
         $facilityIds = $request->user()->facilities()->pluck('id');
 
-        if (!$facilityIds->contains($user->facility_id)) {
+        if (! $facilityIds->contains($user->facility_id)) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -258,7 +256,7 @@ class FacilityController extends Controller
 
     public function players(Request $request)
     {
-        if (!$request->user()->hasPermission('view_players')) {
+        if (! $request->user()->hasPermission('view_players')) {
             abort(403, 'You do not have permission to view players.');
         }
 
@@ -292,7 +290,7 @@ class FacilityController extends Controller
 
         return inertia('Facility/Players', [
             'auth' => [
-                'user' => $request->user()->load('facilities')
+                'user' => $request->user()->load('facilities'),
             ],
             'players' => $players,
             'canManage' => $request->user()->hasPermission('manage_players'),
@@ -301,21 +299,21 @@ class FacilityController extends Controller
 
     public function toggleBanPlayer(Request $request, User $user)
     {
-        if (!$request->user()->hasPermission('manage_players')) {
+        if (! $request->user()->hasPermission('manage_players')) {
             abort(403, 'You do not have permission to manage players.');
         }
 
         $facilityId = $request->input('facility_id');
         $facilityIds = $this->allowedFacilityIds($request);
 
-        if (!$facilityIds->contains((int) $facilityId)) {
+        if (! $facilityIds->contains((int) $facilityId)) {
             abort(403, 'Unauthorized action.');
         }
 
         // Get the current pivot status
         $pivot = $user->joinedFacilities()->where('facility_id', $facilityId)->first();
 
-        if (!$pivot) {
+        if (! $pivot) {
             abort(404, 'Player not found in this facility.');
         }
 
@@ -329,9 +327,84 @@ class FacilityController extends Controller
     {
         $facility->load('verification:id,facility_id,facility_photos');
         $facility->load('courts');
+        $facility->load(['bookings' => function ($q) {
+            $q->whereIn('status', ['pending', 'confirmed'])
+                ->whereDate('date', '>=', now()->toDateString());
+        }]);
 
         return Inertia::render('Facility/Show', [
-            'facility' => $facility
+            'facility' => $facility,
+        ])->withViewData([
+            'meta' => [
+                'title' => $facility->name,
+                'description' => $facility->description,
+                'image' => $facility->cover_image_url,
+                'url' => request()->url(),
+            ],
         ]);
+    }
+
+    public function book(Facility $facility)
+    {
+        $facility->load('verification:id,facility_id,facility_photos');
+        $facility->load('courts');
+        $facility->load(['bookings' => function ($q) {
+            $q->whereIn('status', ['pending', 'confirmed'])
+                ->whereDate('date', '>=', now()->toDateString());
+        }]);
+
+        return Inertia::render('Facility/Book', [
+            'facility' => $facility,
+        ]);
+    }
+
+    public function paymentSettings(Request $request)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER') {
+            abort(403, 'Only facility owners can manage payment settings.');
+        }
+
+        return inertia('Facility/PaymentSettings', [
+            'auth' => [
+                'user' => $request->user()->load('facilities'),
+            ],
+        ]);
+    }
+
+    public function updatePaymentSettings(Request $request, Facility $facility)
+    {
+        if ($request->user()->role !== 'FACILITY_OWNER' || $facility->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'gcash_name' => 'nullable|string|max:255',
+            'gcash_number' => 'nullable|string|max:255',
+            'gcash_qr' => 'nullable|image|max:5120', // 5MB max
+            'maya_name' => 'nullable|string|max:255',
+            'maya_number' => 'nullable|string|max:255',
+            'maya_qr' => 'nullable|image|max:5120',
+        ]);
+
+        $updateData = [
+            'gcash_name' => $validated['gcash_name'],
+            'gcash_number' => $validated['gcash_number'],
+            'maya_name' => $validated['maya_name'],
+            'maya_number' => $validated['maya_number'],
+        ];
+
+        if ($request->hasFile('gcash_qr')) {
+            $path = $request->file('gcash_qr')->store('payments', 'public');
+            $updateData['gcash_qr_url'] = '/storage/'.$path;
+        }
+
+        if ($request->hasFile('maya_qr')) {
+            $path = $request->file('maya_qr')->store('payments', 'public');
+            $updateData['maya_qr_url'] = '/storage/'.$path;
+        }
+
+        $facility->update($updateData);
+
+        return back()->with('success', 'Payment settings updated successfully.');
     }
 }

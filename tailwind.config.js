@@ -13,7 +13,18 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                // Body / UI text — Quicksand (rounded, friendly, great legibility at small sizes)
+                sans: ['Quicksand', ...defaultTheme.fontFamily.sans],
+
+                // Display / Title — Poppins (geometric, bold, strong visual hierarchy)
+                display: ['Poppins', ...defaultTheme.fontFamily.sans],
+
+                // Legacy alias kept for backward compat — remapped to Poppins
+                montserrat: ['Poppins', ...defaultTheme.fontFamily.sans],
+
+                // Explicit named aliases for use in JSX
+                quicksand: ['Quicksand', ...defaultTheme.fontFamily.sans],
+                poppins:   ['Poppins',   ...defaultTheme.fontFamily.sans],
             },
         },
     },

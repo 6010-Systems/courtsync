@@ -1,14 +1,17 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import PageHeader from '@/Components/PageHeader';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import DangerButton from '@/Components/DangerButton';
 import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
-import Modal from '@/Components/Modal';
+import { useConfirm } from '@/Components/ConfirmContext';
+import { useToast } from '@/Components/ToastContext';
 import { useState } from 'react';
 
 export default function Owners({ users }) {
+    const { confirm } = useConfirm();
+    const toast = useToast();
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -20,7 +23,13 @@ export default function Owners({ users }) {
     const submit = (e) => {
         e.preventDefault();
         post(route('admin.owners.store'), {
-            onSuccess: () => reset(),
+            onSuccess: () => {
+                toast.success('Owner invited successfully');
+                reset();
+            },
+            onError: () => {
+                toast.error('Failed to invite owner. Please check details.');
+            }
         });
     };
 
@@ -49,36 +58,52 @@ export default function Owners({ users }) {
     const submitEdit = (e) => {
         e.preventDefault();
         update(route('admin.users.update', editingUser.id), {
-            onSuccess: () => closeEditModal(),
+            onSuccess: () => {
+                toast.success('Owner profile updated successfully');
+                closeEditModal();
+            },
+            onError: () => {
+                toast.error('Failed to update owner profile.');
+            }
         });
     };
 
-    // Delete User State
-    const [deletingUser, setDeletingUser] = useState(null);
-    const { delete: destroy, processing: deleteProcessing } = useForm();
+    const handleDeleteUser = async (user) => {
+        const confirmed = await confirm({
+            title: `Delete Owner: ${user.name}?`,
+            message: `Are you sure you want to delete ${user.name}? All facilities, courts, and bookings owned by this user will be removed.`,
+            confirmText: 'Delete Owner',
+            cancelText: 'Cancel',
+            type: 'danger',
+        });
 
-    const openDeleteModal = (user) => {
-        setDeletingUser(user);
-    };
+        if (!confirmed) return;
 
-    const closeDeleteModal = () => {
-        setDeletingUser(null);
-    };
-
-    const submitDelete = (e) => {
-        e.preventDefault();
-        destroy(route('admin.users.destroy', deletingUser.id), {
-            onSuccess: () => closeDeleteModal(),
+        router.delete(route('admin.users.destroy', user.id), {
+            onSuccess: () => {
+                toast.success(`Owner ${user.name} deleted successfully`);
+            },
+            onError: () => {
+                toast.error('Failed to delete owner.');
+            }
         });
     };
 
     return (
         <AuthenticatedLayout
-            header={<h2 className="text-xl font-bold leading-tight text-[#10221C]">Facility Owners</h2>}
+            header={
+                <PageHeader
+                    title="Facility Owners"
+                    subtitle="Registered facility owners, verification statuses, and credentials"
+                    actions={null}
+                    showSearch={false}
+                    showNotifications={false}
+                />
+            }
         >
             <Head title="Admin - Owners" />
 
-            <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-6 w-full">
                 {/* Add User Card */}
                 <div className="bg-white p-6 shadow-sm rounded-lg border border-gray-200">
                     <h3 className="text-lg font-bold text-[#10221C] mb-2">Invite Facility Owner</h3>
@@ -170,8 +195,8 @@ export default function Owners({ users }) {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => openEditModal(u)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                                        <button onClick={() => openDeleteModal(u)} className="text-red-600 hover:text-red-900">Delete</button>
+                                        <button onClick={() => openEditModal(u)} className="text-indigo-600 hover:text-indigo-900 mr-4 cursor-pointer">Edit</button>
+                                        <button onClick={() => handleDeleteUser(u)} className="text-red-600 hover:text-red-900 cursor-pointer">Delete</button>
                                     </td>
                                 </tr>
                             ))}
@@ -235,25 +260,6 @@ export default function Owners({ users }) {
                         <PrimaryButton className="ms-3" disabled={editProcessing}>
                             Save Changes
                         </PrimaryButton>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Delete User Modal */}
-            <Modal show={deletingUser !== null} onClose={closeDeleteModal}>
-                <form onSubmit={submitDelete} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Are you sure you want to delete {deletingUser?.name}?
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Once this user is deleted, all of their resources and data will be permanently deleted.
-                    </p>
-
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeDeleteModal}>Cancel</SecondaryButton>
-                        <DangerButton className="ms-3" disabled={deleteProcessing}>
-                            Delete User
-                        </DangerButton>
                     </div>
                 </form>
             </Modal>

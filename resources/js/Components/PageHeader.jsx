@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 
 /**
  * ── PageHeader Component ───────────────────────────────────────────────────────
- * Standardized global header across all authenticated pages in CourtSync.
+ * Standardized global floating glass header across all authenticated pages in CourtSync.
  *
  * @param {string} title - Dynamic page heading
  * @param {string} [subtitle] - Dynamic subtext / contextual description
@@ -29,6 +29,7 @@ export default function PageHeader({
     onSearchChange,
     searchPlaceholder = 'Search courts, bookings...',
     className = '',
+    containerClassName = '',
 }) {
     const [notifOpen, setNotifOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(2);
@@ -47,7 +48,7 @@ export default function PageHeader({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Mock venue notifications
+    // Venue notifications
     const [notifications, setNotifications] = useState([
         {
             id: 1,
@@ -60,7 +61,7 @@ export default function PageHeader({
         {
             id: 2,
             title: 'Payment Confirmed',
-            desc: '$60.00 received via Stripe for Court 1',
+            desc: '₱350.00 received via GCash for Court 1',
             time: '28m ago',
             type: 'payment',
             unread: true,
@@ -99,29 +100,27 @@ export default function PageHeader({
         setUnreadCount(0);
     };
 
-    return (
+    const headerContent = (
         <div
             className={[
-                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white px-6 shadow-card transition-colors duration-200',
+                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 px-5 backdrop-blur-md shadow-card transition-all duration-200',
                 className,
             ].join(' ')}
         >
-
             {/* ── Left: Dynamic Page Title & Subtitle ───────────────────── */}
             <div className="flex min-w-0 flex-col justify-center">
-                <h1 className="truncate text-xl font-bold tracking-tight text-[#101F1A]">
+                <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-[#101F1A]">
                     {title}
                 </h1>
                 {subtitle && (
-                    <p className="truncate text-xs text-[#101F1A]/60">
+                    <p className="truncate text-xs font-medium text-[#101F1A]/60">
                         {subtitle}
                     </p>
                 )}
             </div>
 
             {/* ── Right: Search + Notifications + Dynamic Actions ───────── */}
-            <div className="flex shrink-0 items-center gap-2.5">
-
+            <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
                 {/* Global Command Search (⌘K) */}
                 {showSearch && (
                     <div className="relative hidden md:flex items-center">
@@ -134,7 +133,7 @@ export default function PageHeader({
                             value={searchQuery}
                             onChange={(e) => onSearchChange?.(e.target.value)}
                             placeholder={searchPlaceholder}
-                            className="h-8 w-48 sm:w-60 md:w-72 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-10 text-xs text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-colors focus:border-[#101F1A] focus:bg-white focus:outline-none focus-ring-volt"
+                            className="h-8 w-44 sm:w-56 md:w-64 rounded-lg border border-[#101F1A]/10 bg-white/90 py-1 pl-8 pr-9 text-xs font-medium text-[#101F1A] placeholder-[#101F1A]/40 shadow-subtle transition-colors focus:border-[#D6FF3F] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#D6FF3F]"
                         />
                         <div className="pointer-events-none absolute right-1.5 flex items-center">
                             <kbd className="rounded border border-[#101F1A]/15 bg-[#F5F2EA] px-1 py-0.5 text-[9px] font-bold text-[#101F1A]/50 leading-none">
@@ -152,9 +151,9 @@ export default function PageHeader({
                             onClick={() => setNotifOpen(prev => !prev)}
                             aria-label="Notifications"
                             className={[
-                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-colors duration-150 focus:outline-none focus-ring-volt shadow-subtle cursor-pointer',
+                                'relative flex h-8 w-8 items-center justify-center rounded-lg border transition-all duration-150 focus:outline-none shadow-subtle cursor-pointer',
                                 notifOpen
-                                    ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F] glow-volt-sm'
+                                    ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F]'
                                     : 'border-[#101F1A]/10 bg-white/90 text-[#101F1A] hover:bg-white hover:border-[#101F1A]/25',
                             ].join(' ')}
                         >
@@ -169,13 +168,13 @@ export default function PageHeader({
                         {/* Notifications Dropdown Card */}
                         {notifOpen && (
                             <div
-                                className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl glass-card p-1.5 shadow-elevated ring-1 ring-black/5 animate-fade-in"
+                                className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl bg-white/95 backdrop-blur-md border border-[#101F1A]/10 p-1.5 shadow-elevated ring-1 ring-black/5 animate-fade-in"
                             >
                                 <div className="flex items-center justify-between border-b border-[#101F1A]/10 px-3 py-2">
                                     <div className="flex items-center gap-1.5">
                                         <span className="text-xs font-bold text-[#101F1A]">Notifications</span>
                                         {unreadCount > 0 && (
-                                            <span className="rounded-full badge-volt px-1.5 py-0.5 text-[10px] shadow-xs">
+                                            <span className="rounded-full bg-[#D6FF3F] text-[#101F1A] font-bold px-1.5 py-0.5 text-[10px] shadow-xs">
                                                 {unreadCount} new
                                             </span>
                                         )}
@@ -184,7 +183,7 @@ export default function PageHeader({
                                         <button
                                             type="button"
                                             onClick={markAllRead}
-                                            className="text-[11px] font-semibold text-[#101F1A]/60 transition-colors hover:text-[#101F1A] cursor-pointer"
+                                            className="text-[11px] font-bold text-[#101F1A]/60 transition-colors hover:text-[#101F1A] cursor-pointer"
                                         >
                                             Mark all read
                                         </button>
@@ -200,7 +199,7 @@ export default function PageHeader({
                                                 item.unread ? 'bg-[#F5F2EA]/30' : '',
                                             ].join(' ')}
                                         >
-                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F] glow-volt-sm">
+                                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-[#D6FF3F]">
                                                 {item.type === 'booking' ? (
                                                     <Clock size={13} />
                                                 ) : item.type === 'payment' ? (
@@ -211,10 +210,10 @@ export default function PageHeader({
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="truncate text-xs font-semibold text-[#101F1A]">
+                                                    <p className="truncate text-xs font-bold text-[#101F1A]">
                                                         {item.title}
                                                     </p>
-                                                    <span className="shrink-0 text-[10px] text-[#101F1A]/40">
+                                                    <span className="shrink-0 text-[10px] font-medium text-[#101F1A]/40">
                                                         {item.time}
                                                     </span>
                                                 </div>
@@ -230,7 +229,7 @@ export default function PageHeader({
                                     <button
                                         type="button"
                                         onClick={() => setNotifOpen(false)}
-                                        className="w-full rounded-lg py-1.5 text-center text-xs font-semibold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A] cursor-pointer"
+                                        className="w-full rounded-lg py-1.5 text-center text-xs font-bold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A] cursor-pointer"
                                     >
                                         View all activity
                                     </button>
@@ -240,19 +239,29 @@ export default function PageHeader({
                     </div>
                 )}
 
-                {/* Dynamic Page Actions (or Default Action CTA) */}
+                {/* Dynamic Page Actions */}
                 {actions !== undefined ? (
                     actions
                 ) : (
                     <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-colors hover:bg-[#101F1A]/90 glow-volt-sm focus-ring-volt cursor-pointer"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-colors hover:bg-[#162923] cursor-pointer"
                     >
-                        <Plus size={14} strokeWidth={2.5} />
-                        <span>Book Court</span>
+                        <Plus size={14} strokeWidth={2.4} />
+                        <span>Action</span>
                     </button>
                 )}
             </div>
         </div>
     );
+
+    if (containerClassName) {
+        return (
+            <div className={containerClassName}>
+                {headerContent}
+            </div>
+        );
+    }
+
+    return headerContent;
 }
