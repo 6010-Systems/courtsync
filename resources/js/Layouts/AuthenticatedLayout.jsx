@@ -91,6 +91,7 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
                     </Dropdown.Trigger>
                     <Dropdown.Content>
                         <Dropdown.Link href={route('dashboard')}>Dashboard</Dropdown.Link>
+                        {user.role === 'PLAYER' && <Dropdown.Link href={route('player.bookings')}>My Bookings</Dropdown.Link>}
                         <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
                         <Dropdown.Link href={route('logout')} method="post" as="button">
                             Log Out

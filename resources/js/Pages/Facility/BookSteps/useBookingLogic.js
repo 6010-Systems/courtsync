@@ -344,7 +344,7 @@ export function useBookingLogic(facility) {
                 // DEFUSE THE TIME BOMB!
                 if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
 
-                showModal('success', 'Your court reservation has been secured. See you there!');
+                showModal('success', 'Your booking has been submitted and is awaiting confirmation. Track its status in My Bookings.');
                 
                 // Clear the temporary memory!
                 sessionStorage.removeItem('book_facility');

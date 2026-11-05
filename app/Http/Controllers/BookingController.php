@@ -166,7 +166,7 @@ class BookingController extends Controller
         ]);
 
         //  Return success
-        return back()->with('success', 'Booking confirmed successfully!');
+        return back()->with('success', 'Booking submitted successfully. Awaiting confirmation.');
     }
 
     /**
@@ -321,5 +321,31 @@ class BookingController extends Controller
         }
 
         return response()->json(['locked' => false]);
+    }
+
+    public function unlockSlot(Request $request)
+    {
+        $courtId = $request->court_id;
+        $date = $request->date;
+        $startHour = (int) explode(':', $request->start_time)[0];
+        $endHour = (int) explode(':', $request->end_time)[0];
+        $clientId = $request->idempotency_key;
+
+        if (! $clientId) {
+            return response()->json(['success' => false], 400);
+        }
+
+        for ($i = $startHour; $i < $endHour; $i++) {
+            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
+            $cacheKey = "court_hold_{$courtId}_{$date}_{$formattedHour}";
+            if (Cache::has($cacheKey)) {
+                $heldBy = Cache::get($cacheKey);
+                if ($heldBy === $clientId) {
+                    Cache::forget($cacheKey);
+                }
+            }
+        }
+
+        return response()->json(['success' => true]);
     }
 }

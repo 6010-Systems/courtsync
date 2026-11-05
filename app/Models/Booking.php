@@ -2,10 +2,34 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Booking extends Model
 {
+    public function scopeUpcoming(Builder $query, CarbonInterface $at): void
+    {
+        $query->whereIn('status', ['pending', 'confirmed'])
+            ->where(function ($query) use ($at) {
+                $query->where('date', '>', $at->toDateString())
+                    ->orWhere(function ($query) use ($at) {
+                        $query->where('date', $at->toDateString())->where('end_time', '>', $at->format('H:i:s'));
+                    });
+            });
+    }
+
+    public function scopePast(Builder $query, CarbonInterface $at): void
+    {
+        $query->whereIn('status', ['pending', 'confirmed'])
+            ->where(function ($query) use ($at) {
+                $query->where('date', '<', $at->toDateString())
+                    ->orWhere(function ($query) use ($at) {
+                        $query->where('date', $at->toDateString())->where('end_time', '<=', $at->format('H:i:s'));
+                    });
+            });
+    }
+
     protected $fillable = [
         'facility_id', 'user_id', 'guest_name', 'court_id', 'date', 'start_time', 'end_time', 'total_price', 'status',
     ];

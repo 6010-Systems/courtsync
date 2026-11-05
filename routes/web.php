@@ -11,6 +11,7 @@ use App\Http\Controllers\FacilityOwner\FacilityController;
 use App\Http\Controllers\FacilityOwner\PlayerController;
 use App\Http\Controllers\FacilityOwner\StaffController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlayerBookingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
@@ -56,6 +57,10 @@ Route::get('/auth/google/{tenant}/callback', [SocialiteController::class, 'callb
 Route::middleware(['auth', CheckBanned::class, 'verified'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
 
+    if ($user->role === 'PLAYER') {
+        return app(PlayerBookingController::class)->dashboard($request);
+    }
+
     if ($user->role === 'ADMIN') {
         return (new AdminController)->dashboard($request);
     }
@@ -65,6 +70,9 @@ Route::middleware(['auth', CheckBanned::class, 'verified'])->get('/dashboard', f
 
 // ── Facility Owner & Staff Routes ─────────────────────────────────────
 Route::middleware(['auth', CheckBanned::class])->group(function () {
+    Route::get('/player/bookings', [PlayerBookingController::class, 'index'])
+        ->middleware('verified')->name('player.bookings');
+
     // Facilities Management
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
     Route::post('/facility', [FacilityController::class, 'store'])->name('facility.store');
@@ -89,8 +97,8 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
 
-    Route::get('/facility/payment-settings', [FacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
-    Route::post('/facility/payment-settings/{facility}', [FacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
+    Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
     Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
     Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
@@ -137,7 +145,7 @@ Route::middleware('guest')->group(function () use ($facilitySlugPattern) {
 // Book Route (Requires Authentication)
 Route::middleware(['auth'])->group(function () {
     Route::get('/api/courts/{court}/locked-slots', [BookingController::class, 'getLockedSlots']);
-    Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
+    Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->name('facility.book');
 });
 
 // Public Facility Page (Must be at the bottom to avoid catching other routes like /admin)
