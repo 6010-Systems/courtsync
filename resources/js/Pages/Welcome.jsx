@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Building2, MapPin, ArrowRight, Sparkles } from 'lucide-react';
 import { useCountUp } from '@/hooks/useCountUp';
+import LandingBall from '@/Components/LandingBall';
 
 const SPORTS = [
     'Pickleball',
@@ -379,6 +380,7 @@ export default function Welcome({ auth, facilities = [] }) {
                     </div>
                 </footer>
             </div>
+            <LandingBall />
         </>
     );
 }
