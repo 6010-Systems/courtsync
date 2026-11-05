@@ -114,7 +114,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                 setProcessing(false);
             },
             onSuccess: () => {
-                showModal('success', 'Booking Confirmed Successfully!');
+                showModal('success', 'Booking submitted successfully. Awaiting confirmation.');
                 setStartTime('');
                 setEndTime('');
                 setIdempotencyKey(crypto.randomUUID());
@@ -325,6 +325,9 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                         <p className="text-gray-400 text-sm mb-6">
                             {modal.message}
                         </p>
+                        {modal.type === 'success' && user?.role === 'PLAYER' && (
+                            <Link href={route('player.bookings')} className="mb-3 block w-full rounded-xl bg-[#D6FF3F] py-3 text-center font-bold text-[#10221C] hover:bg-[#c4ec39]">View My Bookings</Link>
+                        )}
                         <button 
                             onClick={closeModal}
                             className={`w-full py-3 rounded-xl font-bold transition-all ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#c4ec39]' : 'bg-red-500 text-white hover:bg-red-600'}`}

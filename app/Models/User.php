@@ -7,9 +7,10 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable(['name', 'email', 'password', 'role', 'staff_role', 'status', 'mobile_number', 'google_id', 'avatar', 'facility_id', 'permissions'])]
 #[Hidden(['password', 'remember_token'])]
@@ -83,6 +84,11 @@ class User extends Authenticatable
         return $this->hasMany(Facility::class, 'user_id');
     }
 
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     public function workFacility()
     {
         return $this->belongsTo(Facility::class, 'facility_id');
@@ -94,7 +100,7 @@ class User extends Authenticatable
     public function joinedFacilities(): BelongsToMany
     {
         return $this->belongsToMany(Facility::class, 'facility_player')
-                    ->withPivot('status')
-                    ->withTimestamps();
+            ->withPivot('status')
+            ->withTimestamps();
     }
 }

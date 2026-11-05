@@ -42,6 +42,9 @@ export default function Show({ facility }) {
 
                     {user ? (
                         <>
+                            {user.role === 'PLAYER' && (
+                                <Link href={route('player.bookings')} className="rounded-full bg-[#D6FF3F] px-3 py-2 text-xs font-bold text-[#10221C] sm:text-sm">My Bookings</Link>
+                            )}
                             <div className="text-white text-xs sm:text-sm font-medium flex items-center gap-2 sm:gap-3 bg-[#10221C]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 shadow-xl backdrop-blur-md">
                                 {user.avatar ? (
                                     <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />

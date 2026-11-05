@@ -1,23 +1,27 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Auth\PlayerRegisteredUserController;
+use App\Http\Controllers\Auth\PlayerSessionController;
+use App\Http\Controllers\Auth\SocialiteController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CourtController;
 use App\Http\Controllers\FacilityController;
-use App\Http\Controllers\Auth\SocialiteController;
-use App\Http\Controllers\Auth\PlayerSessionController;
-use App\Http\Controllers\Auth\PlayerRegisteredUserController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlayerBookingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\CheckAdmin;
 use App\Http\Middleware\CheckBanned;
 use App\Http\Middleware\EnsureIdempotency;
+use App\Models\Facility;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Models\Facility;
 
 Route::get('/', function () {
-    $facilities = Facility::select('id','name', 'slug', 'city', 'province', 'description')
+    $facilities = Facility::select('id', 'name', 'slug', 'city', 'province', 'description')
         ->with('verification:id,facility_id,facility_photos')
         ->where('verification_status', 'APPROVED')
         ->latest()
@@ -49,13 +53,17 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/dashboard', function (Request $request) {
         $user = $request->user();
 
+        if ($user->role === 'PLAYER') {
+            return app(PlayerBookingController::class)->dashboard($request);
+        }
+
         if ($user->role === 'ADMIN') {
             return Inertia::render('Dashboard', [
                 'user' => $user,
                 'adminStats' => [
-                    'totalOwners' => \App\Models\User::where('role', 'FACILITY_OWNER')->count(),
-                    'totalStaff' => \App\Models\User::where('role', 'FACILITY_STAFF')->count(),
-                    'totalPlayers' => \App\Models\User::where('role', 'PLAYER')->count(),
+                    'totalOwners' => User::where('role', 'FACILITY_OWNER')->count(),
+                    'totalStaff' => User::where('role', 'FACILITY_STAFF')->count(),
+                    'totalPlayers' => User::where('role', 'PLAYER')->count(),
                     'totalFacilities' => Facility::count(),
                     'approvedFacilities' => Facility::where('verification_status', 'APPROVED')->count(),
                     'pendingVerifications' => Facility::whereIn('verification_status', ['SUBMITTED', 'UNDER_REVIEW'])->count(),
@@ -72,13 +80,16 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
             'user' => $user,
         ]);
     })->middleware(['verified'])->name('dashboard');
-    
+
+    Route::get('/player/bookings', [PlayerBookingController::class, 'index'])
+        ->middleware('verified')->name('player.bookings');
+
     // Facilities Management
     Route::get('/facilities', [FacilityController::class, 'index'])->name('facilities.index');
     Route::post('/facility', [FacilityController::class, 'store'])->name('facility.store');
     Route::delete('/facility/{facility}', [FacilityController::class, 'destroy'])->name('facility.destroy');
     Route::post('/facility/verification', [FacilityController::class, 'storeVerification'])->name('facility.verification.store');
-    
+
     // Facility Staff Routes
     Route::get('/facility/staff', [FacilityController::class, 'staff'])->name('facility.staff');
     Route::post('/facility/staff', [FacilityController::class, 'storeStaff'])->name('facility.staff.store');
@@ -99,27 +110,27 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     Route::get('/facility/payment-settings', [FacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [FacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
-    Route::get('/facility/bookings', [\App\Http\Controllers\BookingController::class, 'index'])->name('facility.bookings');
-    Route::get('/facility/payments', [\App\Http\Controllers\PaymentController::class, 'index'])->name('facility.payments');
-    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
-    Route::delete('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'destroy'])->name('bookings.destroy');
-    Route::post('/bookings/{booking}/verify', [\App\Http\Controllers\BookingController::class, 'verifyPayment'])->name('bookings.verify');
-    Route::post('/bookings/{booking}/reject', [\App\Http\Controllers\BookingController::class, 'rejectPayment'])->name('bookings.reject');
-    Route::post('/bookings/lock', [\App\Http\Controllers\BookingController::class, 'lockSlot'])->name('bookings.lock');
-    Route::post('/bookings/unlock', [\App\Http\Controllers\BookingController::class, 'unlockSlot'])->name('bookings.unlock');
+    Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
+    Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
+    Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
+    Route::post('/bookings/{booking}/verify', [BookingController::class, 'verifyPayment'])->name('bookings.verify');
+    Route::post('/bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])->name('bookings.lock');
+    Route::post('/bookings/unlock', [BookingController::class, 'unlockSlot'])->name('bookings.unlock');
 
 });
 
 Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/owners', [AdminController::class, 'owners'])->name('owners');
     Route::post('/owners', [AdminController::class, 'storeOwner'])->name('owners.store');
-    
+
     Route::get('/staff', [AdminController::class, 'staff'])->name('staff');
     Route::post('/staff', [AdminController::class, 'storeStaff'])->name('staff.store');
-    
+
     Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');
-    
+
     Route::get('/verifications', [AdminController::class, 'verifications'])->name('verifications');
     Route::post('/verifications/{facility_id}/status', [AdminController::class, 'updateVerificationStatus'])->name('verifications.status');
 
@@ -140,7 +151,7 @@ Route::middleware('guest')->group(function () {
 
 // Book Route (Requires Authentication)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/api/courts/{court}/locked-slots', [App\Http\Controllers\BookingController::class, 'getLockedSlots']);
+    Route::get('/api/courts/{court}/locked-slots', [BookingController::class, 'getLockedSlots']);
     Route::get('/{facility:slug}/book', [FacilityController::class, 'book'])->name('facility.book');
 });
 

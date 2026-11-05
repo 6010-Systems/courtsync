@@ -44,6 +44,7 @@ const navSections = [
         title: 'Main',
         items: [
             { name: 'Dashboard',    href: 'dashboard',                 icon: LayoutGrid,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN', 'PLAYER'] },
+            { name: 'My Bookings', href: 'player.bookings', icon: CalendarCheck, badge: null, roles: ['PLAYER'] },
         ],
     },
     {
