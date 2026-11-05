@@ -22,9 +22,32 @@ class BookingController extends Controller
             $facilityIds = collect([$user->facility_id]);
         }
 
-        $bookings = Booking::whereIn('facility_id', $facilityIds)
-            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name'])
-            ->orderBy('date', 'desc')
+        $search = $request->input('search');
+        $filter = $request->input('filter', 'All');
+
+        $query = Booking::whereIn('facility_id', $facilityIds)
+            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%");
+                })->orWhereHas('court', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%");
+                })->orWhere('guest_name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        if ($filter === 'Today') {
+            $query->where('date', now()->toDateString());
+        } elseif ($filter === 'Upcoming') {
+            $query->where('date', '>', now()->toDateString());
+        } elseif ($filter === 'Pending') {
+            $query->where('status', 'pending');
+        }
+
+        $bookings = $query->orderBy('date', 'desc')
             ->orderBy('start_time', 'desc')
             ->get();
 
@@ -35,6 +58,10 @@ class BookingController extends Controller
         return inertia('Facility/Bookings', [
             'bookings' => $bookings,
             'facilities' => $facilities,
+            'filters' => [
+                'search' => $search,
+                'filter' => $filter,
+            ],
         ]);
     }
 
@@ -287,6 +314,7 @@ class BookingController extends Controller
             Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
         }
 
+        // If we made it here, every single hour they requested is completely free!
         // Lock all of them for exactly 7 minutes!
         foreach ($keysToLock as $key) {
             Cache::put($key, $clientId, now()->addMinutes(7));

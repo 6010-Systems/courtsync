@@ -1,17 +1,59 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import PageHeader from '@/Components/PageHeader';
+import { Head, useForm, router } from '@inertiajs/react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Modal from '@/Components/Modal';
-import { Search, Plus, Trash2 } from 'lucide-react';
-import { router } from '@inertiajs/react';
+import { Search, Plus, Trash2, Calendar, Clock, MapPin, User, ChevronRight, LayoutGrid, List } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
+import BookingCard from '@/Components/BookingCard';
+import { useConfirm } from '@/Components/ConfirmContext';
 
-export default function Bookings({ bookings, facilities }) {
-    const [searchQuery, setSearchQuery] = useState('');
+function BookingStatusBadge({ status }) {
+    const s = status?.toLowerCase() || 'pending';
+    let base = "px-2.5 py-1 inline-flex text-[10px] leading-4 font-bold rounded-full uppercase border ";
+    if (s === 'confirmed') {
+        base += "bg-[#D6FF3F]/20 text-[#10221C] border-[#D6FF3F]/50";
+    } else if (s === 'cancelled') {
+        base += "bg-red-50 text-red-700 border-red-200";
+    } else if (s === 'completed') {
+    } else {
+        base += "bg-amber-50 text-amber-700 border-amber-200";
+    }
+    return <span className={base}>{status}</span>;
+}
+
+export default function Bookings({ bookings, facilities, filters }) {
+    const { confirm } = useConfirm();
+    const [searchQuery, setSearchQuery] = useState(filters?.search || '');
+    const [activeFilter, setActiveFilter] = useState(filters?.filter || 'All');
+    const [viewMode, setViewMode] = useState('table');
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [modalMode, setModalMode] = useState('view');
     const [isAdding, setIsAdding] = useState(false);
+
+    const isInitialRender = useRef(true);
+
+    useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            router.get(
+                route('facility.bookings'),
+                { search: searchQuery, filter: activeFilter },
+                { preserveState: true, replace: true, preserveScroll: true }
+            );
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [searchQuery, activeFilter]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         facility_id: facilities[0]?.id || '',
@@ -63,17 +105,7 @@ export default function Bookings({ bookings, facilities }) {
         return formatDate(dateString);
     };
 
-    const filteredBookings = useMemo(() => {
-        return bookings.filter(b => {
-            const query = searchQuery.toLowerCase();
-            return (
-                b.user?.name.toLowerCase().includes(query) ||
-                b.court?.name.toLowerCase().includes(query) ||
-                b.facility?.name.toLowerCase().includes(query) ||
-                b.status.toLowerCase().includes(query)
-            );
-        });
-    }, [bookings, searchQuery]);
+    const filteredBookings = bookings;
 
     // Group bookings by date
     const groupedBookings = useMemo(() => {
@@ -97,9 +129,21 @@ export default function Bookings({ bookings, facilities }) {
         e.preventDefault();
         post(route('bookings.store'), {
             onSuccess: () => {
+                const court = facilities.flatMap(f => f.courts).find(c => c.id == data.court_id);
+                setSelectedBooking({
+                    id: 'NEW',
+                    status: 'pending',
+                    user: null,
+                    guest_name: data.guest_name || 'Walk-in',
+                    date: data.date,
+                    start_time: data.start_time,
+                    end_time: data.end_time,
+                    total_price: data.total_price,
+                    court: court
+                });
+                setModalMode('success');
                 reset();
                 setIsAdding(false);
-                alert('Booking successfully added!');
             }
         });
     };
@@ -163,65 +207,124 @@ export default function Bookings({ bookings, facilities }) {
 
     return (
         <AuthenticatedLayout
+            inset="bookings"
             header={
-                <div className="flex justify-between items-center w-full">
-                    <h2 className="text-xl font-bold leading-tight text-[#10221C]">Facility Bookings</h2>
-                    {facilities.length > 0 && (
-                        <PrimaryButton onClick={() => setIsAdding(true)} className="!bg-[#10221C] hover:!bg-[#1a382d] flex items-center gap-2">
-                            <Plus size={16} /> Add Booking
-                        </PrimaryButton>
-                    )}
-                </div>
+                <PageHeader
+                    title="Facility Bookings"
+                    subtitle="Manage all your court reservations in one place"
+                    actions={
+                        facilities.length > 0 && (
+                            <PrimaryButton 
+                                onClick={() => setIsAdding(true)} 
+                                className="!bg-[#10221C] hover:!bg-[#10221C]/90 text-[#D6FF3F] hover:text-[#D6FF3F] flex items-center gap-2 transition-all duration-200 hover:scale-[1.02]"
+                            >
+                                <Plus size={16} /> New Booking
+                            </PrimaryButton>
+                        )
+                    }
+                    showSearch={false}
+                    showNotifications={false}
+                />
             }
         >
             <Head title="Bookings" />
 
-            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
+            <div className="flex flex-col gap-4 md:gap-6">
                 
-                {/* Bookings List Section */}
-                <div className="bg-white shadow-sm rounded-2xl border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                        <div className="relative w-full max-w-md">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search size={16} className="text-gray-400" />
-                            </div>
-                            <input
-                                type="text"
-                                placeholder="Search bookings..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#D6FF3F] focus:border-[#D6FF3F] sm:text-sm transition duration-150 ease-in-out"
-                            />
+                {/* Top Bar: Search & Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                    <div className="relative w-full max-w-md group">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#10221C] transition-colors">
+                            <Search size={18} />
                         </div>
-                        <span className="text-sm text-gray-500 font-medium ml-4">{filteredBookings.length} booking(s)</span>
+                        <input
+                            type="text"
+                            placeholder="Search by player, court, or status... (Cmd+K)"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2.5 border border-[#10221C]/12 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D6FF3F]/50 focus:border-[#10221C] sm:text-sm transition-all duration-200 shadow-subtle"
+                        />
                     </div>
-
-                    {filteredBookings.length === 0 ? (
-                        <div className="p-10 text-center">
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">No bookings found</h3>
-                            <p className="text-gray-500 text-sm">Try adjusting your search or add a new booking.</p>
+                    
+                    <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar w-full sm:w-auto items-center">
+                        {['All', 'Today', 'Upcoming', 'Pending'].map((filterItem) => (
+                            <button 
+                                key={filterItem}
+                                onClick={() => setActiveFilter(filterItem)}
+                                className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
+                                    activeFilter === filterItem 
+                                    ? 'bg-[#10221C] text-white shadow-subtle' 
+                                    : 'bg-white text-gray-600 border border-[#10221C]/12 hover:border-[#10221C]/30 hover:text-[#10221C]'
+                                }`}
+                            >
+                                {filterItem}
+                            </button>
+                        ))}
+                        <div className="hidden sm:flex border border-[#10221C]/12 rounded-lg bg-white p-1 gap-1 ml-2 h-full items-center">
+                            <button 
+                                onClick={() => setViewMode('table')}
+                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                            >
+                                <List size={18} />
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('card')}
+                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                            >
+                                <LayoutGrid size={18} />
+                            </button>
                         </div>
-                    ) : (
+                    </div>
+                </div>
+                
+                {/* Bookings Data Grid / Cards */}
+                {filteredBookings.length === 0 ? (
+                    <div className="bg-white shadow-subtle rounded-xl border border-[#10221C]/12 overflow-hidden p-16 flex flex-col items-center justify-center text-center">
+                            <div className="w-16 h-16 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center mb-4">
+                                <Calendar className="text-gray-300" size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold text-[#10221C] mb-1">No bookings found</h3>
+                            <p className="text-gray-500 text-sm max-w-sm">
+                                Try adjusting your search filters or create a new booking to get started.
+                            </p>
+                            <PrimaryButton 
+                                onClick={() => setIsAdding(true)} 
+                                className="mt-6 !bg-[#10221C] text-[#D6FF3F] transition-all hover:scale-105"
+                            >
+                                Create First Booking
+                            </PrimaryButton>
+                        </div>
+                ) : viewMode === 'card' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filteredBookings.map(booking => (
+                            <BookingCard 
+                                key={booking.id} 
+                                booking={booking} 
+                                onClick={() => { setSelectedBooking(booking); setModalMode('view'); }}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-white shadow-subtle rounded-xl border border-[#10221C]/12 overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                            <table className="min-w-full divide-y divide-[#10221C]/5">
+                                <thead className="bg-[#10221C]/[0.02]">
                                     <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Time</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Court</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Facility</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Player</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Price</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th scope="col" className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Time</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Court</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Player</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Price</th>
+                                        <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
-                                {groupedBookings.map((group, groupIndex) => (
-                                    <tbody key={group.date} className="bg-white divide-y divide-gray-100">
+                                {groupedBookings.map((group) => (
+                                    <tbody key={group.date} className="bg-white divide-y divide-[#10221C]/5">
                                         {/* Group Header */}
                                         <tr>
-                                            <td colSpan="7" className="px-6 py-3 bg-gray-50/50 border-t border-gray-200">
+                                            <td colSpan="6" className="px-6 py-3 bg-gray-50/80 border-t border-[#10221C]/5">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-black text-[#10221C] uppercase tracking-wide">{group.label}</span>
+                                                    <span className="text-xs font-black text-[#10221C] uppercase tracking-wider">{group.label}</span>
                                                     {group.label !== 'Today' && group.label !== 'Tomorrow' && group.label !== 'Yesterday' ? null : (
                                                         <span className="text-xs text-gray-500 font-medium">({formatDate(group.date)})</span>
                                                     )}
@@ -230,41 +333,103 @@ export default function Bookings({ bookings, facilities }) {
                                         </tr>
                                         {/* Group Items */}
                                         {group.bookings.map((booking) => (
-                                            <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                                            <tr 
+                                                key={booking.id} 
+                                                onClick={() => { setSelectedBooking(booking); setModalMode('view'); }}
+                                                className="group hover:bg-[#10221C]/[0.02] transition-colors cursor-pointer"
+                                            >
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-bold text-gray-900">{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock size={14} className="text-gray-400" />
+                                                        <div className="text-sm font-bold text-[#10221C]">
+                                                            {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-bold text-gray-900">{booking.court?.name}</div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-[#10221C]">{booking.court?.name}</span>
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                                            <MapPin size={12} /> {booking.facility?.name}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-500">{booking.facility?.name}</div>
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                                                            <User size={14} className="text-gray-500" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-[#10221C]">
+                                                                {booking.user?.name || booking.guest_name || 'Walk-in'}
+                                                            </span>
+                                                            {booking.user?.name && <span className="text-[11px] text-gray-500">Registered Player</span>}
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900">{booking.user?.name || booking.guest_name || 'Walk-in'}</div>
+                                                    <BookingStatusBadge status={booking.status} />
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-[#10221C]">
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-black text-[#10221C]">
                                                     ₱{Number(booking.total_price).toFixed(2)}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2.5 py-1 inline-flex text-[10px] leading-4 font-bold rounded-full uppercase ${booking.status === 'confirmed' ? 'bg-[#D6FF3F]/20 text-[#10221C] border border-[#D6FF3F]/50' : 'bg-gray-100 text-gray-800'}`}>
-                                                        {booking.status}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button
-                                                        onClick={() => {
-                                                            if (confirm('Are you sure you want to delete this booking?')) {
-                                                                router.delete(route('bookings.destroy', booking.id), {
-                                                                    preserveScroll: true
-                                                                });
-                                                            }
-                                                        }}
-                                                        className="text-red-600 hover:text-red-900 transition-colors p-1 rounded-full hover:bg-red-50"
-                                                        title="Delete Booking"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {booking.status === 'pending' && (
+                                                            <button
+                                                                onClick={async (e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    const ok = await confirm({
+                                                                        title: 'Verify Payment',
+                                                                        message: 'Are you sure you want to mark this booking as paid and confirmed?',
+                                                                        confirmText: 'Verify Payment',
+                                                                        type: 'success'
+                                                                    });
+                                                                    if (ok) router.patch(route('bookings.update', booking.id), { status: 'confirmed' }, { preserveScroll: true });
+                                                                }}
+                                                                className="px-3 py-1.5 bg-[#10221C] text-[#D6FF3F] text-xs font-bold rounded-lg hover:bg-[#1a352b] transition-colors"
+                                                            >
+                                                                Verify
+                                                            </button>
+                                                        )}
+                                                        {booking.status !== 'cancelled' && (
+                                                            <button
+                                                                onClick={async (e) => { 
+                                                                    e.stopPropagation();
+                                                                    const ok = await confirm({
+                                                                        title: 'Cancel Booking',
+                                                                        message: 'Are you sure you want to cancel this booking? This action cannot be undone.',
+                                                                        confirmText: 'Cancel Booking',
+                                                                        type: 'danger'
+                                                                    });
+                                                                    if (ok) router.patch(route('bookings.update', booking.id), { status: 'cancelled' }, { preserveScroll: true });
+                                                                }}
+                                                                className="px-3 py-1.5 bg-gray-100 text-gray-500 hover:text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 transition-colors"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 border-l border-gray-200 pl-2 ml-1">
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    const ok = await confirm({
+                                                                        title: 'Delete Booking',
+                                                                        message: 'Are you sure you want to permanently delete this booking?',
+                                                                        confirmText: 'Delete',
+                                                                        type: 'danger'
+                                                                    });
+                                                                    if (ok) {
+                                                                        router.delete(route('bookings.destroy', booking.id), { preserveScroll: true });
+                                                                    }
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                                                title="Delete Booking"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -272,9 +437,16 @@ export default function Bookings({ bookings, facilities }) {
                                 ))}
                             </table>
                         </div>
-                    )}
+                    </div>
+                )}
                 </div>
-            </div>
+
+            <BookingDetailDrawer 
+                isOpen={!!selectedBooking}
+                booking={selectedBooking}
+                mode={modalMode}
+                onClose={() => setSelectedBooking(null)}
+            />
 
             <Modal show={isAdding} onClose={closeModal} maxWidth="2xl">
                 <div className="p-6 sm:p-8">

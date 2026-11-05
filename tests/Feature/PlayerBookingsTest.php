@@ -119,9 +119,9 @@ class PlayerBookingsTest extends TestCase
 
     public function test_other_roles_keep_the_existing_dashboard(): void
     {
-        foreach (['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] as $role) {
+        foreach (['FACILITY_OWNER' => 'FacilityOwner/Dashboard', 'FACILITY_STAFF' => 'FacilityOwner/Dashboard', 'ADMIN' => 'Admin/Dashboard'] as $role => $component) {
             $this->actingAs(User::factory()->create(['role' => $role, 'status' => 'VERIFIED']))
-                ->get('/dashboard')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Dashboard'));
+                ->get('/dashboard')->assertOk()->assertInertia(fn (Assert $page) => $page->component($component));
         }
     }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, useForm } from '@inertiajs/react';
 import { Save, Wallet, UploadCloud } from 'lucide-react';
 
@@ -67,7 +68,10 @@ export default function PaymentSettings({ auth }) {
 
     if (facilities.length === 0) {
         return (
-            <AuthenticatedLayout user={auth.user}>
+            <AuthenticatedLayout 
+                user={auth.user}
+                header={<PageHeader title="Payment Settings" showSearch={false} showNotifications={false} />}
+            >
                 <Head title="Payment Settings" />
                 <div className="p-8 text-center text-gray-500">
                     You need to create a facility first before managing payment settings.
@@ -77,22 +81,15 @@ export default function PaymentSettings({ auth }) {
     }
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout 
+            user={auth.user}
+            header={<PageHeader title="Payment Settings" subtitle="Configure your GCash and Maya QR codes so players can pay for bookings." showSearch={false} showNotifications={false} />}
+        >
             <Head title="Payment Settings" />
             
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight text-[#10221C] flex items-center gap-3">
-                            <Wallet className="w-8 h-8 text-[#10221C]" strokeWidth={2.5} />
-                            Payment Settings
-                        </h1>
-                        <p className="text-sm font-medium text-gray-500 mt-2">
-                            Configure your GCash and Maya QR codes so players can pay for bookings.
-                        </p>
-                    </div>
-
-                    {facilities.length > 1 && (
+            <div className="flex flex-col gap-4 md:gap-6">
+                {/* Facility Selector */}
+                {facilities.length > 1 && (
                         <div className="w-full sm:w-64 shrink-0">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Select Facility</label>
                             <div className="relative">
@@ -288,7 +285,6 @@ export default function PaymentSettings({ auth }) {
                         </div>
                     </form>
                 </div>
-            </div>
         </AuthenticatedLayout>
     );
 }

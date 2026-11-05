@@ -2,23 +2,23 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\IdempotencyRequest;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\IdempotencyRequest;
 
 class EnsureIdempotency
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $idempotencyKey = $request->header('Idempotency-Key');
 
-        if (!$idempotencyKey) {
+        if (! $idempotencyKey) {
             return $next($request);
         }
 
