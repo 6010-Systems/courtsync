@@ -30,6 +30,8 @@ export default function Edit({ mustVerifyEmail, status }) {
                     title="Settings & Profile"
                     subtitle="Manage personal credentials and security preferences"
                     actions={null}
+                    liveNotifications
+                    notificationsFooterHref={user.role === 'PLAYER' ? route('player.bookings') : null}
                 />
             }
         >

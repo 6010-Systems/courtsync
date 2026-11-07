@@ -7,7 +7,7 @@ export default function Dashboard({ stats, nextBooking, recentBookings, timezone
     const { auth } = usePage().props;
 
     return (
-        <AuthenticatedLayout header={<PageHeader title={`Welcome back, ${auth.user.name}`} subtitle="Your courts, reservations, and next game" actions={null} showSearch={false} showNotifications={false} />}>
+        <AuthenticatedLayout header={<PageHeader title={`Welcome back, ${auth.user.name}`} subtitle="Your courts, reservations, and next game" actions={null} showSearch={false} liveNotifications notificationsFooterHref={route('player.bookings')} />}>
             <Head title="Player Dashboard" />
             <div className="space-y-6">
                 <div className="flex flex-wrap gap-3">

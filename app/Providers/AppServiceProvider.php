@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Console\Commands\Serve;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -13,7 +14,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton('command.serve', function ($app) {
+            return new Serve;
+        });
     }
 
     /**

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Facility;
+use App\Notifications\BookingConfirmed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
@@ -233,10 +235,20 @@ class BookingController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $booking->update(['status' => 'confirmed']);
-        if ($booking->payment) {
-            $booking->payment->update(['status' => 'verified']);
-        }
+        DB::transaction(function () use ($booking): void {
+            $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
+
+            if ($booking->status === 'confirmed') {
+                return;
+            }
+
+            abort_unless($booking->status === 'pending', 409, 'Only pending bookings can be confirmed.');
+
+            $booking->update(['status' => 'confirmed']);
+            $booking->payment()->update(['status' => 'verified']);
+            $booking->loadMissing(['court', 'facility']);
+            $booking->user?->notify(new BookingConfirmed($booking));
+        });
 
         return redirect()->back()->with('success', 'Booking and payment verified successfully.');
     }

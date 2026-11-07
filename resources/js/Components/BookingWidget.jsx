@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES_DARK, courtIsBookable } from '@/Utils/courtStatus';
 
@@ -58,6 +58,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
     const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
     const [processing, setProcessing] = useState(false);
+    const submittingRef = useRef(false);
 
     const showModal = (type, message) => setModal({ isOpen: true, type, message });
     const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
@@ -95,8 +96,12 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     }, [selectedDate, selectedCourtId]);
 
     const handleBooking = () => {
-        if (!startTime || !endTime || !selectedCourtId || processing) return;
+        if (!startTime || !endTime || !selectedCourtId || processing || submittingRef.current) return;
 
+        // Generate a fresh idempotency key for every attempt so retries are never blocked
+        const freshKey = crypto.randomUUID();
+
+        submittingRef.current = true;
         setProcessing(true);
 
         router.post(route('bookings.store'), {
@@ -108,9 +113,10 @@ export default function BookingWidget({ facility, user, courts = [] }) {
             total_price: price
         }, {
             headers: {
-                'Idempotency-Key': idempotencyKey
+                'Idempotency-Key': freshKey
             },
             onFinish: () => {
+                submittingRef.current = false;
                 setProcessing(false);
             },
             onSuccess: () => {
