@@ -101,8 +101,8 @@ export default function Staff({ auth }) {
 
                     <div className="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
                         <h4 className="text-md font-semibold text-gray-800 mb-4">Invite New Staff</h4>
-                        <form onSubmit={submitStaff} className="flex flex-col sm:flex-row gap-4 items-start flex-wrap">
-                            <div className="flex-1 max-w-xs">
+                        <form onSubmit={submitStaff} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                            <div className="w-full">
                                 <select
                                     value={staffData.facility_id}
                                     onChange={e => setStaffData('facility_id', e.target.value)}
@@ -115,15 +115,15 @@ export default function Staff({ auth }) {
                                 </select>
                                 <InputError message={staffErrors.facility_id} className="mt-2" />
                             </div>
-                            <div className="flex-1 max-w-xs">
+                            <div className="w-full">
                                 <TextInput id="staff_name" value={staffData.name} onChange={e => setStaffData('name', e.target.value)} placeholder="Staff Name" className="block w-full" />
                                 <InputError message={staffErrors.name} className="mt-2" />
                             </div>
-                            <div className="flex-1 max-w-xs">
+                            <div className="w-full">
                                 <TextInput id="staff_email" type="email" value={staffData.email} onChange={e => setStaffData('email', e.target.value)} placeholder="staff@example.com" className="block w-full" />
                                 <InputError message={staffErrors.email} className="mt-2" />
                             </div>
-                            <PrimaryButton disabled={staffProcessing} className="!bg-[#10221C] hover:!bg-[#1a382d] h-[42px]">
+                            <PrimaryButton type="submit" disabled={staffProcessing} className="w-full justify-center !bg-[#10221C] hover:!bg-[#1a382d] py-2.5">
                                 Send Invite
                             </PrimaryButton>
                         </form>
@@ -184,7 +184,13 @@ export default function Staff({ auth }) {
                                 ) : (
                                     <tr>
                                         <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                                            No staff members yet. Invite one above!
+                                            <div className="flex flex-col items-center justify-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                                <h3 className="mt-2 text-sm font-semibold text-gray-900">No staff members yet</h3>
+                                                <p className="mt-1 text-sm text-gray-500">Invite new staff members to join your team above.</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}

@@ -8,6 +8,7 @@ import InputError from '@/Components/InputError';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
 import { useState } from 'react';
+import Modal from '@/Components/Modal';
 
 export default function Staff({ users, facilities }) {
     const { confirm } = useConfirm();
@@ -109,8 +110,8 @@ export default function Staff({ users, facilities }) {
                     <h3 className="text-lg font-bold text-[#10221C] mb-2">Invite Facility Staff</h3>
                     <p className="text-sm text-gray-500 mb-6">Invite a new staff member and assign them to a specific facility.</p>
                     
-                    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-4 items-start">
-                        <div className="flex-1 max-w-xs">
+                    <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                        <div className="w-full">
                             <TextInput
                                 id="name"
                                 type="text"
@@ -122,7 +123,7 @@ export default function Staff({ users, facilities }) {
                             />
                             <InputError message={errors.name} className="mt-2" />
                         </div>
-                        <div className="flex-1 max-w-xs">
+                        <div className="w-full">
                             <TextInput
                                 id="email"
                                 type="email"
@@ -134,13 +135,13 @@ export default function Staff({ users, facilities }) {
                             />
                             <InputError message={errors.email} className="mt-2" />
                         </div>
-                        <div className="flex-1 max-w-xs">
+                        <div className="w-full">
                             <select
                                 id="facility_id"
                                 name="facility_id"
                                 value={data.facility_id}
                                 onChange={(e) => setData('facility_id', e.target.value)}
-                                className="block w-full border-gray-300 focus:border-[#D6FF3F] focus:ring-[#D6FF3F] rounded-md shadow-sm h-[42px]"
+                                className="block w-full border-gray-300 focus:border-[#D6FF3F] focus:ring-[#D6FF3F] rounded-md shadow-sm"
                             >
                                 <option value="" disabled>Select Facility</option>
                                 {facilities.map(facility => (
@@ -150,7 +151,7 @@ export default function Staff({ users, facilities }) {
                             <InputError message={errors.facility_id} className="mt-2" />
                         </div>
                         <PrimaryButton
-                            className="!bg-[#10221C] !text-white hover:!bg-[#1A332B] h-[42px]"
+                            className="w-full justify-center !bg-[#10221C] !text-white hover:!bg-[#1A332B] py-2.5"
                             disabled={processing}
                         >
                             Invite Staff
@@ -172,33 +173,47 @@ export default function Staff({ users, facilities }) {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-bold text-gray-900">{user.name}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{user.email}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-semibold text-gray-900">{user.work_facility?.name || 'Unassigned'}</div>
-                                            <div className="text-xs text-gray-500">{user.work_facility?.owner?.name ? `Owner: ${user.work_facility.owner.name}` : ''}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-md border ${
-                                                user.status === 'VERIFIED' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                user.status === 'BANNED' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                            }`}>
-                                                {user.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button onClick={() => openEditModal(user)} className="text-[#10221C] hover:text-[#1a382d] mr-4 cursor-pointer">Edit</button>
-                                            <button onClick={() => handleDeleteUser(user)} className="text-red-600 hover:text-red-900 cursor-pointer">Delete</button>
+                                {users.length > 0 ? (
+                                    users.map((user) => (
+                                        <tr key={user.id} className="hover:bg-gray-50 transition">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-bold text-gray-900">{user.name}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-500">{user.email}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-semibold text-gray-900">{user.work_facility?.name || 'Unassigned'}</div>
+                                                <div className="text-xs text-gray-500">{user.work_facility?.owner?.name ? `Owner: ${user.work_facility.owner.name}` : ''}</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-md border ${
+                                                    user.status === 'VERIFIED' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                    user.status === 'BANNED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                    'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                                }`}>
+                                                    {user.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button onClick={() => openEditModal(user)} className="text-[#10221C] hover:text-[#1a382d] mr-4 transition-colors font-semibold">Edit</button>
+                                                <button onClick={() => handleDeleteUser(user)} className="text-red-600 hover:text-red-900 transition-colors font-semibold">Delete</button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                                <h3 className="mt-2 text-sm font-semibold text-gray-900">No staff members found</h3>
+                                                <p className="mt-1 text-sm text-gray-500">Invite new staff members to join your facilities above.</p>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>

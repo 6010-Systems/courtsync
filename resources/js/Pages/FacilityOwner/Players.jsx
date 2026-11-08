@@ -3,10 +3,19 @@ import PageHeader from '@/Components/PageHeader';
 import { Head, router } from '@inertiajs/react';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
+import { useState } from 'react';
+import TextInput from '@/Components/TextInput';
 
 export default function Players({ auth, players, canManage }) {
     const { confirm } = useConfirm();
     const toast = useToast();
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredPlayers = players.filter(player => 
+        player.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        player.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (player.facility_name && player.facility_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     const handleToggleBan = async (player) => {
         const isBanned = player.status === 'BANNED';
@@ -54,11 +63,22 @@ export default function Players({ auth, players, canManage }) {
                 <div className="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100">
                     <div className="p-6 text-gray-900">
                         
-                        <div className="mb-6 flex justify-between items-center">
+                        <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-[#10221C]">Registered Players</h3>
                                 <p className="text-sm text-gray-500 mt-1">Manage the players who have joined your facilities.</p>
                             </div>
+                            {players.length > 0 && (
+                                <div className="w-full sm:w-72">
+                                    <TextInput
+                                        type="text"
+                                        placeholder="Search by name, email, or facility..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full block"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {players.length === 0 ? (
@@ -69,69 +89,133 @@ export default function Players({ auth, players, canManage }) {
                                 <h3 className="mt-2 text-sm font-semibold text-gray-900">No players yet</h3>
                                 <p className="mt-1 text-sm text-gray-500">Share your facility link to get players to register.</p>
                             </div>
+                        ) : filteredPlayers.length === 0 ? (
+                            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <h3 className="mt-2 text-sm font-semibold text-gray-900">No results found</h3>
+                                <p className="mt-1 text-sm text-gray-500">No players match your search "{searchQuery}".</p>
+                            </div>
                         ) : (
-                            <div className="overflow-x-auto rounded-xl border border-gray-200">
-                                <table className="w-full text-sm text-left text-gray-500">
-                                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
-                                        <tr>
-                                            <th scope="col" className="px-6 py-4">Player</th>
-                                            <th scope="col" className="px-6 py-4">Facility Joined</th>
-                                            <th scope="col" className="px-6 py-4">Joined Date</th>
-                                            <th scope="col" className="px-6 py-4">Status</th>
-                                            {canManage && <th scope="col" className="px-6 py-4 text-right">Actions</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {players.map((player, index) => (
-                                            <tr key={`${player.id}-${player.facility_id}`} className="bg-white border-b hover:bg-gray-50 transition">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center gap-3">
-                                                        {player.avatar ? (
-                                                            <img src={player.avatar} alt="" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-                                                        ) : (
-                                                            <div className="w-8 h-8 rounded-full bg-[#10221C] text-[#D6FF3F] flex items-center justify-center font-bold text-xs">
-                                                                {player.name.charAt(0)}
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <div className="font-bold text-[#10221C]">{player.name}</div>
-                                                            <div className="text-gray-500">{player.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                        {player.facility_name}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {new Date(player.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {player.status === 'BANNED' ? (
-                                                        <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">Banned</span>
-                                                    ) : (
-                                                        <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Active</span>
-                                                    )}
-                                                </td>
-                                                {canManage && (
-                                                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                        <button
-                                                            onClick={() => handleToggleBan(player)}
-                                                            className={`text-sm font-bold transition ${
-                                                                player.status === 'BANNED'
-                                                                    ? 'text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100'
-                                                                    : 'text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100'
-                                                            } px-3 py-1.5 rounded-md`}
-                                                        >
-                                                            {player.status === 'BANNED' ? 'Unban Player' : 'Ban Player'}
-                                                        </button>
-                                                    </td>
-                                                )}
+                            <div className="rounded-xl border border-gray-200 overflow-hidden">
+                                {/* Desktop Table View */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="w-full text-sm text-left text-gray-500">
+                                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                <th scope="col" className="px-6 py-4">Player</th>
+                                                <th scope="col" className="px-6 py-4">Facility Joined</th>
+                                                <th scope="col" className="px-6 py-4">Joined Date</th>
+                                                <th scope="col" className="px-6 py-4">Status</th>
+                                                {canManage && <th scope="col" className="px-6 py-4 text-right">Actions</th>}
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {filteredPlayers.map((player) => (
+                                                <tr key={`desktop-${player.id}-${player.facility_id}`} className="bg-white hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-3">
+                                                            {player.avatar ? (
+                                                                <img src={player.avatar} alt={`${player.name}'s avatar`} className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+                                                            ) : (
+                                                                <div className="w-8 h-8 rounded-full bg-[#10221C] text-[#D6FF3F] flex items-center justify-center font-bold text-xs">
+                                                                    {player.name.charAt(0)}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <div className="font-bold text-[#10221C]">{player.name}</div>
+                                                                <div className="text-gray-500">{player.email}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                                                            {player.facility_name}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        {new Date(player.created_at).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        {player.status === 'BANNED' ? (
+                                                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">Banned</span>
+                                                        ) : (
+                                                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">Active</span>
+                                                        )}
+                                                    </td>
+                                                    {canManage && (
+                                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                            <button
+                                                                onClick={() => handleToggleBan(player)}
+                                                                className={`text-sm font-bold transition-colors ${
+                                                                    player.status === 'BANNED'
+                                                                        ? 'text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100'
+                                                                        : 'text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100'
+                                                                } px-3 py-1.5 rounded-md`}
+                                                            >
+                                                                {player.status === 'BANNED' ? 'Unban Player' : 'Ban Player'}
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Mobile Card View */}
+                                <div className="md:hidden flex flex-col divide-y divide-gray-100">
+                                    {filteredPlayers.map((player) => (
+                                        <div key={`mobile-${player.id}-${player.facility_id}`} className="p-4 bg-white flex flex-col gap-4">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-3">
+                                                    {player.avatar ? (
+                                                        <img src={player.avatar} alt={`${player.name}'s avatar`} className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-[#10221C] text-[#D6FF3F] flex items-center justify-center font-bold text-sm">
+                                                            {player.name.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="font-bold text-[#10221C] text-base">{player.name}</div>
+                                                        <div className="text-xs text-gray-500">{player.email}</div>
+                                                    </div>
+                                                </div>
+                                                {player.status === 'BANNED' ? (
+                                                    <span className="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded whitespace-nowrap">Banned</span>
+                                                ) : (
+                                                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded whitespace-nowrap">Active</span>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">Joined Date</div>
+                                                    <div className="font-medium text-gray-900">{new Date(player.created_at).toLocaleDateString()}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs text-gray-500 mb-1">Facility</div>
+                                                    <div className="font-medium text-gray-900 truncate" title={player.facility_name}>{player.facility_name}</div>
+                                                </div>
+                                            </div>
+
+                                            {canManage && (
+                                                <div className="mt-1">
+                                                    <button
+                                                        onClick={() => handleToggleBan(player)}
+                                                        className={`w-full text-sm font-bold transition-colors ${
+                                                            player.status === 'BANNED'
+                                                                ? 'text-green-700 bg-green-50 hover:bg-green-100'
+                                                                : 'text-red-700 bg-red-50 hover:bg-red-100'
+                                                        } px-4 py-2.5 rounded-lg flex items-center justify-center`}
+                                                    >
+                                                        {player.status === 'BANNED' ? 'Unban Player' : 'Ban Player'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
