@@ -6,7 +6,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Foundation\Console\ServeCommand as BaseServeCommand;
 use Symfony\Component\Process\Process;
 
-#[Signature('serve {--host= : The hostname to serve on} {--port= : The port to serve on}')]
+#[Signature('serve {--host= : The hostname to serve on} {--port= : The port to serve on} {--no-reload : Disable automatic reloading}')]
 class Serve extends BaseServeCommand
 {
     /**
