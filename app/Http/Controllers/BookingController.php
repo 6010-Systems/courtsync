@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Facility;
 use App\Notifications\BookingConfirmed;
+use App\Notifications\BookingRequested;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -166,6 +167,14 @@ class BookingController extends Controller
         $facility->players()->syncWithoutDetaching([
             $user->id => ['status' => 'ACTIVE'],
         ]);
+
+        //  Notify the facility owner and staff that a new booking awaits confirmation
+        $notifiables = collect([$facility->owner])
+            ->merge($facility->staff->where('role', 'FACILITY_STAFF'))
+            ->unique('id')
+            ->filter();
+
+        $notifiables->each(fn ($user) => $user->notify(new BookingRequested($booking)));
 
         //  Return success
         return back()->with('success', 'Booking submitted successfully. Awaiting confirmation.');

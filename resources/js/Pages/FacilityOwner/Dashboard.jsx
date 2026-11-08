@@ -398,7 +398,8 @@ export default function FacilityOwnerDashboard({ user, metrics = null }) {
                     }
                     actions={null}
                     showSearch={false}
-                    showNotifications={false}
+                    liveNotifications
+                    notificationsFooterHref={route('facility.bookings')}
                 />
             }
         >
