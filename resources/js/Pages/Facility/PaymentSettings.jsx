@@ -18,9 +18,11 @@ export default function PaymentSettings({ auth }) {
         gcash_name: selectedFacility?.gcash_name || '',
         gcash_number: selectedFacility?.gcash_number || '',
         gcash_qr: null,
+        clear_gcash_qr: false,
         maya_name: selectedFacility?.maya_name || '',
         maya_number: selectedFacility?.maya_number || '',
         maya_qr: null,
+        clear_maya_qr: false,
     });
 
     // Handle facility change
@@ -185,11 +187,24 @@ export default function PaymentSettings({ auth }) {
                                 <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center">
                                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Preview</h4>
                                     {gcashPreview ? (
-                                        <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                                            <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
-                                                <img src={gcashPreview} alt="GCash Preview" className="max-w-none w-full object-cover" />
+                                        <>
+                                            <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                                                <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
+                                                    <img src={gcashPreview} alt="GCash Preview" className="max-w-none w-full object-cover" />
+                                                </div>
                                             </div>
-                                        </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('gcash_qr', null);
+                                                    setData('clear_gcash_qr', true);
+                                                    setGcashPreview(null);
+                                                }}
+                                                className="text-xs font-bold text-red-500 hover:text-red-700 underline hover:underline mt-2"
+                                            >
+                                                Remove QR
+                                            </button>
+                                        </>
                                     ) : (
                                         <div className="w-48 h-48 bg-gray-200 rounded-xl border border-gray-300 flex items-center justify-center text-gray-400 flex-col">
                                             <svg className="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -249,11 +264,24 @@ export default function PaymentSettings({ auth }) {
                                 <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center">
                                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Preview</h4>
                                     {mayaPreview ? (
-                                        <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                                            <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
-                                                <img src={mayaPreview} alt="Maya Preview" className="max-w-none w-full object-cover" />
+                                        <>
+                                            <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                                                <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
+                                                    <img src={mayaPreview} alt="Maya Preview" className="max-w-none w-full object-cover" />
+                                                </div>
                                             </div>
-                                        </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('maya_qr', null);
+                                                    setData('clear_maya_qr', true);
+                                                    setMayaPreview(null);
+                                                }}
+                                                className="text-xs font-bold text-red-500 hover:text-red-700 underline hover:underline mt-2"
+                                            >
+                                                Remove QR
+                                            </button>
+                                        </>
                                     ) : (
                                         <div className="w-48 h-48 bg-gray-200 rounded-xl border border-gray-300 flex items-center justify-center text-gray-400 flex-col">
                                             <svg className="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

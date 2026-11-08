@@ -381,9 +381,11 @@ class FacilityController extends Controller
             'gcash_name' => 'nullable|string|max:255',
             'gcash_number' => 'nullable|string|max:255',
             'gcash_qr' => 'nullable|image|max:5120', // 5MB max
+            'clear_gcash_qr' => 'sometimes|boolean',
             'maya_name' => 'nullable|string|max:255',
             'maya_number' => 'nullable|string|max:255',
             'maya_qr' => 'nullable|image|max:5120',
+            'clear_maya_qr' => 'sometimes|boolean',
         ]);
 
         $updateData = [
@@ -396,11 +398,15 @@ class FacilityController extends Controller
         if ($request->hasFile('gcash_qr')) {
             $path = $request->file('gcash_qr')->store('payments', 'public');
             $updateData['gcash_qr_url'] = '/storage/'.$path;
+        } elseif ($request->boolean('clear_gcash_qr')) {
+            $updateData['gcash_qr_url'] = null;
         }
 
         if ($request->hasFile('maya_qr')) {
             $path = $request->file('maya_qr')->store('payments', 'public');
             $updateData['maya_qr_url'] = '/storage/'.$path;
+        } elseif ($request->boolean('clear_maya_qr')) {
+            $updateData['maya_qr_url'] = null;
         }
 
         $facility->update($updateData);
