@@ -67,6 +67,7 @@ class CourtController extends Controller
             'time_range' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'hourly_rate' => 'nullable|numeric|min:0',
+            'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
         ]);
 
@@ -78,6 +79,7 @@ class CourtController extends Controller
             'facility_id' => $request->facility_id,
             'name' => $request->name,
             'type' => $request->type,
+            'image_url' => $request->image_url,
             'time_range' => $request->time_range,
             'description' => $request->description,
             'hourly_rate' => $request->hourly_rate,
@@ -103,12 +105,14 @@ class CourtController extends Controller
             'time_range' => 'nullable|string|max:100',
             'description' => 'nullable|string',
             'hourly_rate' => 'nullable|numeric|min:0',
+            'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
         ]);
 
         $court->update([
             'name' => $request->name,
             'type' => $request->type,
+            'image_url' => $request->has('image_url') ? $request->image_url : $court->image_url,
             'time_range' => $request->time_range,
             'description' => $request->description,
             'hourly_rate' => $request->hourly_rate,

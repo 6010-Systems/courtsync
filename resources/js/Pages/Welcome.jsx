@@ -223,7 +223,7 @@ export default function Welcome({ auth, facilities = [] }) {
                                     {/* Top Image: Edge-to-edge with smooth gradient overlay integrating into card background */}
                                     <div className="relative h-36 sm:h-40 lg:h-44 w-full shrink-0 overflow-hidden bg-white">
                                         <img
-                                            src={facility.verification?.facility_photos?.[0] || MOCK_FACILITY_IMAGES[(facility.id || i) % MOCK_FACILITY_IMAGES.length]}
+                                            src={facility.cover_photo_url || facility.cover_image_url || facility.verification?.facility_photos?.[0] || MOCK_FACILITY_IMAGES[i % MOCK_FACILITY_IMAGES.length]}
                                             alt={facility.name}
                                             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
                                             style={{
@@ -255,9 +255,19 @@ export default function Welcome({ auth, facilities = [] }) {
                                     {/* Card Body — flex-1 flex flex-col justify-between ensures footer is pinned identically */}
                                     <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
                                         <div>
-                                            <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors duration-200 truncate h-6 sm:h-7 flex items-center" title={facility.name}>
-                                                {facility.name}
-                                            </h3>
+                                            <div className="flex items-center gap-2 h-6 sm:h-7">
+                                                {facility.logo_url && (
+                                                    <img
+                                                        src={facility.logo_url}
+                                                        alt="Logo"
+                                                        className="w-5 h-5 rounded-md object-cover border border-[#101F1A]/10 shrink-0 shadow-2xs"
+                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    />
+                                                )}
+                                                <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors duration-200 truncate flex-1" title={facility.name}>
+                                                    {facility.name}
+                                                </h3>
+                                            </div>
 
                                             <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#10221C]/60 truncate h-5">
                                                 <MapPin size={12} className="text-[#FF5A36]/80 shrink-0" />

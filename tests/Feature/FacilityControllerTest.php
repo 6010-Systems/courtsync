@@ -57,4 +57,33 @@ class FacilityControllerTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_owner_can_update_facility_branding(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+
+        $response = $this->actingAs($owner)->post(route('facility.branding.update', $facility), [
+            'cover_photo_url' => 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1600&q=80',
+            'logo_url' => 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=300&q=80',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $facility->refresh();
+        $this->assertSame('https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1600&q=80', $facility->cover_photo_url);
+        $this->assertSame('https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=300&q=80', $facility->logo_url);
+    }
+
+    public function test_other_user_cannot_update_facility_branding(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $otherUser = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+
+        $response = $this->actingAs($otherUser)->post(route('facility.branding.update', $facility), [
+            'cover_photo_url' => 'https://example.com/hacked.png',
+        ]);
+
+        $response->assertForbidden();
+    }
 }

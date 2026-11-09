@@ -413,4 +413,47 @@ class FacilityController extends Controller
 
         return back()->with('success', 'Payment settings updated successfully.');
     }
+
+    public function updateBranding(Request $request, Facility $facility)
+    {
+        $user = $request->user();
+        if ($user->role !== 'ADMIN' && ($user->role !== 'FACILITY_OWNER' || $facility->user_id !== $user->id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'cover_photo' => 'nullable|image|max:10240',
+            'cover_photo_url' => 'nullable|string|max:2048',
+            'clear_cover_photo' => 'sometimes|boolean',
+            'logo' => 'nullable|image|max:5120',
+            'logo_url' => 'nullable|string|max:2048',
+            'clear_logo' => 'sometimes|boolean',
+        ]);
+
+        $updateData = [];
+
+        if ($request->hasFile('cover_photo')) {
+            $path = $request->file('cover_photo')->store('facilities/covers', 'public');
+            $updateData['cover_photo_url'] = '/storage/'.$path;
+        } elseif ($request->filled('cover_photo_url')) {
+            $updateData['cover_photo_url'] = $request->cover_photo_url;
+        } elseif ($request->boolean('clear_cover_photo')) {
+            $updateData['cover_photo_url'] = null;
+        }
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('facilities/logos', 'public');
+            $updateData['logo_url'] = '/storage/'.$path;
+        } elseif ($request->filled('logo_url')) {
+            $updateData['logo_url'] = $request->logo_url;
+        } elseif ($request->boolean('clear_logo')) {
+            $updateData['logo_url'] = null;
+        }
+
+        if (! empty($updateData)) {
+            $facility->update($updateData);
+        }
+
+        return back()->with('success', 'Facility branding updated successfully.');
+    }
 }

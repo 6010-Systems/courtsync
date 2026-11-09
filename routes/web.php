@@ -26,7 +26,7 @@ use Inertia\Inertia;
 
 // ── Public Platform Landing ───────────────────────────────────────────
 Route::get('/', function () {
-    $facilities = Facility::select('id', 'name', 'slug', 'city', 'province', 'description')
+    $facilities = Facility::select('id', 'name', 'slug', 'logo_url', 'cover_photo_url', 'city', 'province', 'description')
         ->with('verification:id,facility_id,facility_photos')
         ->where('verification_status', 'APPROVED')
         ->latest()
@@ -107,6 +107,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::post('/facility/{facility}/branding', [RootFacilityController::class, 'updateBranding'])->name('facility.branding.update');
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
     Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
     Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
