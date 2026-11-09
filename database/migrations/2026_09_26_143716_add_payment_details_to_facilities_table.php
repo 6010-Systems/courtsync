@@ -29,7 +29,7 @@ return new class extends Migration
         Schema::table('facilities', function (Blueprint $table) {
             $table->dropColumn([
                 'gcash_name', 'gcash_number', 'gcash_qr_url',
-                'maya_name', 'maya_number', 'maya_qr_url'
+                'maya_name', 'maya_number', 'maya_qr_url',
             ]);
         });
     }

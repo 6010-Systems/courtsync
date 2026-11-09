@@ -57,6 +57,7 @@ export function useBookingLogic(facility) {
     });
     const [modal, setModal] = useState({ isOpen: false, type: '', message: '', title: '' });
     const [processing, setProcessing] = useState(false);
+    const submittingRef = useRef(false);
     const [lockedSlots, setLockedSlots] = useState([]);
     
     // Keep track of our hidden timer
@@ -323,8 +324,14 @@ export function useBookingLogic(facility) {
     const [proofFile, setProofFile] = useState(null);
 
     const handleBooking = () => {
-        if (!startTime || !endTime || !selectedCourtId || processing) return;
+        if (!startTime || !endTime || !selectedCourtId || processing || submittingRef.current) return;
 
+        // Generate a fresh idempotency key for every attempt so retries are never blocked
+        const freshKey = crypto.randomUUID();
+        sessionStorage.setItem('book_idempotency_key', freshKey);
+        setIdempotencyKey(freshKey);
+
+        submittingRef.current = true;
         setProcessing(true);
 
         router.post(route('bookings.store'), {
@@ -338,13 +345,16 @@ export function useBookingLogic(facility) {
             proof_file: proofFile
         }, {
             forceFormData: true,
-            headers: { 'Idempotency-Key': idempotencyKey },
-            onFinish: () => setProcessing(false),
+            headers: { 'Idempotency-Key': freshKey },
+            onFinish: () => {
+                submittingRef.current = false;
+                setProcessing(false);
+            },
             onSuccess: () => {
                 // DEFUSE THE TIME BOMB!
                 if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
 
-                showModal('success', 'Your court reservation has been secured. See you there!');
+                showModal('success', 'Your booking has been submitted and is awaiting confirmation. Track its status in My Bookings.');
                 
                 // Clear the temporary memory!
                 sessionStorage.removeItem('book_facility');

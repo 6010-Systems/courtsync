@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone } from 'lucide-react';
 
 export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMethod, proofFile, setProofFile, facility }) {
-    
+    const hasDefaulted = useRef(false);
+
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setProofFile(e.target.files[0]);
@@ -17,6 +18,18 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
     const mayaName = facility?.maya_name;
     const mayaNumber = facility?.maya_number;
     const mayaQrUrl = facility?.maya_qr_url;
+
+    // Auto-select a default payment method on arrival so a QR is shown immediately
+    useEffect(() => {
+        if (!hasDefaulted.current && paymentMethod === 'pay_at_facility') {
+            if (gcashQrUrl || gcashName || gcashNumber) {
+                setPaymentMethod('gcash');
+            } else if (mayaQrUrl || mayaName || mayaNumber) {
+                setPaymentMethod('maya');
+            }
+            hasDefaulted.current = true;
+        }
+    }, [paymentMethod, setPaymentMethod, gcashQrUrl, gcashName, gcashNumber, mayaQrUrl, mayaName, mayaNumber]);
 
     return (
         <div className="p-6 sm:p-10">

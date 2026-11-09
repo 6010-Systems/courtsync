@@ -12,6 +12,7 @@ class IdempotencyRequest extends Model
         'path',
         'response_code',
         'response_body',
+        'expires_at',
     ];
 
     protected $casts = [

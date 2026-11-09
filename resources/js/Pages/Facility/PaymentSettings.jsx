@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PageHeader from '@/Components/PageHeader';
 import { Head, useForm } from '@inertiajs/react';
 import { Save, Wallet, UploadCloud } from 'lucide-react';
 
@@ -17,9 +18,11 @@ export default function PaymentSettings({ auth }) {
         gcash_name: selectedFacility?.gcash_name || '',
         gcash_number: selectedFacility?.gcash_number || '',
         gcash_qr: null,
+        clear_gcash_qr: false,
         maya_name: selectedFacility?.maya_name || '',
         maya_number: selectedFacility?.maya_number || '',
         maya_qr: null,
+        clear_maya_qr: false,
     });
 
     // Handle facility change
@@ -67,7 +70,10 @@ export default function PaymentSettings({ auth }) {
 
     if (facilities.length === 0) {
         return (
-            <AuthenticatedLayout user={auth.user}>
+            <AuthenticatedLayout 
+                user={auth.user}
+                header={<PageHeader title="Payment Settings" showSearch={false} showNotifications={false} />}
+            >
                 <Head title="Payment Settings" />
                 <div className="p-8 text-center text-gray-500">
                     You need to create a facility first before managing payment settings.
@@ -77,22 +83,15 @@ export default function PaymentSettings({ auth }) {
     }
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout 
+            user={auth.user}
+            header={<PageHeader title="Payment Settings" subtitle="Configure your GCash and Maya QR codes so players can pay for bookings." showSearch={false} showNotifications={false} />}
+        >
             <Head title="Payment Settings" />
             
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-black tracking-tight text-[#10221C] flex items-center gap-3">
-                            <Wallet className="w-8 h-8 text-[#10221C]" strokeWidth={2.5} />
-                            Payment Settings
-                        </h1>
-                        <p className="text-sm font-medium text-gray-500 mt-2">
-                            Configure your GCash and Maya QR codes so players can pay for bookings.
-                        </p>
-                    </div>
-
-                    {facilities.length > 1 && (
+            <div className="flex flex-col gap-4 md:gap-6">
+                {/* Facility Selector */}
+                {facilities.length > 1 && (
                         <div className="w-full sm:w-64 shrink-0">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Select Facility</label>
                             <div className="relative">
@@ -188,11 +187,24 @@ export default function PaymentSettings({ auth }) {
                                 <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center">
                                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Preview</h4>
                                     {gcashPreview ? (
-                                        <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                                            <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
-                                                <img src={gcashPreview} alt="GCash Preview" className="max-w-none w-full object-cover" />
+                                        <>
+                                            <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                                                <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
+                                                    <img src={gcashPreview} alt="GCash Preview" className="max-w-none w-full object-cover" />
+                                                </div>
                                             </div>
-                                        </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('gcash_qr', null);
+                                                    setData('clear_gcash_qr', true);
+                                                    setGcashPreview(null);
+                                                }}
+                                                className="text-xs font-bold text-red-500 hover:text-red-700 underline hover:underline mt-2"
+                                            >
+                                                Remove QR
+                                            </button>
+                                        </>
                                     ) : (
                                         <div className="w-48 h-48 bg-gray-200 rounded-xl border border-gray-300 flex items-center justify-center text-gray-400 flex-col">
                                             <svg className="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -252,11 +264,24 @@ export default function PaymentSettings({ auth }) {
                                 <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center">
                                     <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Preview</h4>
                                     {mayaPreview ? (
-                                        <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                                            <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
-                                                <img src={mayaPreview} alt="Maya Preview" className="max-w-none w-full object-cover" />
+                                        <>
+                                            <div className="w-48 h-48 bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+                                                <div className="w-full h-full overflow-hidden rounded-xl relative flex justify-center items-center">
+                                                    <img src={mayaPreview} alt="Maya Preview" className="max-w-none w-full object-cover" />
+                                                </div>
                                             </div>
-                                        </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData('maya_qr', null);
+                                                    setData('clear_maya_qr', true);
+                                                    setMayaPreview(null);
+                                                }}
+                                                className="text-xs font-bold text-red-500 hover:text-red-700 underline hover:underline mt-2"
+                                            >
+                                                Remove QR
+                                            </button>
+                                        </>
                                     ) : (
                                         <div className="w-48 h-48 bg-gray-200 rounded-xl border border-gray-300 flex items-center justify-center text-gray-400 flex-col">
                                             <svg className="w-10 h-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -288,7 +313,6 @@ export default function PaymentSettings({ auth }) {
                         </div>
                     </form>
                 </div>
-            </div>
         </AuthenticatedLayout>
     );
 }

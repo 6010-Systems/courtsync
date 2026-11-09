@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES_DARK, courtIsBookable } from '@/Utils/courtStatus';
 
@@ -58,6 +58,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
     const [modal, setModal] = useState({ isOpen: false, type: '', message: '' });
     const [processing, setProcessing] = useState(false);
+    const submittingRef = useRef(false);
 
     const showModal = (type, message) => setModal({ isOpen: true, type, message });
     const closeModal = () => setModal({ isOpen: false, type: '', message: '' });
@@ -95,8 +96,12 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     }, [selectedDate, selectedCourtId]);
 
     const handleBooking = () => {
-        if (!startTime || !endTime || !selectedCourtId || processing) return;
+        if (!startTime || !endTime || !selectedCourtId || processing || submittingRef.current) return;
 
+        // Generate a fresh idempotency key for every attempt so retries are never blocked
+        const freshKey = crypto.randomUUID();
+
+        submittingRef.current = true;
         setProcessing(true);
 
         router.post(route('bookings.store'), {
@@ -108,13 +113,14 @@ export default function BookingWidget({ facility, user, courts = [] }) {
             total_price: price
         }, {
             headers: {
-                'Idempotency-Key': idempotencyKey
+                'Idempotency-Key': freshKey
             },
             onFinish: () => {
+                submittingRef.current = false;
                 setProcessing(false);
             },
             onSuccess: () => {
-                showModal('success', 'Booking Confirmed Successfully!');
+                showModal('success', 'Booking submitted successfully. Awaiting confirmation.');
                 setStartTime('');
                 setEndTime('');
                 setIdempotencyKey(crypto.randomUUID());
@@ -325,6 +331,9 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                         <p className="text-gray-400 text-sm mb-6">
                             {modal.message}
                         </p>
+                        {modal.type === 'success' && user?.role === 'PLAYER' && (
+                            <Link href={route('player.bookings')} className="mb-3 block w-full rounded-xl bg-[#D6FF3F] py-3 text-center font-bold text-[#10221C] hover:bg-[#c4ec39]">View My Bookings</Link>
+                        )}
                         <button 
                             onClick={closeModal}
                             className={`w-full py-3 rounded-xl font-bold transition-all ${modal.type === 'success' ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#c4ec39]' : 'bg-red-500 text-white hover:bg-red-600'}`}

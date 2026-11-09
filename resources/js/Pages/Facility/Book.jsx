@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 import Step1Court from './BookSteps/Step1Court';
 import Step2DateTime from './BookSteps/Step2DateTime';
@@ -9,6 +9,7 @@ import { useBookingLogic } from './BookSteps/useBookingLogic';
 import TimerIcon from '@/Components/TimerIcon';
 
 export default function Book({ facility }) {
+    const isPlayer = usePage().props.auth.user?.role === 'PLAYER';
     const {
         selectableCourts,
         selectedCourtId, setSelectedCourtId,
@@ -227,16 +228,16 @@ export default function Book({ facility }) {
                             </div>
                         )}
                         <h4 className="text-2xl font-black text-[#10221C] mb-2">
-                            {modal.title ? modal.title : (modal.type === 'success' ? 'Booking Confirmed!' : 'Booking Failed')}
+                            {modal.title ? modal.title : (modal.type === 'success' ? 'Booking Submitted!' : 'Booking Failed')}
                         </h4>
                         <p className="text-gray-500 text-sm mb-8 leading-relaxed px-2">{modal.message}</p>
                         
                         {modal.type === 'success' ? (
                             <Link 
-                                href={route('facility.show', facility.slug)}
+                                href={isPlayer ? route('player.bookings') : route('facility.show', facility.slug)}
                                 className="block w-full py-3.5 rounded-xl font-bold transition-all bg-[#10221C] text-white hover:bg-[#1a362d] hover:-translate-y-0.5 shadow-md text-center text-sm"
                             >
-                                Return to Facility
+                                {isPlayer ? 'View My Bookings' : 'Return to Facility'}
                             </Link>
                         ) : (
                             <button 
