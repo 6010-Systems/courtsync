@@ -24,30 +24,53 @@ class FacilityOwnerSeeder extends Seeder
     {
         $demoOwner = User::factory()
             ->facilityOwner()
-            ->has(Facility::factory()->count(2)->state(function (array $attributes, User $user) {
-                return [
-                    'gcash_name' => 'CourtSync Demo',
-                    'gcash_number' => '0912 345 6789',
-                    'gcash_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433960/gcashqr_zynbos.jpg',
-                    'maya_name' => 'CourtSync Demo',
-                    'maya_number' => '0912 345 6789',
-                    'maya_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433959/mayaqr_wv3fzq.jpg',
-                ];
-            }), 'facilities')
             ->create([
                 'name' => 'Owner Demo',
                 'email' => 'owner@example.com',
             ]);
 
-        $demoOwner->facilities->each(function (Facility $facility) {
+        // First facility: has a prominent logo and verified photos
+        $firstFacility = Facility::factory()
+            ->withLogo()
+            ->create([
+                'user_id' => $demoOwner->id,
+                'name' => 'CourtSync Premier Sports Arena',
+                'slug' => 'courtsync-premier-arena',
+                'logo_url' => 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=300&q=80',
+                'cover_photo_url' => 'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1600&q=80',
+                'gcash_name' => 'CourtSync Demo',
+                'gcash_number' => '0912 345 6789',
+                'gcash_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433960/gcashqr_zynbos.jpg',
+                'maya_name' => 'CourtSync Demo',
+                'maya_number' => '0912 345 6789',
+                'maya_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433959/mayaqr_wv3fzq.jpg',
+            ]);
+
+        // Second facility: clearly NO logo (logo_url = null) to test the clean no-logo layout
+        $secondFacility = Facility::factory()
+            ->withoutLogo()
+            ->create([
+                'user_id' => $demoOwner->id,
+                'name' => 'Metro Play Community Complex',
+                'slug' => 'metro-play-complex',
+                'logo_url' => null,
+                'cover_photo_url' => 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&w=1600&q=80',
+                'gcash_name' => 'CourtSync Demo',
+                'gcash_number' => '0912 345 6789',
+                'gcash_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433960/gcashqr_zynbos.jpg',
+                'maya_name' => 'CourtSync Demo',
+                'maya_number' => '0912 345 6789',
+                'maya_qr_url' => 'https://res.cloudinary.com/dwnu9lxd7/image/upload/v1790433959/mayaqr_wv3fzq.jpg',
+            ]);
+
+        collect([$firstFacility, $secondFacility])->each(function (Facility $facility) {
             Court::factory()->count(2)->create(['facility_id' => $facility->id]);
             Court::factory()->openPlay()->create(['facility_id' => $facility->id]);
             Court::factory()->blocked()->create(['facility_id' => $facility->id]);
         });
 
-        // Create a sample booking and payment for the first facility to test receipt viewing
-        $firstFacility = $demoOwner->facilities->first();
-        $court = $firstFacility->courts->first();
+        // Create sample bookings and payment for the first facility to test receipt viewing
+        $court = $firstFacility->courts()->first();
 
         for ($i = 0; $i < 10; $i++) {
             $booking = Booking::create([
@@ -71,13 +94,39 @@ class FacilityOwnerSeeder extends Seeder
             ]);
         }
 
-        User::factory()
-            ->count(3)
-            ->facilityOwner()
-            ->has(Facility::factory(), 'facilities')
-            ->create()
-            ->each(function (User $owner) {
-                Court::factory()->count(3)->create(['facility_id' => $owner->facilities()->first()->id]);
-            });
+        // 3 additional facility owners with distinct facilities
+        $otherFacilitiesData = [
+            [
+                'name' => 'Cartwright & Sons Basketball Arena',
+                'slug' => 'cartwright-basketball-arena',
+                'cover_photo_url' => 'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1600&q=80',
+                'logo_url' => 'https://images.unsplash.com/photo-1569517282132-25d22f4573e6?auto=format&fit=crop&w=300&q=80',
+            ],
+            [
+                'name' => 'Schumm Group Futsal & Turf Center',
+                'slug' => 'schumm-futsal-turf',
+                'cover_photo_url' => 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=80',
+                'logo_url' => null, // Explicitly no logo
+            ],
+            [
+                'name' => 'Abernathy Badminton & Racket Club',
+                'slug' => 'abernathy-badminton-club',
+                'cover_photo_url' => 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1600&q=80',
+                'logo_url' => 'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?auto=format&fit=crop&w=300&q=80',
+            ],
+        ];
+
+        foreach ($otherFacilitiesData as $data) {
+            $owner = User::factory()
+                ->facilityOwner()
+                ->create();
+
+            $facility = Facility::factory()
+                ->create(array_merge([
+                    'user_id' => $owner->id,
+                ], $data));
+
+            Court::factory()->count(3)->create(['facility_id' => $facility->id]);
+        }
     }
 }

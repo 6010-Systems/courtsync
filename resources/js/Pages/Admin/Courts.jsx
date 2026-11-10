@@ -62,6 +62,10 @@ const DEFAULT_COURT_IMAGES = [
 ];
 
 function getCourtImage(court, facility, index = 0) {
+    if (court?.image_url) {
+        return court.image_url;
+    }
+
     const facilityPhotos = (facility?.verification?.facility_photos || []).filter(p => Boolean(p && typeof p === 'string' && p.trim()));
     if (facilityPhotos.length > 0) {
         return facilityPhotos[(court.id || index) % facilityPhotos.length];

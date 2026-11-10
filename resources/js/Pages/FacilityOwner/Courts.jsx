@@ -95,6 +95,10 @@ const DEFAULT_COURT_IMAGES = [
 ];
 
 function getCourtImage(court, facility, index = 0) {
+    if (court?.image_url) {
+        return court.image_url;
+    }
+
     const facilityPhotos = (facility?.verification?.facility_photos || []).filter(p => Boolean(p && typeof p === 'string' && p.trim()));
     if (facilityPhotos.length > 0) {
         return facilityPhotos[(court.id || index) % facilityPhotos.length];
@@ -127,6 +131,7 @@ export default function Courts({ facilities = [], can = {} }) {
         facility_id: facilities[0]?.id || '',
         name: '',
         type: '',
+        image_url: '',
         time_range: '',
         description: '',
         hourly_rate: '',
@@ -139,6 +144,7 @@ export default function Courts({ facilities = [], can = {} }) {
             return (
                 (data.name || '').trim() !== (editingCourt.name || '').trim() ||
                 (data.type || '').trim() !== (editingCourt.type || '').trim() ||
+                (data.image_url || '').trim() !== (editingCourt.image_url || '').trim() ||
                 String(data.facility_id || '') !== String(editingCourt.facility_id || '') ||
                 (data.time_range || '').trim() !== (editingCourt.time_range || '').trim() ||
                 (data.description || '').trim() !== (editingCourt.description || '').trim() ||
@@ -149,6 +155,7 @@ export default function Courts({ facilities = [], can = {} }) {
         return Boolean(
             data.name?.trim() ||
             data.type?.trim() ||
+            data.image_url?.trim() ||
             data.time_range?.trim() ||
             data.description?.trim() ||
             (data.hourly_rate !== '' && data.hourly_rate !== null) ||
@@ -206,6 +213,7 @@ export default function Courts({ facilities = [], can = {} }) {
             facility_id: facility.id,
             name: court.name || '',
             type: court.type || '',
+            image_url: court.image_url || '',
             time_range: court.time_range || '',
             description: court.description || '',
             hourly_rate: court.hourly_rate ?? '',
@@ -975,6 +983,34 @@ export default function Courts({ facilities = [], can = {} }) {
                             })}
                         </div>
                         <InputError message={activeErrors.status} className="mt-1" />
+                    </div>
+
+                    {/* Court Image Link */}
+                    <div className="pt-1.5 border-t border-[#101F1A]/5">
+                        <InputLabel htmlFor="image_url" value="Court Photo / Image Link (Optional)" />
+                        <div className="mt-1 flex items-center gap-3">
+                            {data.image_url ? (
+                                <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-[#101F1A]/10 bg-[#101F1A]/5">
+                                    <img
+                                        src={data.image_url}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </div>
+                            ) : null}
+                            <div className="flex-1">
+                                <TextInput
+                                    id="image_url"
+                                    type="url"
+                                    value={data.image_url}
+                                    onChange={(e) => setData('image_url', e.target.value)}
+                                    className="block w-full text-xs font-medium"
+                                    placeholder="https://images.unsplash.com/photo-... (or leave blank for sport default)"
+                                />
+                            </div>
+                        </div>
+                        <InputError message={activeErrors.image_url} className="mt-1" />
                     </div>
 
                     {/* Amenities & Description */}

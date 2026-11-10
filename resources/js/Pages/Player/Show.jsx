@@ -69,6 +69,10 @@ const DEFAULT_COURT_IMAGES = [
 ];
 
 function getCourtImage(court, facility, index = 0) {
+    if (court?.image_url) {
+        return court.image_url;
+    }
+
     const facilityPhotos = (facility?.verification?.facility_photos || []).filter(p => Boolean(p && typeof p === 'string' && p.trim()));
     if (facilityPhotos.length > 0) {
         return facilityPhotos[(court.id || index) % facilityPhotos.length];
@@ -145,7 +149,7 @@ export default function Show({ facility }) {
     
     const validPhotos = (facility.verification?.facility_photos || []).filter(p => Boolean(p && typeof p === 'string' && p.trim()));
     const defaultCover = MOCK_FACILITY_IMAGES[(facility.id || 0) % MOCK_FACILITY_IMAGES.length];
-    const coverPhoto = validPhotos.length > 0 ? validPhotos[0] : defaultCover;
+    const coverPhoto = facility.cover_photo_url || facility.cover_image_url || (validPhotos.length > 0 ? validPhotos[0] : defaultCover);
     const photos = validPhotos.length > 0 ? validPhotos : [
         MOCK_FACILITY_IMAGES[(facility.id || 0) % MOCK_FACILITY_IMAGES.length],
         MOCK_FACILITY_IMAGES[((facility.id || 0) + 1) % MOCK_FACILITY_IMAGES.length],
@@ -169,35 +173,52 @@ export default function Show({ facility }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#10221C] via-[#10221C]/60 to-transparent"></div>
                 
                 {/* Navbar elements integrated into hero */}
-                <div className="absolute top-0 left-0 right-0 p-4 sm:p-6 lg:p-8 flex justify-end items-center gap-2 sm:gap-4 z-30">
-                    {user ? (
+                <div className="absolute top-0 right-0 p-3 sm:p-6 lg:p-8 flex justify-end items-center gap-2 sm:gap-3 z-30">
+                    {user && (
                         <>
-                            <div className="text-white text-xs sm:text-sm font-medium flex items-center gap-2 sm:gap-3 bg-[#10221C]/90 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 shadow-xl backdrop-blur-md">
+                            {user.role === 'PLAYER' && (
+                                <Link
+                                    href={route('player.bookings')}
+                                    className="rounded-full bg-[#D6FF3F] hover:bg-[#c4ec39] transition px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-[#10221C] sm:text-sm shadow-md whitespace-nowrap"
+                                >
+                                    My Bookings
+                                </Link>
+                            )}
+
+                            {(user.role === 'ADMIN' || user.role === 'FACILITY_OWNER' || user.role === 'FACILITY_STAFF') && (
+                                <Link
+                                    href="/dashboard"
+                                    className="rounded-full bg-[#D6FF3F] hover:bg-[#c4ec39] transition px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-[#10221C] sm:text-sm shadow-md whitespace-nowrap"
+                                >
+                                    Dashboard
+                                </Link>
+                            )}
+
+                            <div className="text-white text-xs sm:text-sm font-medium flex items-center gap-2 bg-[#10221C]/90 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/20 shadow-xl backdrop-blur-md">
                                 {user.avatar ? (
-                                    <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full" referrerPolicy="no-referrer" />
+                                    <img
+                                        src={user.avatar}
+                                        alt={user.name}
+                                        className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover shrink-0"
+                                        referrerPolicy="no-referrer"
+                                    />
                                 ) : (
-                                    <div className="w-6 h-6 rounded-full bg-[#D6FF3F] flex items-center justify-center text-[#10221C] font-bold text-xs">
-                                        {user.name.charAt(0)}
+                                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#D6FF3F] flex items-center justify-center text-[#10221C] font-black text-[10px] sm:text-xs shrink-0">
+                                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                     </div>
                                 )}
-                                <span className="hidden sm:inline">{user.name}</span>
+                                <span className="hidden sm:inline max-w-[130px] truncate">{user.name}</span>
                             </div>
+
                             <Link
                                 href={route('logout')}
                                 method="post"
                                 as="button"
-                                className="text-white hover:text-white text-xs sm:text-sm font-bold bg-[#10221C]/50 hover:bg-[#10221C]/80 transition px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 backdrop-blur-md cursor-pointer"
+                                className="text-white hover:text-[#D6FF3F] text-xs sm:text-sm font-bold bg-[#10221C]/60 hover:bg-[#10221C]/90 transition px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 backdrop-blur-md cursor-pointer whitespace-nowrap"
                             >
                                 Log Out
                             </Link>
                         </>
-                    ) : (
-                        <Link
-                            href={`/${facility.slug}/login`}
-                            className="text-[#10221C] text-xs sm:text-sm font-black flex items-center gap-2 sm:gap-3 bg-[#D6FF3F] hover:bg-[#c4ec39] transition px-4 sm:px-6 py-2 sm:py-2.5 rounded-full shadow-lg shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
-                        >
-                            Sign In
-                        </Link>
                     )}
                 </div>
 
