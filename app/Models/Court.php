@@ -6,8 +6,23 @@ use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
-#[Fillable(['facility_id', 'name', 'type', 'image_url', 'time_range', 'description', 'hourly_rate', 'status'])]
+#[Fillable([
+    'facility_id',
+    'name',
+    'type',
+    'image_url',
+    'time_range',
+    'description',
+    'hourly_rate',
+    'pricing_mode',
+    'day_rate',
+    'night_rate',
+    'day_start_time',
+    'night_start_time',
+    'status',
+])]
 class Court extends Model
 {
     /** @use HasFactory<CourtFactory> */
@@ -98,6 +113,91 @@ class Court extends Model
     {
         return [
             'hourly_rate' => 'decimal:2',
+            'day_rate' => 'decimal:2',
+            'night_rate' => 'decimal:2',
+        ];
+    }
+
+    /**
+     * Calculate price and itemized breakdown for a time range.
+     *
+     * @return array{pricing_mode: string, total: float, duration_hours: int, breakdown: array<int, array<string, mixed>>}
+     */
+    public function calculatePriceForRange(string $startTime, string $endTime): array
+    {
+        $start = Carbon::parse($startTime);
+        $end = Carbon::parse($endTime);
+        $durationHours = max(0, $start->diffInHours($end));
+
+        if ($this->pricing_mode !== 'SPLIT' || empty($this->day_rate) || empty($this->night_rate) || $durationHours === 0) {
+            $rate = (float) ($this->hourly_rate ?? 0);
+            $total = round($durationHours * $rate, 2);
+
+            return [
+                'pricing_mode' => 'FLAT',
+                'total' => $total,
+                'duration_hours' => $durationHours,
+                'breakdown' => [
+                    [
+                        'label' => 'Standard Rate',
+                        'hours' => $durationHours,
+                        'rate' => $rate,
+                        'subtotal' => $total,
+                    ],
+                ],
+            ];
+        }
+
+        $dayStartH = Carbon::parse($this->day_start_time ?: '06:00:00')->format('H:i');
+        $nightStartH = Carbon::parse($this->night_start_time ?: '18:00:00')->format('H:i');
+
+        $dayHours = 0;
+        $nightHours = 0;
+        $cursor = $start->copy();
+
+        while ($cursor->lt($end)) {
+            $slotTime = $cursor->format('H:i');
+            if ($slotTime >= $nightStartH || $slotTime < $dayStartH) {
+                $nightHours++;
+            } else {
+                $dayHours++;
+            }
+            $cursor->addHour();
+        }
+
+        $dayRate = (float) $this->day_rate;
+        $nightRate = (float) $this->night_rate;
+        $daySubtotal = round($dayHours * $dayRate, 2);
+        $nightSubtotal = round($nightHours * $nightRate, 2);
+        $total = round($daySubtotal + $nightSubtotal, 2);
+
+        $breakdown = [];
+        if ($dayHours > 0) {
+            $breakdown[] = [
+                'label' => 'Day Rate',
+                'hours' => $dayHours,
+                'rate' => $dayRate,
+                'subtotal' => $daySubtotal,
+            ];
+        }
+        if ($nightHours > 0) {
+            $breakdown[] = [
+                'label' => 'Night Rate',
+                'hours' => $nightHours,
+                'rate' => $nightRate,
+                'subtotal' => $nightSubtotal,
+            ];
+        }
+
+        return [
+            'pricing_mode' => 'SPLIT',
+            'total' => $total,
+            'duration_hours' => $dayHours + $nightHours,
+            'day_hours' => $dayHours,
+            'night_hours' => $nightHours,
+            'day_rate' => $dayRate,
+            'night_rate' => $nightRate,
+            'breakdown' => $breakdown,
         ];
     }
 

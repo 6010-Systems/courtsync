@@ -4,6 +4,7 @@ import Dialog from '@/Components/Dialog';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import CourtCard from '@/Components/CourtCard';
 import { Camera, Image as ImageIcon, Sparkles, Check, Upload, Link2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -371,47 +372,46 @@ export default function Show({ facility }) {
                     <div className="lg:col-span-7 xl:col-span-8 space-y-8 sm:space-y-10 lg:space-y-12">
                         {/* Courts */}
                         <section>
-                            <h2 className="text-2xl sm:text-3xl font-bold text-[#10221C] mb-5 sm:mb-8 px-1 sm:px-2">Courts</h2>
+                            <div className="mb-5 sm:mb-8 px-1 sm:px-2">
+                                <div className="flex items-center gap-2.5">
+                                    <h2 className="text-2xl sm:text-3xl font-bold text-[#10221C]">Courts</h2>
+                                    {facility.courts?.length > 0 && (
+                                        <span className="rounded-full bg-[#10221C]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#10221C]/70">
+                                            {facility.courts.length}
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-0.5 text-xs sm:text-sm text-[#10221C]/60">
+                                    Operating hours, day/night rates, and availability for every court.
+                                </p>
+                            </div>
                             {facility.courts && facility.courts.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     {facility.courts.map((court, courtIndex) => {
-                                        const courtImg = getCourtImage(court, facility, courtIndex);
-                                        return (
-                                            <div
-                                                key={court.id}
-                                                className="group overflow-hidden rounded-2xl border border-[#10221C]/10 bg-white shadow-sm hover:shadow-md transition-all duration-300"
-                                            >
-                                                {/* Court Image Banner */}
-                                                <div className="relative h-40 w-full overflow-hidden bg-[#10221C]">
-                                                    <img
-                                                        src={courtImg}
-                                                        alt={court.name}
-                                                        className="w-full h-full object-cover transition-transform duration-700 "
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
-                                                    <div className="absolute top-3 right-3">
-                                                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wider shadow-md ${COURT_STATUS_STYLES[court.status] || 'bg-gray-800 text-white'}`}>
-                                                            {COURT_STATUS_LABELS[court.status] || court.status}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                        const isBookable = court.status === 'AVAILABLE';
 
-                                                <div className="p-5 sm:p-6">
-                                                    <h3 className="text-lg font-bold text-[#10221C]">{court.name}</h3>
-                                                    {court.type && (
-                                                        <p className="mt-1 text-sm font-medium text-[#10221C]/60">{court.type}</p>
-                                                    )}
-                                                    {court.time_range && (
-                                                        <p className="mt-1.5 text-xs text-[#10221C]/60">🕐 {court.time_range}</p>
-                                                    )}
-                                                    {court.hourly_rate && (
-                                                        <p className="mt-3 text-base font-extrabold text-[#10221C]">₱{Number(court.hourly_rate).toFixed(2)}/hr</p>
-                                                    )}
-                                                    {court.description && (
-                                                        <p className="mt-2 text-xs text-[#10221C]/70 line-clamp-2">{court.description}</p>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        return (
+                                            <CourtCard
+                                                key={court.id}
+                                                court={court}
+                                                image={getCourtImage(court, facility, courtIndex)}
+                                                fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
+                                                actions={
+                                                    isBookable ? (
+                                                        <Link
+                                                            href={route('facility.book', facility.slug)}
+                                                            className="inline-flex items-center gap-1 rounded-xl bg-[#10221C] px-3.5 py-2 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0c4a34]"
+                                                        >
+                                                            Book court
+                                                            <ChevronRight size={13} strokeWidth={2.6} />
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="rounded-xl bg-[#10221C]/5 px-3 py-2 text-xs font-bold text-[#10221C]/50">
+                                                            Unavailable
+                                                        </span>
+                                                    )
+                                                }
+                                            />
                                         );
                                     })}
                                 </div>

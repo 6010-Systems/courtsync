@@ -64,9 +64,11 @@ class FacilityOwnerSeeder extends Seeder
             ]);
 
         collect([$firstFacility, $secondFacility])->each(function (Facility $facility) {
-            Court::factory()->count(2)->create(['facility_id' => $facility->id]);
-            Court::factory()->openPlay()->create(['facility_id' => $facility->id]);
-            Court::factory()->blocked()->create(['facility_id' => $facility->id]);
+            // Mix of split and flat rate courts for demo testing
+            Court::factory()->splitPricing(300, 450, '18:00:00')->create(['facility_id' => $facility->id, 'name' => 'Court 1 (Split Day/Night)']);
+            Court::factory()->flatPricing(350)->create(['facility_id' => $facility->id, 'name' => 'Court 2 (Flat Rate)']);
+            Court::factory()->openPlay()->splitPricing(250, 400, '17:00:00')->create(['facility_id' => $facility->id, 'name' => 'Court 3 (Open Play)']);
+            Court::factory()->blocked()->flatPricing(400)->create(['facility_id' => $facility->id, 'name' => 'Court 4 (Maintenance)']);
         });
 
         // Create sample bookings and payment for the first facility to test receipt viewing

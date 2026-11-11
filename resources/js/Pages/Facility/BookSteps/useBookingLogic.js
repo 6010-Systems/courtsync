@@ -171,12 +171,22 @@ export function useBookingLogic(facility) {
             
             const isUnavailable = bookedHours.has(i) || lockedHours.has(i);
             const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
+
+            let rateTag = '';
+            if (selectedCourt?.pricing_mode === 'SPLIT' && selectedCourt.day_rate && selectedCourt.night_rate) {
+                const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
+                const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
+                const isNight = i >= nightStartH || i < dayStartH;
+                const rate = isNight ? Number(selectedCourt.night_rate) : Number(selectedCourt.day_rate);
+                rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
+            }
             
             options.push({ 
                 value: timeValue, 
                 label: formatted, 
                 isBooked: isUnavailable, 
-                labelSuffix: labelSuffix 
+                labelSuffix: labelSuffix,
+                rateTag: rateTag
             });
         }
         return options;
@@ -270,14 +280,7 @@ export function useBookingLogic(facility) {
                 // The useEffect will automatically catch this step change and start the timer!
             } catch (error) {
                 if (error.response?.status === 423) {
-                    const formatTime = (time24) => {
-                        let [h, m] = time24.split(':');
-                        h = parseInt(h);
-                        const ampm = h >= 12 ? 'PM' : 'AM';
-                        h = h % 12 || 12;
-                        return `${h}:${m} ${ampm}`;
-                    };
-                    const rangeStr = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+                    const rangeStr = `${formatTimeString(startTime)} - ${formatTimeString(endTime)}`;
                     showModal('timer', `Oops! Someone else is currently booking your requested time (${rangeStr}). Please choose another time, or try checking back in a few minutes to see if it becomes available!`, 'Slot Unavailable');
                 } else {
                     showModal('error', 'Failed to connect to the server. Please check your internet and try again.');
@@ -309,17 +312,100 @@ export function useBookingLogic(facility) {
         setStep(s => Math.max(s - 1, 1));
     };
 
-    const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
-    
-    const durationHours = useMemo(() => {
-        if (!startTime || !endTime) return 0;
+    const pricingSummary = useMemo(() => {
+        if (!selectedCourt || !startTime || !endTime) {
+            return {
+                isSplit: false,
+                durationHours: 0,
+                totalPrice: 0,
+                dayHours: 0,
+                nightHours: 0,
+                dayRate: 0,
+                nightRate: 0,
+                daySubtotal: 0,
+                nightSubtotal: 0,
+                breakdown: [],
+            };
+        }
+
         const [sH] = startTime.split(':').map(Number);
         const [eH] = endTime.split(':').map(Number);
-        const diff = eH - sH;
-        return diff > 0 ? diff : 0;
-    }, [startTime, endTime]);
-    
-    const totalPrice = price * durationHours;
+        const diff = Math.max(0, eH - sH);
+
+        const isSplit = selectedCourt.pricing_mode === 'SPLIT' &&
+            Boolean(selectedCourt.day_rate && selectedCourt.night_rate);
+
+        if (!isSplit) {
+            const rate = Number(selectedCourt.hourly_rate || 0);
+            const total = diff * rate;
+            return {
+                isSplit: false,
+                durationHours: diff,
+                totalPrice: total,
+                rate,
+                breakdown: [
+                    { label: 'Standard Rate', hours: diff, rate, subtotal: total },
+                ],
+            };
+        }
+
+        const dayRate = Number(selectedCourt.day_rate);
+        const nightRate = Number(selectedCourt.night_rate);
+        const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
+        const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
+
+        let dayHours = 0;
+        let nightHours = 0;
+
+        for (let h = sH; h < eH; h++) {
+            if (h >= nightStartH || h < dayStartH) {
+                nightHours++;
+            } else {
+                dayHours++;
+            }
+        }
+
+        const daySubtotal = dayHours * dayRate;
+        const nightSubtotal = nightHours * nightRate;
+        const total = daySubtotal + nightSubtotal;
+
+        const breakdown = [];
+        if (dayHours > 0) {
+            breakdown.push({
+                label: 'Day Rate',
+                hours: dayHours,
+                rate: dayRate,
+                subtotal: daySubtotal,
+            });
+        }
+        if (nightHours > 0) {
+            breakdown.push({
+                label: 'Night Rate',
+                hours: nightHours,
+                rate: nightRate,
+                subtotal: nightSubtotal,
+            });
+        }
+
+        return {
+            isSplit: true,
+            durationHours: diff,
+            totalPrice: total,
+            dayHours,
+            nightHours,
+            dayRate,
+            nightRate,
+            daySubtotal,
+            nightSubtotal,
+            breakdown,
+        };
+    }, [selectedCourt, startTime, endTime]);
+
+    const durationHours = pricingSummary.durationHours;
+    const totalPrice = pricingSummary.totalPrice;
+    const price = pricingSummary.isSplit
+        ? (pricingSummary.dayRate || 0)
+        : (selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0);
 
     const [proofFile, setProofFile] = useState(null);
 
@@ -421,7 +507,7 @@ export function useBookingLogic(facility) {
         dates,
         goNext, goPrev,
         handleBooking,
-        price, durationHours, totalPrice,
+        price, durationHours, totalPrice, pricingSummary,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile

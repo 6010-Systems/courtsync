@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
 import { Head } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import CourtCard from '@/Components/CourtCard';
 import SportIcon from '@/Components/Bookings/SportIcon';
 import { useState, useMemo } from 'react';
 import {
@@ -366,86 +367,14 @@ export default function Courts({ facilities = [] }) {
                                 {/* Content: Grid View or Table View */}
                                 {viewMode === 'grid' ? (
                                     <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {facility.filteredCourts.map((court, courtIndex) => {
-                                            const statusStyle = COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE;
-                                            const statusLabel = COURT_STATUS_LABELS[court.status] || court.status;
-                                            const courtImg = getCourtImage(court, facility, courtIndex);
-
-                                            return (
-                                                <div
-                                                    key={court.id}
-                                                    className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block"
-                                                >
-                                                    <div>
-                                                        {/* Court Image Banner with rounded-lg matching landing page */}
-                                                        <div className="relative mb-3 h-32 w-full rounded-lg overflow-hidden bg-[#101F1A]/5 border border-[#101F1A]/5">
-                                                            <img
-                                                                src={courtImg}
-                                                                alt={court.name}
-                                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                                onError={(e) => {
-                                                                    e.currentTarget.src = DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length];
-                                                                }}
-                                                            />
-
-                                                            {/* Floating Status Badge */}
-                                                            <div className="absolute top-2 right-2">
-                                                                <span className={`px-2 py-0.5 text-[10px] font-bold border rounded-md uppercase tracking-wider whitespace-nowrap shadow-xs backdrop-blur-md bg-white/90 ${statusStyle}`}>
-                                                                    {statusLabel}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* Sport Pill Badge */}
-                                                            <div className="absolute bottom-2 left-2">
-                                                                <span className="inline-flex items-center gap-1 bg-[#101F1A]/80 text-[#F5F2EA] text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-md">
-                                                                    <SportIcon sport={court.type} className="w-3 h-3 text-[#D6FF3F]" />
-                                                                    <span>{court.type || 'Court'}</span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Court Info */}
-                                                        <div>
-                                                            <h4 className="font-display font-black text-sm text-[#101F1A] tracking-tight truncate" title={court.name}>
-                                                                {court.name}
-                                                            </h4>
-                                                        </div>
-
-                                                        {/* Court Details Strip */}
-                                                        <div className="space-y-1.5 mt-2.5 pt-2 border-t border-[#101F1A]/5">
-                                                            {/* Rate */}
-                                                            <div className="flex items-center justify-between text-xs">
-                                                                <span className="text-[#101F1A]/50 font-medium flex items-center gap-1">
-                                                                    <PhilippinePeso size={12} className="text-[#101F1A]/40" />
-                                                                    Rate
-                                                                </span>
-                                                                <span className="font-bold text-[#101F1A] bg-[#F5F2EA] px-2 py-0.5 rounded border border-[#101F1A]/5">
-                                                                    {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : 'Free / Unset'}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* Operating Hours */}
-                                                            <div className="flex items-center justify-between text-xs">
-                                                                <span className="text-[#101F1A]/50 font-medium flex items-center gap-1">
-                                                                    <Clock size={12} className="text-[#101F1A]/40" />
-                                                                    Hours
-                                                                </span>
-                                                                <span className="font-medium text-[#101F1A]/80 truncate max-w-[130px]" title={court.time_range}>
-                                                                    {court.time_range || 'Standard'}
-                                                                </span>
-                                                            </div>
-
-                                                            {/* Description */}
-                                                            {court.description && (
-                                                                <p className="pt-1 text-[11px] text-[#101F1A]/60 line-clamp-2 leading-snug">
-                                                                    {court.description}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                        {facility.filteredCourts.map((court, courtIndex) => (
+                                            <CourtCard
+                                                key={court.id}
+                                                court={court}
+                                                image={getCourtImage(court, facility, courtIndex)}
+                                                fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
+                                            />
+                                        ))}
                                     </div>
                                 ) : (
                                     /* Table View with Thumbnails */
@@ -498,7 +427,16 @@ export default function Courts({ facilities = [] }) {
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-2.5 font-bold text-[#101F1A]">
-                                                                {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : '—'}
+                                                                {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
+                                                                    <span className="inline-flex items-center gap-1 text-xs">
+                                                                        <span className="text-amber-700">☀️ ₱{Number(court.day_rate).toFixed(0)}</span>
+                                                                        <span className="text-gray-400">/</span>
+                                                                        <span className="text-indigo-700">🌙 ₱{Number(court.night_rate).toFixed(0)}</span>
+                                                                        <span className="text-[10px] text-gray-400 font-normal">/hr</span>
+                                                                    </span>
+                                                                ) : (
+                                                                    court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : '—'
+                                                                )}
                                                             </td>
                                                             <td className="px-4 py-2.5">
                                                                 <span className={`px-2 py-0.5 text-[10px] font-bold border rounded-md uppercase tracking-wider whitespace-nowrap shadow-2xs ${COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE}`}>

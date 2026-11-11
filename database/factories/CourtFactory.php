@@ -55,6 +55,11 @@ class CourtFactory extends Factory
     public function definition(): array
     {
         $type = fake()->randomElement(['Badminton', 'Basketball', 'Tennis', 'Futsal', 'Volleyball', 'Pickleball', 'Padel', 'Table Tennis']);
+        $isSplit = fake()->boolean(55); // ~55% split pricing, ~45% flat rate
+
+        $dayRate = fake()->randomElement([200, 250, 300, 350]);
+        $nightRate = $dayRate + fake()->randomElement([100, 150, 200]);
+        $flatRate = fake()->randomElement([250, 300, 350, 400, 500]);
 
         return [
             'facility_id' => Facility::factory(),
@@ -63,9 +68,43 @@ class CourtFactory extends Factory
             'image_url' => Court::defaultImageFor($type, fake()->numberBetween(0, 1)),
             'time_range' => fake()->randomElement(['6:00 AM - 10:00 PM', '7:00 AM - 9:00 PM', '24 Hours', '8:00 AM - 11:00 PM']),
             'description' => fake()->optional()->sentence(),
-            'hourly_rate' => fake()->randomElement([250, 300, 350, 400, 500]),
+            'pricing_mode' => $isSplit ? 'SPLIT' : 'FLAT',
+            'hourly_rate' => $isSplit ? $dayRate : $flatRate,
+            'day_rate' => $isSplit ? $dayRate : null,
+            'night_rate' => $isSplit ? $nightRate : null,
+            'day_start_time' => '06:00:00',
+            'night_start_time' => fake()->randomElement(['17:00:00', '18:00:00']),
             'status' => 'AVAILABLE',
         ];
+    }
+
+    public function splitPricing(?float $dayRate = null, ?float $nightRate = null, string $nightStart = '18:00:00'): static
+    {
+        $day = $dayRate ?? fake()->randomElement([250, 300, 350]);
+        $night = $nightRate ?? ($day + 150);
+
+        return $this->state(fn (array $attributes) => [
+            'pricing_mode' => 'SPLIT',
+            'hourly_rate' => $day,
+            'day_rate' => $day,
+            'night_rate' => $night,
+            'day_start_time' => '06:00:00',
+            'night_start_time' => $nightStart,
+        ]);
+    }
+
+    public function flatPricing(?float $rate = null): static
+    {
+        $hourly = $rate ?? fake()->randomElement([250, 300, 350, 400, 500]);
+
+        return $this->state(fn (array $attributes) => [
+            'pricing_mode' => 'FLAT',
+            'hourly_rate' => $hourly,
+            'day_rate' => null,
+            'night_rate' => null,
+            'day_start_time' => '06:00:00',
+            'night_start_time' => '18:00:00',
+        ]);
     }
 
     public function openPlay(): static

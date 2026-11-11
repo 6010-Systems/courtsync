@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone } from 'lucide-react';
 
+import { formatPeso } from '@/Components/MetricCard';
+
 export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMethod, proofFile, setProofFile, facility }) {
     const hasDefaulted = useRef(false);
 
@@ -40,7 +42,7 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
                 </div>
                 <div className="text-right">
                     <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Amount to Pay</span>
-                    <span className="text-2xl font-black text-[#10221C]">₱{totalPrice.toFixed(2)}</span>
+                    <span className="text-2xl font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
                 </div>
             </div>
 

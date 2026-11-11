@@ -134,17 +134,54 @@ export default function BookingWidget({ facility, user, courts = [] }) {
         });
     };
 
-    const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0;
-    // Calculate total price based on duration
-    const durationHours = useMemo(() => {
-        if (!startTime || !endTime) return 0;
+    const pricingSummary = useMemo(() => {
+        if (!selectedCourt || !startTime || !endTime) {
+            return { isSplit: false, durationHours: 0, totalPrice: 0, breakdown: [] };
+        }
         const [sH] = startTime.split(':').map(Number);
         const [eH] = endTime.split(':').map(Number);
-        const diff = eH - sH;
-        return diff > 0 ? diff : 0;
-    }, [startTime, endTime]);
-    
-    const totalPrice = price * durationHours;
+        const diff = Math.max(0, eH - sH);
+        const isSplit = selectedCourt.pricing_mode === 'SPLIT' && Boolean(selectedCourt.day_rate && selectedCourt.night_rate);
+
+        if (!isSplit) {
+            const rate = Number(selectedCourt.hourly_rate || 0);
+            return { isSplit: false, durationHours: diff, totalPrice: diff * rate, rate };
+        }
+
+        const dayRate = Number(selectedCourt.day_rate);
+        const nightRate = Number(selectedCourt.night_rate);
+        const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
+        const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
+
+        let dayHours = 0;
+        let nightHours = 0;
+        for (let h = sH; h < eH; h++) {
+            if (h >= nightStartH || h < dayStartH) nightHours++;
+            else dayHours++;
+        }
+
+        const daySubtotal = dayHours * dayRate;
+        const nightSubtotal = nightHours * nightRate;
+        return {
+            isSplit: true,
+            durationHours: diff,
+            totalPrice: daySubtotal + nightSubtotal,
+            dayHours,
+            nightHours,
+            dayRate,
+            nightRate,
+            daySubtotal,
+            nightSubtotal,
+            breakdown: [
+                dayHours > 0 ? { label: 'Day Rate', hours: dayHours, rate: dayRate, subtotal: daySubtotal } : null,
+                nightHours > 0 ? { label: 'Night Rate', hours: nightHours, rate: nightRate, subtotal: nightSubtotal } : null,
+            ].filter(Boolean),
+        };
+    }, [selectedCourt, startTime, endTime]);
+
+    const durationHours = pricingSummary.durationHours;
+    const totalPrice = pricingSummary.totalPrice;
+    const price = selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : (Number(selectedCourt?.day_rate) || 0);
 
     const formatTimeString = (timeString) => {
         if (!timeString) return '';
@@ -180,7 +217,10 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                         >
                             {selectableCourts.map(court => (
                                 <option key={court.id} value={court.id} className="text-gray-900">
-                                    {court.name}{court.type ? ` (${court.type})` : ''}{court.hourly_rate ? ` - ₱${Number(court.hourly_rate).toFixed(2)}/hr` : ''} · {COURT_STATUS_LABELS[court.status] || court.status}
+                                    {court.name}{court.type ? ` (${court.type})` : ''}
+                                    {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate 
+                                        ? ` - ☀️ ₱${Number(court.day_rate).toFixed(0)} / 🌙 ₱${Number(court.night_rate).toFixed(0)}/hr` 
+                                        : (court.hourly_rate ? ` - ₱${Number(court.hourly_rate).toFixed(2)}/hr` : '')} · {COURT_STATUS_LABELS[court.status] || court.status}
                                 </option>
                             ))}
                         </select>
@@ -275,15 +315,29 @@ export default function BookingWidget({ facility, user, courts = [] }) {
 
                 {/* Order Summary */}
                 {startTime && endTime && durationHours > 0 && (
-                    <div className="bg-[#1A332B] rounded-2xl p-4 sm:p-5 mt-6 sm:mt-8 border border-white/5">
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="text-gray-300 font-medium">{selectedCourt?.name} ({durationHours} hr)</span>
-                            <span className="font-bold text-white">₱{price.toFixed(2)}/hr</span>
+                    <div className="bg-[#1A332B] rounded-2xl p-4 sm:p-5 mt-6 sm:mt-8 border border-white/5 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-300 font-medium">{selectedCourt?.name} ({durationHours} hr{durationHours > 1 ? 's' : ''})</span>
+                            <span className="font-bold text-white">
+                                {pricingSummary.isSplit
+                                    ? `☀️ ₱${pricingSummary.dayRate} / 🌙 ₱${pricingSummary.nightRate}/hr`
+                                    : `₱${price.toFixed(2)}/hr`}
+                            </span>
                         </div>
-                        <div className="flex justify-between text-sm mb-2">
+                        <div className="flex justify-between text-sm">
                             <span className="text-gray-300 font-medium">Time</span>
                             <span className="font-bold text-white">{formatTimeString(startTime)} - {formatTimeString(endTime)}</span>
                         </div>
+                        {pricingSummary.isSplit && pricingSummary.breakdown?.length > 0 && (
+                            <div className="pt-2 border-t border-white/10 space-y-1 text-xs">
+                                {pricingSummary.breakdown.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between text-gray-300">
+                                        <span>• {item.label}: {item.hours} hr × ₱{Number(item.rate).toFixed(0)}</span>
+                                        <span className="font-semibold text-white">₱{Number(item.subtotal).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
                             <span className="text-white font-medium">Total</span>
                             <span className="text-[#D6FF3F] text-2xl font-black">₱{totalPrice.toFixed(2)}</span>
