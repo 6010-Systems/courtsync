@@ -13,6 +13,7 @@ import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
 import { useState, useMemo } from 'react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import CourtCard from '@/Components/CourtCard';
 import {
     Plus,
     Search,
@@ -51,6 +52,134 @@ const TIME_PRESETS = [
     '8:00 AM - 9:00 PM',
     '24 Hours / Open Daily',
 ];
+
+const MINUTES_PER_DAY = 24 * 60;
+
+/**
+ * 12-hour label for a minute offset from midnight, e.g. 420 -> "07:00 AM".
+ */
+function formatMinutesLabel(totalMinutes) {
+    const hour24 = Math.floor((totalMinutes % MINUTES_PER_DAY) / 60);
+    const minutes = totalMinutes % 60;
+    const suffix = hour24 >= 12 ? 'PM' : 'AM';
+    const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+
+    return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${suffix}`;
+}
+
+/**
+ * 24-hour value for a minute offset from midnight, e.g. 420 -> "07:00".
+ */
+function formatMinutesValue(totalMinutes) {
+    const hour24 = Math.floor((totalMinutes % MINUTES_PER_DAY) / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+/**
+ * Read either "7:00 AM" or "19:00" into minutes from midnight.
+ */
+function parseClockToMinutes(rawValue) {
+    if (!rawValue) {
+        return null;
+    }
+
+    const meridiem = String(rawValue).trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
+    if (meridiem) {
+        const hour = (Number(meridiem[1]) % 12) + (meridiem[3].toLowerCase() === 'pm' ? 12 : 0);
+
+        return hour * 60 + Number(meridiem[2] ?? 0);
+    }
+
+    const twentyFourHour = String(rawValue).trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (twentyFourHour) {
+        return Number(twentyFourHour[1]) * 60 + Number(twentyFourHour[2]);
+    }
+
+    return null;
+}
+
+/**
+ * Bounds of the free-text operating schedule, or null when it cannot be read.
+ *
+ * @return {{startMinutes: number, endMinutes: number}|null}
+ */
+function parseScheduleBounds(schedule) {
+    const normalized = (schedule || '').trim();
+
+    if (!normalized) {
+        return null;
+    }
+
+    if (/(24\s*(?:hrs|hours)|open\s*(?:all\s*)?daily|open\s*24)/i.test(normalized)) {
+        return { startMinutes: 0, endMinutes: MINUTES_PER_DAY };
+    }
+
+    const [startRaw, endRaw] = normalized.split(/\s*[-–—]\s*/);
+    const startMinutes = parseClockToMinutes(startRaw);
+    const endMinutes = parseClockToMinutes(endRaw);
+
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+        return null;
+    }
+
+    return { startMinutes, endMinutes };
+}
+
+/**
+ * Hourly start-time options inside the schedule bounds, so an owner can only
+ * pick hours the court is actually open.
+ *
+ * @return {Array<{value: string, label: string, minutes: number}>}
+ */
+function buildStartTimeOptions(bounds) {
+    const rangeStart = bounds?.startMinutes ?? 0;
+    const rangeEnd = bounds?.endMinutes ?? MINUTES_PER_DAY;
+    const options = [];
+
+    for (let minutes = rangeStart; minutes < rangeEnd; minutes += 60) {
+        options.push({
+            value: formatMinutesValue(minutes),
+            label: formatMinutesLabel(minutes),
+            minutes,
+        });
+    }
+
+    return options.length > 0 ? options : buildStartTimeOptions(null);
+}
+
+function describeScheduleBounds(bounds) {
+    if (!bounds) {
+        return null;
+    }
+
+    if (bounds.endMinutes - bounds.startMinutes >= MINUTES_PER_DAY) {
+        return '24 hours';
+    }
+
+    return `${formatMinutesLabel(bounds.startMinutes)} – ${formatMinutesLabel(bounds.endMinutes)}`;
+}
+
+/**
+ * Keep a saved start time selectable even when it sits outside the schedule.
+ */
+function withCurrentTimeOption(options, currentValue) {
+    if (!currentValue || options.some((option) => option.value === currentValue)) {
+        return options;
+    }
+
+    const minutes = parseClockToMinutes(currentValue);
+
+    return [
+        ...options,
+        {
+            value: currentValue,
+            label: minutes === null ? String(currentValue) : formatMinutesLabel(minutes),
+            minutes: minutes ?? 0,
+        },
+    ].sort((a, b) => a.minutes - b.minutes);
+}
 
 const SPORT_COURT_IMAGES = {
     pickleball: [
@@ -119,6 +248,7 @@ export default function Courts({ facilities = [], can = {} }) {
     const toast = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourt, setEditingCourt] = useState(null);
+    const [step, setStep] = useState(1);
 
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState('');
@@ -134,9 +264,46 @@ export default function Courts({ facilities = [], can = {} }) {
         image_url: '',
         time_range: '',
         description: '',
+        pricing_mode: 'FLAT',
         hourly_rate: '',
+        day_rate: '',
+        night_rate: '',
+        day_start_time: '06:00',
+        night_start_time: '18:00',
         status: 'AVAILABLE',
     });
+
+    const hasOperatingSchedule = useMemo(() => Boolean((data.time_range || '').trim()), [data.time_range]);
+    const scheduleBounds = useMemo(() => parseScheduleBounds(data.time_range), [data.time_range]);
+    const startTimeOptions = useMemo(() => buildStartTimeOptions(scheduleBounds), [scheduleBounds]);
+    const dayStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.day_start_time), [startTimeOptions, data.day_start_time]);
+    const nightStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.night_start_time), [startTimeOptions, data.night_start_time]);
+
+    /**
+     * Update the schedule and re-clamp the day/night start times to the new range.
+     */
+    const applyOperatingSchedule = (value) => {
+        const options = buildStartTimeOptions(parseScheduleBounds(value));
+        const eveningOption = options.reduce(
+            (closest, option) => (Math.abs(option.minutes - 18 * 60) < Math.abs(closest.minutes - 18 * 60) ? option : closest),
+            options[0],
+        );
+
+        setData({
+            ...data,
+            time_range: value,
+            day_start_time: options.some((option) => option.value === data.day_start_time)
+                ? data.day_start_time
+                : (options[0]?.value ?? '06:00'),
+            night_start_time: options.some((option) => option.value === data.night_start_time)
+                ? data.night_start_time
+                : (eveningOption?.value ?? '18:00'),
+        });
+
+        if (clientErrors.time_range) {
+            setClientErrors(prev => ({ ...prev, time_range: undefined }));
+        }
+    };
 
     // Check if the form has been altered from its initial state
     const hasChanges = useMemo(() => {
@@ -148,7 +315,12 @@ export default function Courts({ facilities = [], can = {} }) {
                 String(data.facility_id || '') !== String(editingCourt.facility_id || '') ||
                 (data.time_range || '').trim() !== (editingCourt.time_range || '').trim() ||
                 (data.description || '').trim() !== (editingCourt.description || '').trim() ||
+                data.pricing_mode !== (editingCourt.pricing_mode || 'FLAT') ||
                 String(data.hourly_rate ?? '') !== String(editingCourt.hourly_rate ?? '') ||
+                String(data.day_rate ?? '') !== String(editingCourt.day_rate ?? '') ||
+                String(data.night_rate ?? '') !== String(editingCourt.night_rate ?? '') ||
+                String(data.day_start_time || '') !== String(editingCourt.day_start_time ? editingCourt.day_start_time.substring(0, 5) : '06:00') ||
+                String(data.night_start_time || '') !== String(editingCourt.night_start_time ? editingCourt.night_start_time.substring(0, 5) : '18:00') ||
                 data.status !== (editingCourt.status || 'AVAILABLE')
             );
         }
@@ -158,7 +330,10 @@ export default function Courts({ facilities = [], can = {} }) {
             data.image_url?.trim() ||
             data.time_range?.trim() ||
             data.description?.trim() ||
+            data.pricing_mode !== 'FLAT' ||
             (data.hourly_rate !== '' && data.hourly_rate !== null) ||
+            (data.day_rate !== '' && data.day_rate !== null) ||
+            (data.night_rate !== '' && data.night_rate !== null) ||
             data.status !== 'AVAILABLE'
         );
     }, [data, editingCourt]);
@@ -175,11 +350,65 @@ export default function Courts({ facilities = [], can = {} }) {
         if (facilities.length > 1 && !data.facility_id) {
             errs.facility_id = 'Please select a facility venue.';
         }
-        if (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0)) {
-            errs.hourly_rate = 'Hourly rate must be a positive number.';
+        if (!hasOperatingSchedule) {
+            errs.time_range = 'Set the operating schedule before choosing a pricing mode.';
+        } else if (data.pricing_mode === 'FLAT') {
+            if (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0)) {
+                errs.hourly_rate = 'Hourly rate must be a positive number.';
+            }
+        } else {
+            if (data.day_rate === '' || data.day_rate === null || isNaN(Number(data.day_rate)) || Number(data.day_rate) < 0) {
+                errs.day_rate = 'Day rate must be a valid positive number.';
+            }
+            if (data.night_rate === '' || data.night_rate === null || isNaN(Number(data.night_rate)) || Number(data.night_rate) < 0) {
+                errs.night_rate = 'Night rate must be a valid positive number.';
+            }
+            if (!data.day_start_time) {
+                errs.day_start_time = 'Day start hour is required.';
+            }
+            if (!data.night_start_time) {
+                errs.night_start_time = 'Night start hour is required.';
+            }
         }
         setClientErrors(errs);
         return Object.keys(errs).length === 0;
+    };
+
+    // Step 1 must be complete before the pricing step is shown.
+    const validateStepOne = () => {
+        const errs = {};
+
+        if (!data.name?.trim()) {
+            errs.name = 'Court identifier/name is required.';
+        }
+        if (!data.type?.trim()) {
+            errs.type = 'Sport category is required.';
+        }
+        if (facilities.length > 1 && !data.facility_id) {
+            errs.facility_id = 'Please select a facility venue.';
+        }
+        if (!hasOperatingSchedule) {
+            errs.time_range = 'Set the operating schedule to continue.';
+        }
+
+        setClientErrors(errs);
+
+        return Object.keys(errs).length === 0;
+    };
+
+    const goToStepTwo = () => {
+        if (!validateStepOne()) {
+            toast.error('Complete the court details and operating schedule first.');
+            return;
+        }
+
+        setClientErrors({});
+        setStep(2);
+    };
+
+    const goToStepOne = () => {
+        setClientErrors({});
+        setStep(1);
     };
 
     const activeErrors = useMemo(() => ({
@@ -197,10 +426,16 @@ export default function Courts({ facilities = [], can = {} }) {
             type: '',
             time_range: '',
             description: '',
+            pricing_mode: 'FLAT',
             hourly_rate: '',
+            day_rate: '',
+            night_rate: '',
+            day_start_time: '06:00',
+            night_start_time: '18:00',
             status: 'AVAILABLE',
         });
         setEditingCourt(null);
+        setStep(1);
         setIsModalOpen(true);
     };
 
@@ -216,14 +451,21 @@ export default function Courts({ facilities = [], can = {} }) {
             image_url: court.image_url || '',
             time_range: court.time_range || '',
             description: court.description || '',
+            pricing_mode: court.pricing_mode || 'FLAT',
             hourly_rate: court.hourly_rate ?? '',
+            day_rate: court.day_rate ?? '',
+            night_rate: court.night_rate ?? '',
+            day_start_time: court.day_start_time ? String(court.day_start_time).substring(0, 5) : '06:00',
+            night_start_time: court.night_start_time ? String(court.night_start_time).substring(0, 5) : '18:00',
             status: court.status || 'AVAILABLE',
         });
+        setStep(1);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
+        setStep(1);
         setEditingCourt(null);
         setClientErrors({});
         reset();
@@ -247,6 +489,12 @@ export default function Courts({ facilities = [], can = {} }) {
     const submitForm = (e) => {
         e.preventDefault();
 
+        // Pressing Enter on step 1 advances the wizard instead of saving.
+        if (step !== 2) {
+            goToStepTwo();
+            return;
+        }
+
         if (!validate()) {
             toast.error('Please complete all required fields.');
             return;
@@ -258,8 +506,11 @@ export default function Courts({ facilities = [], can = {} }) {
                     toast.success('Court updated successfully');
                     closeModal();
                 },
-                onError: () => {
+                onError: (serverErrors = {}) => {
                     toast.error('Failed to update court. Please check the form.');
+                    if (['name', 'type', 'facility_id', 'time_range'].some((key) => key in serverErrors)) {
+                        setStep(1);
+                    }
                 },
                 preserveScroll: true,
             });
@@ -269,8 +520,11 @@ export default function Courts({ facilities = [], can = {} }) {
                     toast.success('Court created successfully');
                     closeModal();
                 },
-                onError: () => {
+                onError: (serverErrors = {}) => {
                     toast.error('Failed to create court. Please check the form.');
+                    if (['name', 'type', 'facility_id', 'time_range'].some((key) => key in serverErrors)) {
+                        setStep(1);
+                    }
                 },
                 preserveScroll: true,
             });
@@ -616,126 +870,43 @@ export default function Courts({ facilities = [], can = {} }) {
 
                                     {/* Courts Grid — 4 cards per row */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {facility.filteredCourts.map((court, courtIndex) => {
-                                            const statusStyle = COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE;
-                                            const statusLabel = COURT_STATUS_LABELS[court.status] || court.status;
-                                            const courtImg = getCourtImage(court, facility, courtIndex);
-
-                                            return (
-                                                <div
-                                                    key={court.id}
-                                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#101F1A]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
-                                                    style={{ animationDelay: `${courtIndex * 40}ms` }}
-                                                >
-                                                    {/* Top Image: Edge-to-edge with smooth dissolved gradient overlay */}
-                                                    <div className="relative h-36 sm:h-40 w-full shrink-0 overflow-hidden bg-white">
-                                                        <img
-                                                            src={courtImg}
-                                                            alt={court.name}
-                                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
-                                                            style={{
-                                                                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                                                                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                                                            }}
-                                                            onError={(e) => {
-                                                                e.currentTarget.src = DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length];
-                                                            }}
-                                                        />
-
-                                                        {/* Floating Sport Badge */}
-                                                        <div className="absolute top-2.5 left-2.5 z-10">
-                                                            <span className="inline-flex items-center gap-1.5 bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-xs border border-white/10">
-                                                                <SportIcon sport={court.type} className="w-3 h-3 text-[#D6FF3F]" />
-                                                                <span>{court.type || 'Court'}</span>
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Floating Status Badge */}
-                                                        <div className="absolute top-2.5 right-2.5 z-10">
-                                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold border rounded-full uppercase tracking-wider whitespace-nowrap shadow-xs backdrop-blur-md bg-white/95 ${statusStyle}`}>
-                                                                {statusLabel}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
-                                                        <div
-                                                            className="absolute inset-0 pointer-events-none"
-                                                            style={{
-                                                                background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    {/* Card Body */}
-                                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4 sm:pb-3.5 flex-1 flex flex-col justify-between">
-                                                        <div>
-                                                            <div className="flex items-center justify-between gap-2 h-6">
-                                                                <h4 className="font-display font-bold text-[15px] sm:text-base text-[#101F1A] tracking-tight truncate group-hover:text-[#FF5A36] transition-colors" title={court.name}>
-                                                                    {court.name}
-                                                                </h4>
-                                                            </div>
-
-                                                            <div className="space-y-1.5 mt-2 pt-2 border-t border-[#101F1A]/6 text-xs">
-                                                                <div className="flex items-center justify-between h-6">
-                                                                    <span className="text-[#101F1A]/60 font-medium flex items-center gap-1.5">
-                                                                        <PhilippinePeso size={12} className="text-[#FF5A36] shrink-0" />
-                                                                        Hourly Rate
-                                                                    </span>
-                                                                    <span className="font-display font-bold text-xs sm:text-sm text-[#101F1A] bg-[#F5F2EA] px-2 py-0.5 rounded-md border border-[#101F1A]/5">
-                                                                        {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : 'Free / Not set'}
-                                                                    </span>
-                                                                </div>
-
-                                                                <div className="flex items-center justify-between h-6">
-                                                                    <span className="text-[#101F1A]/60 font-medium flex items-center gap-1.5">
-                                                                        <Clock size={12} className="text-[#101F1A]/40 shrink-0" />
-                                                                        Operating Hours
-                                                                    </span>
-                                                                    <span className="font-medium text-[#101F1A]/80 truncate max-w-[135px]" title={court.time_range}>
-                                                                        {court.time_range || 'Venue standard'}
-                                                                    </span>
-                                                                </div>
-
-                                                                <p className="pt-0.5 text-[11px] text-[#101F1A]/60 line-clamp-1 leading-normal h-5 flex items-center overflow-hidden">
-                                                                    {court.description || 'Verified court with standard playing equipment.'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Footer Actions — fixed height and bottom pinned */}
-                                                        <div className="mt-3 pt-2.5 border-t border-[#101F1A]/6 flex items-center justify-between shrink-0 h-10">
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                                                {court.type || 'Court'}
-                                                            </span>
-
-                                                            {(can.edit || can.delete) && (
-                                                                <div className="flex items-center gap-1.5">
-                                                                    {can.edit && (
-                                                                        <button
-                                                                            onClick={() => openEditModal(court, facility)}
-                                                                            className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#101F1A] bg-[#D6FF3F] hover:bg-[#c4ec32] rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 font-display"
-                                                                        >
-                                                                            <Edit3 size={11} strokeWidth={2.2} />
-                                                                            <span>Edit</span>
-                                                                        </button>
-                                                                    )}
-                                                                    {can.delete && (
-                                                                        <button
-                                                                            onClick={() => handleDeleteCourt(court)}
-                                                                            className="inline-flex items-center justify-center w-7 h-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                                                            title="Delete court"
-                                                                            aria-label={`Delete ${court.name}`}
-                                                                        >
-                                                                            <Trash2 size={12} />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                        {facility.filteredCourts.map((court, courtIndex) => (
+                                            <CourtCard
+                                                key={court.id}
+                                                court={court}
+                                                image={getCourtImage(court, facility, courtIndex)}
+                                                fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
+                                                className="animate-fade-up"
+                                                style={{ animationDelay: `${courtIndex * 40}ms` }}
+                                                actions={
+                                                    can.edit || can.delete ? (
+                                                        <>
+                                                            {can.edit && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openEditModal(court, facility)}
+                                                                    className="inline-flex items-center gap-1 rounded-xl bg-[#D6FF3F] px-2.5 py-1.5 text-xs font-bold text-[#10221C] transition-all hover:bg-[#c4ec32]"
+                                                                >
+                                                                    <Edit3 size={11} strokeWidth={2.2} />
+                                                                    <span>Edit</span>
+                                                                </button>
                                                             )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                            {can.delete && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteCourt(court)}
+                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
+                                                                    title="Delete court"
+                                                                    aria-label={`Delete ${court.name}`}
+                                                                >
+                                                                    <Trash2 size={12} />
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    ) : null
+                                                }
+                                            />
+                                        ))}
                                     </div>
                                 </div>
                             );
@@ -764,11 +935,24 @@ export default function Courts({ facilities = [], can = {} }) {
                                 )}
                             </div>
                             <p className="text-[11px] text-[#101F1A]/60 font-medium truncate">
-                                {editingCourt ? 'Update pricing, operating hours, sport category, or status' : 'Register a new playable court under your sports venue'}
+                                {step === 1
+                                    ? 'Step 1 of 2 · Court details & operating schedule'
+                                    : 'Step 2 of 2 · Pricing, status & court profile'}
                             </p>
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center gap-1">
+                            {[1, 2].map((stepNumber) => (
+                                <span
+                                    key={stepNumber}
+                                    className={`h-1.5 w-5 rounded-full transition-colors ${step >= stepNumber ? 'bg-[#101F1A]' : 'bg-[#101F1A]/15'}`}
+                                />
+                            ))}
                         </div>
                     </div>
 
+                    {/* Step 1 — Court details & operating schedule */}
+                    {step === 1 && (
+                        <>
                     {/* Venue Selection (if multiple) */}
                     {facilities.length > 1 && (
                         <div>
@@ -861,45 +1045,34 @@ export default function Courts({ facilities = [], can = {} }) {
                         </div>
                     </div>
 
-                    {/* Rates & Schedule */}
-                    <div className="space-y-2 pt-1.5 border-t border-[#101F1A]/5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <InputLabel htmlFor="hourly_rate" value="Hourly Rate (PHP ₱)" />
-                                <div className="relative mt-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#101F1A]/50 font-bold text-xs">₱</span>
-                                    <TextInput
-                                        id="hourly_rate"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={data.hourly_rate}
-                                        onChange={(e) => {
-                                            setData('hourly_rate', e.target.value);
-                                            if (clientErrors.hourly_rate) setClientErrors(prev => ({ ...prev, hourly_rate: undefined }));
-                                        }}
-                                        className="pl-7 block w-full text-xs font-bold"
-                                        placeholder="350.00"
-                                    />
-                                </div>
-                                <InputError message={activeErrors.hourly_rate} className="mt-1" />
+                    {/* Operating Schedule — drives the pricing time options */}
+                    <div className="space-y-2 pt-2 border-t border-[#101F1A]/5">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#101F1A] text-[#D6FF3F]">
+                                    <Clock size={12} strokeWidth={2.4} />
+                                </span>
+                                <InputLabel htmlFor="time_range" value="Operating Schedule *" className="!block !text-xs !font-bold !text-[#101F1A]" />
                             </div>
-
-                            <div>
-                                <InputLabel htmlFor="time_range" value="Operating Schedule" />
-                                <TextInput
-                                    id="time_range"
-                                    value={data.time_range}
-                                    onChange={(e) => setData('time_range', e.target.value)}
-                                    className="mt-1 block w-full text-xs font-medium"
-                                    placeholder="e.g. 6:00 AM - 10:00 PM"
-                                />
-                                <InputError message={activeErrors.time_range} className="mt-1" />
-                            </div>
+                            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${hasOperatingSchedule ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                                {hasOperatingSchedule ? '✓ Hours set' : 'Required'}
+                            </span>
                         </div>
 
+                        <TextInput
+                            id="time_range"
+                            value={data.time_range}
+                            onChange={(e) => applyOperatingSchedule(e.target.value)}
+                            className={`block w-full text-xs font-medium ${activeErrors.time_range ? '!border-rose-300' : ''}`}
+                            placeholder="e.g. 6:00 AM - 10:00 PM"
+                        />
+                        <InputError message={activeErrors.time_range} className="mt-1" />
+                        <p className="text-[10px] font-medium text-[#101F1A]/50">
+                            Pricing time options follow this range{describeScheduleBounds(scheduleBounds) ? ` — ${describeScheduleBounds(scheduleBounds)}.` : '.'}
+                        </p>
+
                         {/* Quick Schedule Preset Pills */}
-                        <div>
+                        <div className="pt-0.5">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 block mb-1.5">
                                 Schedule Presets:
                             </span>
@@ -910,7 +1083,7 @@ export default function Courts({ facilities = [], can = {} }) {
                                         <button
                                             type="button"
                                             key={preset}
-                                            onClick={() => setData('time_range', preset)}
+                                            onClick={() => applyOperatingSchedule(preset)}
                                             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                                 isSelected
                                                     ? 'bg-[#101F1A] text-white font-bold shadow-xs'
@@ -922,6 +1095,172 @@ export default function Courts({ facilities = [], can = {} }) {
                                     );
                                 })}
                             </div>
+                        </div>
+                    </div>
+                        </>
+                    )}
+
+                    {/* Step 2 — Pricing & court profile */}
+                    {step === 2 && (
+                        <>
+                    <div className="space-y-3 pt-2 border-t border-[#101F1A]/5">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                                <Clock size={12} className="shrink-0 text-[#101F1A]/45" />
+                                <span className="truncate text-[11px] font-medium text-[#101F1A]/60">
+                                    Operating hours: <span className="font-bold text-[#101F1A]">{data.time_range || 'Not set'}</span>
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={goToStepOne}
+                                className="shrink-0 cursor-pointer text-[11px] font-bold text-[#101F1A] hover:underline"
+                            >
+                                Change
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-[#101F1A]">Pricing Structure *</span>
+                            <div className="flex bg-[#F5F2EA] p-0.5 rounded-xl border border-[#101F1A]/10 text-xs font-bold">
+                                <button
+                                    type="button"
+                                    onClick={() => setData('pricing_mode', 'FLAT')}
+                                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                                        data.pricing_mode === 'FLAT'
+                                            ? 'bg-[#101F1A] text-white shadow-xs'
+                                            : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                    }`}
+                                >
+                                    Flat Rate
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setData('pricing_mode', 'SPLIT')}
+                                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                                        data.pricing_mode === 'SPLIT'
+                                            ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
+                                            : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                    }`}
+                                >
+                                    <span>☀️ Day / 🌙 Night Split</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                        {data.pricing_mode === 'FLAT' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <InputLabel htmlFor="hourly_rate" value="Hourly Rate (PHP ₱)" />
+                                    <div className="relative mt-1">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#101F1A]/50 font-bold text-xs">₱</span>
+                                        <TextInput
+                                            id="hourly_rate"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={data.hourly_rate}
+                                            onChange={(e) => {
+                                                setData('hourly_rate', e.target.value);
+                                                if (clientErrors.hourly_rate) setClientErrors(prev => ({ ...prev, hourly_rate: undefined }));
+                                            }}
+                                            className="pl-7 block w-full text-xs font-bold"
+                                            placeholder="350.00"
+                                        />
+                                    </div>
+                                    <InputError message={activeErrors.hourly_rate} className="mt-1" />
+                                </div>
+
+                                <div className="flex items-center rounded-xl border border-dashed border-[#101F1A]/15 bg-[#F5F2EA]/40 px-3 py-2 text-[11px] font-medium leading-snug text-[#101F1A]/55">
+                                    One hourly rate applies to every slot booked within the operating schedule above.
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-[#F5F2EA]/60 rounded-xl border border-[#101F1A]/8">
+                                    {/* Day Rate & Start Time */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
+                                            <span>☀️ Daytime Rate</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase text-[#101F1A]/60 mb-0.5">Rate (₱/hr)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#101F1A]/50 font-bold text-xs">₱</span>
+                                                    <TextInput
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={data.day_rate}
+                                                        onChange={(e) => {
+                                                            setData('day_rate', e.target.value);
+                                                            if (clientErrors.day_rate) setClientErrors(prev => ({ ...prev, day_rate: undefined }));
+                                                        }}
+                                                        className="pl-6 block w-full text-xs font-bold"
+                                                        placeholder="250.00"
+                                                    />
+                                                </div>
+                                                <InputError message={activeErrors.day_rate} className="mt-1" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase text-[#101F1A]/60 mb-0.5">Starts At</label>
+                                                <select
+                                                    value={data.day_start_time}
+                                                    onChange={(e) => setData('day_start_time', e.target.value)}
+                                                    className="block w-full text-xs font-bold rounded-xl border-[#101F1A]/15 bg-white py-2 px-2.5 shadow-xs focus:border-[#101F1A] focus:ring-[#101F1A]"
+                                                >
+                                                    {dayStartOptions.map((opt) => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Night Rate & Start Time */}
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700">
+                                            <span>🌙 Nighttime Rate</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase text-[#101F1A]/60 mb-0.5">Rate (₱/hr)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#101F1A]/50 font-bold text-xs">₱</span>
+                                                    <TextInput
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={data.night_rate}
+                                                        onChange={(e) => {
+                                                            setData('night_rate', e.target.value);
+                                                            if (clientErrors.night_rate) setClientErrors(prev => ({ ...prev, night_rate: undefined }));
+                                                        }}
+                                                        className="pl-6 block w-full text-xs font-bold"
+                                                        placeholder="400.00"
+                                                    />
+                                                </div>
+                                                <InputError message={activeErrors.night_rate} className="mt-1" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold uppercase text-[#101F1A]/60 mb-0.5">Starts At</label>
+                                                <select
+                                                    value={data.night_start_time}
+                                                    onChange={(e) => setData('night_start_time', e.target.value)}
+                                                    className="block w-full text-xs font-bold rounded-xl border-[#101F1A]/15 bg-white py-2 px-2.5 shadow-xs focus:border-[#101F1A] focus:ring-[#101F1A]"
+                                                >
+                                                    {nightStartOptions.map((opt) => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         </div>
                     </div>
 
@@ -1026,26 +1365,52 @@ export default function Courts({ facilities = [], can = {} }) {
                         />
                         <InputError message={activeErrors.description} className="mt-1" />
                     </div>
+                        </>
+                    )}
 
                     {/* Footer Actions */}
-                    <div className="pt-2 border-t border-[#101F1A]/10 flex items-center justify-end gap-2">
-                        <SecondaryButton type="button" onClick={handleCancelAttempt} className="!text-xs font-bold !py-1.5 !px-3.5">
-                            Cancel
-                        </SecondaryButton>
-                        <PrimaryButton
-                            type="submit"
-                            disabled={
-                                processing ||
-                                !hasChanges ||
-                                !data.name?.trim() ||
-                                !data.type?.trim() ||
-                                (facilities.length > 1 && !data.facility_id) ||
-                                (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0))
-                            }
-                            className="!bg-[#101F1A] hover:!bg-[#162923] !text-[#D6FF3F] !rounded-xl !px-4.5 !py-1.5 !text-xs !font-bold shadow-subtle hover-lift press-scale disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
-                        >
-                            {processing ? 'Saving...' : editingCourt ? 'Save Changes' : 'Create Court'}
-                        </PrimaryButton>
+                    <div className="pt-2 border-t border-[#101F1A]/10 flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/45">
+                            Step {step} of 2
+                        </span>
+                        <div className="flex items-center gap-2">
+                            {step === 1 ? (
+                                <div key="step-one-actions" className="flex items-center gap-2">
+                                    <SecondaryButton type="button" onClick={handleCancelAttempt} className="!text-xs font-bold !py-1.5 !px-3.5">
+                                        Cancel
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        type="button"
+                                        onClick={goToStepTwo}
+                                        className="!bg-[#101F1A] hover:!bg-[#162923] !text-[#D6FF3F] !rounded-xl !px-4.5 !py-1.5 !text-xs !font-bold shadow-subtle hover-lift press-scale"
+                                    >
+                                        <span>Next: Pricing</span>
+                                        <ChevronRight size={13} strokeWidth={2.6} className="ml-1" />
+                                    </PrimaryButton>
+                                </div>
+                            ) : (
+                                <div key="step-two-actions" className="flex items-center gap-2">
+                                    <SecondaryButton type="button" onClick={goToStepOne} className="!text-xs font-bold !py-1.5 !px-3.5">
+                                        Back
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        type="submit"
+                                        disabled={
+                                            processing ||
+                                            !hasChanges ||
+                                            !data.name?.trim() ||
+                                            !data.type?.trim() ||
+                                            (facilities.length > 1 && !data.facility_id) ||
+                                            !hasOperatingSchedule ||
+                                            (data.pricing_mode === 'FLAT' && data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0))
+                                        }
+                                        className="!bg-[#101F1A] hover:!bg-[#162923] !text-[#D6FF3F] !rounded-xl !px-4.5 !py-1.5 !text-xs !font-bold shadow-subtle hover-lift press-scale disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none disabled:shadow-none"
+                                    >
+                                        {processing ? 'Saving...' : editingCourt ? 'Save Changes' : 'Create Court'}
+                                    </PrimaryButton>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </form>
             </Dialog>

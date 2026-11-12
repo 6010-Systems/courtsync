@@ -99,6 +99,11 @@ export interface Court extends Timestamps {
     time_range: string | null;
     description: string | null;
     hourly_rate: number | string | null;
+    pricing_mode?: 'FLAT' | 'SPLIT';
+    day_rate?: number | string | null;
+    night_rate?: number | string | null;
+    day_start_time?: string | null;
+    night_start_time?: string | null;
     status: CourtStatus;
 
     // Relationship

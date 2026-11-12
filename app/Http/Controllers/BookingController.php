@@ -133,6 +133,10 @@ class BookingController extends Controller
         // Determine user_id based on whether a guest name is provided
         $userId = ! empty($validated['guest_name']) ? null : $user->id;
 
+        $court = Court::findOrFail($validated['court_id']);
+        $pricingResult = $court->calculatePriceForRange($validated['start_time'], $validated['end_time']);
+        $finalPrice = $pricingResult['total'] > 0 ? $pricingResult['total'] : $validated['total_price'];
+
         // Create the booking
         $booking = Booking::create([
             'facility_id' => $validated['facility_id'],
@@ -142,7 +146,7 @@ class BookingController extends Controller
             'date' => $validated['date'],
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
-            'total_price' => $validated['total_price'],
+            'total_price' => $finalPrice,
             'status' => 'pending',
         ]);
 
@@ -155,7 +159,7 @@ class BookingController extends Controller
 
             $booking->payment()->create([
                 'user_id' => $userId,
-                'amount' => $validated['total_price'],
+                'amount' => $finalPrice,
                 'payment_method' => $request->input('payment_method'),
                 'proof_path' => $proofPath,
                 'status' => 'pending',

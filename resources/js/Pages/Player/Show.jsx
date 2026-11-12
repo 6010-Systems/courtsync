@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import BookingWidget from '@/Components/BookingWidget';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES, courtIsBookable } from '@/Utils/courtStatus';
+import CourtCard from '@/Components/CourtCard';
 import SportIcon from '@/Components/Bookings/SportIcon';
 import {
     Clock,
@@ -284,158 +285,41 @@ export default function Show({ facility }) {
                             {facility.courts && facility.courts.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {facility.courts.map((court, courtIndex) => {
-                                        const courtImg = getCourtImage(court, facility, courtIndex);
                                         const isBookable = courtIsBookable(court.status);
                                         const isSelected = selectedCourtId == court.id && isBookable;
-                                        const statusStyle = COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE;
-                                        const statusLabel = COURT_STATUS_LABELS[court.status] || court.status;
 
                                         return (
-                                            <div
+                                            <CourtCard
                                                 key={court.id}
+                                                court={court}
+                                                image={getCourtImage(court, facility, courtIndex)}
+                                                fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
                                                 onClick={() => handleCourtClick(court)}
-                                                className={`group relative flex flex-col justify-between h-full rounded-xl border bg-white overflow-hidden transition-all duration-300 cursor-pointer text-left ${
-                                                    isSelected
-                                                        ? 'border-[#D6FF3F] ring-2 ring-[#D6FF3F] shadow-lg shadow-[#D6FF3F]/25 -translate-y-1'
-                                                        : isBookable
-                                                        ? 'border-[#10221C]/10 shadow-xs hover:border-[#10221C]/30 hover:shadow-md hover:-translate-y-0.5'
-                                                        : 'border-[#10221C]/10 bg-[#FAF9F5] opacity-85 hover:opacity-100 hover:border-amber-300/80 hover:shadow-sm'
-                                                }`}
-                                            >
-                                                {/* Court Image Banner — matching landing page card with smooth dissolved gradient */}
-                                                <div className="relative h-36 sm:h-40 w-full shrink-0 overflow-hidden bg-white">
-                                                    <img
-                                                        src={courtImg}
-                                                        alt={court.name}
-                                                        className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08] ${
-                                                            !isBookable ? 'filter grayscale-[25%] opacity-85' : ''
-                                                        }`}
-                                                        style={{
-                                                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                                                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                                                        }}
-                                                        onError={(e) => {
-                                                            e.currentTarget.src = DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length];
-                                                        }}
-                                                    />
-
-                                                    {/* Floating Sport Badge */}
-                                                    <div className="absolute top-2.5 left-2.5 z-10">
-                                                        <span className="inline-flex items-center gap-1.5 bg-[#10221C]/85 text-[#F5F2EA] text-[10px] sm:text-[11px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-xs border border-white/10">
-                                                            <SportIcon sport={court.type} className="w-3 h-3 text-[#D6FF3F]" />
-                                                            <span>{court.type || 'Court'}</span>
-                                                        </span>
-                                                    </div>
-
-                                                    {/* Floating Status Badge */}
-                                                    <div className="absolute top-2.5 right-2.5 z-10">
-                                                        {isBookable ? (
-                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-xs backdrop-blur-md bg-white/95 text-emerald-900 border border-emerald-200">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                                Available
-                                                            </span>
-                                                        ) : (
-                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full shadow-xs backdrop-blur-md bg-white/95 ${statusStyle}`}>
-                                                                <AlertCircle size={11} className="shrink-0" />
-                                                                {statusLabel}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Smooth gradient overlay that seamlessly dissolves into the card background */}
-                                                    <div
-                                                        className="absolute inset-0 pointer-events-none"
-                                                        style={{
-                                                            background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
-                                                        }}
-                                                    />
-
-                                                    {/* Active Selected Tag Banner */}
-                                                    {isSelected && (
-                                                        <div className="absolute bottom-2.5 left-2.5 z-10">
-                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-full shadow-md bg-[#D6FF3F] text-[#10221C]">
-                                                                <CheckCircle2 size={12} className="text-[#10221C]" /> Selected in Form
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Card Body — flex-1 flex flex-col justify-between to keep footer fixed in place */}
-                                                <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4 sm:pb-3.5 flex-1 flex flex-col justify-between">
-                                                    <div>
-                                                        <div className="flex items-center justify-between gap-2 h-6">
-                                                            <h3 className="font-display text-[15px] sm:text-base font-bold text-[#10221C] tracking-tight group-hover:text-[#FF5A36] transition-colors truncate" title={court.name}>
-                                                                {court.name}
-                                                            </h3>
-                                                            {isSelected && (
-                                                                <span className="shrink-0 w-5 h-5 rounded-full bg-[#101F1A] text-[#D6FF3F] flex items-center justify-center shadow-xs">
-                                                                    <Check size={12} strokeWidth={2.8} />
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="space-y-1.5 mt-2 pt-2 border-t border-[#10221C]/6 text-xs">
-                                                            <div className="flex items-center justify-between h-6">
-                                                                <span className="text-[#10221C]/60 font-medium flex items-center gap-1.5">
-                                                                    <PhilippinePeso size={12} className="text-[#FF5A36] shrink-0" />
-                                                                    Hourly Rate
-                                                                </span>
-                                                                <span className="font-display font-bold text-xs sm:text-sm text-[#10221C] bg-[#F5F2EA] px-2 py-0.5 rounded-md border border-[#10221C]/5">
-                                                                    {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(2)} / hr` : 'Free / Not set'}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="flex items-center justify-between h-6">
-                                                                <span className="text-[#10221C]/60 font-medium flex items-center gap-1.5">
-                                                                    <Clock size={12} className="text-[#10221C]/40 shrink-0" />
-                                                                    Operating Hours
-                                                                </span>
-                                                                <span className="font-medium text-[#10221C]/80 truncate max-w-[170px]">
-                                                                    {court.time_range || 'Venue standard'}
-                                                                </span>
-                                                            </div>
-
-                                                            <p className="pt-0.5 text-[11px] text-[#10221C]/60 line-clamp-1 leading-normal h-5 flex items-center overflow-hidden">
-                                                                {court.description || 'Verified tournament-grade court with optimal lighting.'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Bottom Action Footer — fixed in place with h-10 and mt-auto */}
-                                                    <div className="mt-3 pt-2.5 border-t border-[#10221C]/6 flex items-center justify-between shrink-0 h-10">
-                                                        {isBookable ? (
-                                                            isSelected ? (
+                                                isSelected={isSelected}
+                                                isDimmed={!isBookable}
+                                                hint={isBookable ? 'Click to select' : 'Not bookable right now'}
+                                                actions={
+                                                    isBookable ? (
+                                                        <span className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold transition-all ${isSelected ? 'bg-[#D6FF3F] text-[#10221C]' : 'bg-[#10221C] text-[#D6FF3F]'}`}>
+                                                            {isSelected ? (
                                                                 <>
-                                                                    <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 h-7">
-                                                                        <Check size={13} strokeWidth={2.5} className="text-emerald-600" /> Active in Form
-                                                                    </span>
-                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-black bg-[#101F1A] text-[#D6FF3F] px-2.5 h-7 rounded-lg shadow-xs transition-transform group-hover:scale-105">
-                                                                        Selected
-                                                                    </span>
+                                                                    <Check size={12} strokeWidth={2.8} />
+                                                                    Selected
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <span className="text-xs font-bold text-[#10221C]/60 group-hover:text-[#10221C] transition-colors flex items-center h-7">
-                                                                        Click to Select
-                                                                    </span>
-                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-[#101F1A]/5 text-[#101F1A] group-hover:bg-[#FF5A36] group-hover:text-white px-2.5 h-7 rounded-lg transition-all shadow-2xs group-hover:scale-105">
-                                                                        Book Court <ArrowRight size={12} strokeWidth={2.2} className="transition-transform group-hover:translate-x-0.5" />
-                                                                    </span>
+                                                                    Select court
+                                                                    <ArrowRight size={12} strokeWidth={2.6} />
                                                                 </>
-                                                            )
-                                                        ) : (
-                                                            <>
-                                                                <span className="text-xs font-semibold text-amber-800 flex items-center gap-1 h-7">
-                                                                    <AlertCircle size={12} className="text-amber-600" /> {statusLabel}
-                                                                </span>
-                                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-amber-500/10 text-amber-900 group-hover:bg-amber-500/20 px-2.5 h-7 rounded-lg transition-colors">
-                                                                    View Status <ArrowRight size={12} strokeWidth={2.2} className="transition-transform group-hover:translate-x-0.5" />
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="rounded-xl bg-[#10221C]/5 px-3 py-2 text-xs font-bold text-[#10221C]/50">
+                                                            Unavailable
+                                                        </span>
+                                                    )
+                                                }
+                                            />
                                         );
                                     })}
                                 </div>
