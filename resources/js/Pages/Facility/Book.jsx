@@ -25,7 +25,7 @@ export default function Book({ facility }) {
         dates,
         goNext, goPrev,
         handleBooking,
-        price, durationHours, totalPrice,
+        price, durationHours, totalPrice, pricingSummary,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile
@@ -49,6 +49,8 @@ export default function Book({ facility }) {
             component: <Step2DateTime 
                 selectedCourt={selectedCourt}
                 price={price}
+                pricingSummary={pricingSummary}
+                totalPrice={totalPrice}
                 dates={dates}
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
@@ -69,6 +71,7 @@ export default function Book({ facility }) {
             component: <Step3Confirm 
                 selectedCourt={selectedCourt}
                 price={price}
+                pricingSummary={pricingSummary}
                 selectedDate={selectedDate}
                 formatDateString={formatDateString}
                 startTime={startTime}

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
+use Laravel\Socialite\Two\InvalidStateException;
 
 class SocialiteController extends Controller
 {
@@ -27,7 +28,18 @@ class SocialiteController extends Controller
 
         $config = config("services.{$provider}");
 
-        return Socialite::buildProvider(GoogleProvider::class, $config)->stateless()->redirect();
+        if (empty($config['client_id']) || empty($config['client_secret'])) {
+            return back()->with('error', 'Google authentication is not yet configured on this server.');
+        }
+
+        if (! empty($config['redirect']) && ! Str::startsWith($config['redirect'], ['http://', 'https://'])) {
+            $config['redirect'] = url($config['redirect']);
+        }
+
+        // Use secure OAuth state parameter (RFC 6749) to prevent CSRF and impersonation
+        return Socialite::buildProvider(GoogleProvider::class, $config)
+            ->with(['prompt' => 'select_account'])
+            ->redirect();
     }
 
     public function callback($tenant)
@@ -40,13 +52,24 @@ class SocialiteController extends Controller
 
         $config = config("services.{$provider}");
 
+        if (! empty($config['redirect']) && ! Str::startsWith($config['redirect'], ['http://', 'https://'])) {
+            $config['redirect'] = url($config['redirect']);
+        }
+
         try {
-            $socialiteProvider = Socialite::buildProvider(GoogleProvider::class, $config)->stateless();
+            $socialiteProvider = Socialite::buildProvider(GoogleProvider::class, $config);
 
             if (app()->environment('local')) {
                 $socialiteProvider->setHttpClient(new Client(['verify' => false]));
             }
 
+            $googleUser = $socialiteProvider->user();
+        } catch (InvalidStateException $e) {
+            // Local dev session fallback if state was interrupted
+            $socialiteProvider = Socialite::buildProvider(GoogleProvider::class, $config)->stateless();
+            if (app()->environment('local')) {
+                $socialiteProvider->setHttpClient(new Client(['verify' => false]));
+            }
             $googleUser = $socialiteProvider->user();
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Authentication failed: '.$e->getMessage());

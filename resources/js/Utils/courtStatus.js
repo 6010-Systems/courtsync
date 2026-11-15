@@ -7,12 +7,12 @@ export const COURT_STATUS_LABELS = {
     NOT_AVAILABLE: 'Not Available',
 };
 
-// Badge classes (light backgrounds — used on white/light cards)
+// Badge classes (high contrast — clearly visible on both light and photo backgrounds)
 export const COURT_STATUS_STYLES = {
-    AVAILABLE: 'bg-[#D6FF3F]/30 text-[#10221C] border-[#D6FF3F]',
-    OPEN_PLAY: 'bg-blue-100 text-blue-700 border-blue-200',
-    BLOCKED: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    NOT_AVAILABLE: 'bg-red-100 text-red-700 border-red-200',
+    AVAILABLE: 'bg-[#D6FF3F] text-[#10221C] font-black border-[#D6FF3F] shadow-md',
+    OPEN_PLAY: 'bg-sky-500 text-white font-bold border-sky-400 shadow-md',
+    BLOCKED: 'bg-amber-500 text-white font-bold border-amber-400 shadow-md',
+    NOT_AVAILABLE: 'bg-rose-500 text-white font-bold border-rose-400 shadow-md',
 };
 
 // Badge classes on the dark public facility page

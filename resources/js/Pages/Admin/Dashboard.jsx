@@ -27,7 +27,8 @@ export default function AdminDashboard({ user, adminStats }) {
                         </div>
                     }
                     showSearch={false}
-                    showNotifications={false}
+                    liveNotifications
+                    notificationsFooterHref={route('facility.payments')}
                 />
             }
         >

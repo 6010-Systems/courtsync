@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Phone } from 'lucide-react';
 
+import { formatPeso } from '@/Components/MetricCard';
+
 export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMethod, proofFile, setProofFile, facility }) {
-    
+    const hasDefaulted = useRef(false);
+
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setProofFile(e.target.files[0]);
@@ -18,6 +21,18 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
     const mayaNumber = facility?.maya_number;
     const mayaQrUrl = facility?.maya_qr_url;
 
+    // Auto-select a default payment method on arrival so a QR is shown immediately
+    useEffect(() => {
+        if (!hasDefaulted.current && paymentMethod === 'pay_at_facility') {
+            if (gcashQrUrl || gcashName || gcashNumber) {
+                setPaymentMethod('gcash');
+            } else if (mayaQrUrl || mayaName || mayaNumber) {
+                setPaymentMethod('maya');
+            }
+            hasDefaulted.current = true;
+        }
+    }, [paymentMethod, setPaymentMethod, gcashQrUrl, gcashName, gcashNumber, mayaQrUrl, mayaName, mayaNumber]);
+
     return (
         <div className="p-6 sm:p-10">
             <div className="mb-6 flex justify-between items-end  pb-5">
@@ -27,7 +42,7 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
                 </div>
                 <div className="text-right">
                     <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Amount to Pay</span>
-                    <span className="text-2xl font-black text-[#10221C]">₱{totalPrice.toFixed(2)}</span>
+                    <span className="text-2xl font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
                 </div>
             </div>
 

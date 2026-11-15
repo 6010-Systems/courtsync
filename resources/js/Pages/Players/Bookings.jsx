@@ -5,7 +5,7 @@ import { Head, Link } from '@inertiajs/react';
 
 export default function Bookings({ bookings, filter, timezone }) {
     return (
-        <AuthenticatedLayout header={<PageHeader title="My Bookings" subtitle="Track your court reservations across all facilities" actions={null} showSearch={false} showNotifications={false} />}>
+        <AuthenticatedLayout header={<PageHeader title="My Bookings" subtitle="Track your court reservations across all facilities" actions={null} showSearch={false} liveNotifications notificationsFooterHref={route('player.bookings')} />}>
             <Head title="My Bookings" />
             <div className="space-y-5">
                 <nav aria-label="Booking filters" className="flex flex-wrap gap-2">

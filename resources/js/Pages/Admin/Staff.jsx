@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
+import Modal from '@/Components/Modal';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
@@ -8,7 +9,6 @@ import InputError from '@/Components/InputError';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
 import { useState } from 'react';
-import Modal from '@/Components/Modal';
 
 export default function Staff({ users, facilities }) {
     const { confirm } = useConfirm();

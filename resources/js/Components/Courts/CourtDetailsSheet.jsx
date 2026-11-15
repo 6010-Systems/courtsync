@@ -372,9 +372,22 @@ export default function CourtDetailsSheet({
                             <PhilippinePeso size={13} className="text-[#FF5A36]" />
                         </div>
                         <div>
-                            <div className="font-bold text-lg sm:text-xl text-[#101F1A] tracking-tight">
-                                {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(0)}` : 'Free'}
-                            </div>
+                            {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
+                                <div className="space-y-0.5">
+                                    <div className="font-bold text-xs sm:text-sm text-[#101F1A] tracking-tight flex items-center justify-between">
+                                        <span className="text-[#101F1A]/60 font-medium text-[11px]">☀️ Day:</span>
+                                        <span>₱{Number(court.day_rate).toFixed(0)}</span>
+                                    </div>
+                                    <div className="font-bold text-xs sm:text-sm text-[#101F1A] tracking-tight flex items-center justify-between">
+                                        <span className="text-[#101F1A]/60 font-medium text-[11px]">🌙 Night:</span>
+                                        <span>₱{Number(court.night_rate).toFixed(0)}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="font-bold text-lg sm:text-xl text-[#101F1A] tracking-tight">
+                                    {court.hourly_rate ? `₱${Number(court.hourly_rate).toFixed(0)}` : 'Free'}
+                                </div>
+                            )}
                             <p className="text-[10px] text-[#101F1A]/50 font-medium">per 60m session</p>
                         </div>
                     </div>

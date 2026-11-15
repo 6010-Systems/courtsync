@@ -34,6 +34,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user() ? $request->user()->load(['facilities', 'workFacility']) : null,
             ],
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
         ];
     }
 }

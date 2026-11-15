@@ -223,7 +223,8 @@ export default function Bookings({ bookings, facilities, filters }) {
                         )
                     }
                     showSearch={false}
-                    showNotifications={false}
+                    liveNotifications
+                    notificationsFooterHref={route('facility.bookings')}
                 />
             }
         >
