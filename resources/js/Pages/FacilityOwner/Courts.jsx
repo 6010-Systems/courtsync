@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Dialog from '@/Components/Dialog';
+import CourtDetailsSheet from '@/Components/Courts/CourtDetailsSheet';
 import SportIcon from '@/Components/Bookings/SportIcon';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
@@ -115,6 +116,8 @@ export default function Courts({ facilities = [], can = {} }) {
     const toast = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourt, setEditingCourt] = useState(null);
+    const [selectedCourtForDetails, setSelectedCourtForDetails] = useState(null);
+    const [selectedFacilityForDetails, setSelectedFacilityForDetails] = useState(null);
 
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState('');
@@ -616,7 +619,11 @@ export default function Courts({ facilities = [], can = {} }) {
                                             return (
                                                 <div
                                                     key={court.id}
-                                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#101F1A]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up"
+                                                    onClick={() => {
+                                                        setSelectedCourtForDetails(court);
+                                                        setSelectedFacilityForDetails(facility);
+                                                    }}
+                                                    className="group relative flex flex-col justify-between h-full rounded-xl border border-[#101F1A]/10 bg-white shadow-sm overflow-hidden transition-all duration-300 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block animate-fade-up cursor-pointer"
                                                     style={{ animationDelay: `${courtIndex * 40}ms` }}
                                                 >
                                                     {/* Top Image: Edge-to-edge with smooth dissolved gradient overlay */}
@@ -704,7 +711,10 @@ export default function Courts({ facilities = [], can = {} }) {
                                                                 <div className="flex items-center gap-1.5">
                                                                     {can.edit && (
                                                                         <button
-                                                                            onClick={() => openEditModal(court, facility)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                openEditModal(court, facility);
+                                                                            }}
                                                                             className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#101F1A] bg-[#D6FF3F] hover:bg-[#c4ec32] rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 font-display"
                                                                         >
                                                                             <Edit3 size={11} strokeWidth={2.2} />
@@ -713,7 +723,10 @@ export default function Courts({ facilities = [], can = {} }) {
                                                                     )}
                                                                     {can.delete && (
                                                                         <button
-                                                                            onClick={() => handleDeleteCourt(court)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleDeleteCourt(court);
+                                                                            }}
                                                                             className="inline-flex items-center justify-center w-7 h-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                                                                             title="Delete court"
                                                                             aria-label={`Delete ${court.name}`}
@@ -1013,6 +1026,20 @@ export default function Courts({ facilities = [], can = {} }) {
                     </div>
                 </form>
             </Dialog>
+
+            {/* ── Court Details Slide-over Sheet ── */}
+            <CourtDetailsSheet
+                isOpen={Boolean(selectedCourtForDetails)}
+                onClose={() => {
+                    setSelectedCourtForDetails(null);
+                    setSelectedFacilityForDetails(null);
+                }}
+                court={selectedCourtForDetails}
+                facility={selectedFacilityForDetails}
+                courtImage={selectedCourtForDetails ? getCourtImage(selectedCourtForDetails, selectedFacilityForDetails) : ''}
+                can={can}
+                onEdit={(court, facility) => openEditModal(court, facility)}
+            />
         </AuthenticatedLayout>
     );
 }

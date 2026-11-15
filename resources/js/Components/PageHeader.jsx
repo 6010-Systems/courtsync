@@ -13,11 +13,17 @@ import { useEffect, useRef, useState } from 'react';
  * ── PageHeader Component ───────────────────────────────────────────────────────
  * Standardized global floating glass header across all authenticated pages in CourtSync.
  *
- * @param {string} title - Dynamic page heading
- * @param {string} [subtitle] - Dynamic subtext / contextual description
- * @param {React.ReactNode} [actions] - Dynamic page-specific action buttons on the right
- * @param {boolean} [showSearch] - Shows global quick search / ⌘K command trigger
- * @param {boolean} [showNotifications] - Shows interactive notification center
+ * @param {Object} props
+ * @param {React.ReactNode} [props.title] - Dynamic page heading
+ * @param {string} [props.subtitle] - Dynamic subtext / contextual description
+ * @param {React.ReactNode} [props.actions] - Dynamic page-specific action buttons on the right
+ * @param {boolean} [props.showSearch] - Shows global quick search / ⌘K command trigger
+ * @param {boolean} [props.showNotifications] - Shows interactive notification center
+ * @param {string} [props.searchQuery]
+ * @param {(query: string) => void} [props.onSearchChange]
+ * @param {string} [props.searchPlaceholder]
+ * @param {string} [props.className]
+ * @param {string} [props.containerClassName]
  */
 export default function PageHeader({
     title,
@@ -103,7 +109,7 @@ export default function PageHeader({
     const headerContent = (
         <div
             className={[
-                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 px-5 backdrop-blur-md shadow-card transition-all duration-200',
+                'flex h-16 w-full items-center justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 px-3 sm:px-5 backdrop-blur-md shadow-card transition-all duration-200',
                 className,
             ].join(' ')}
         >

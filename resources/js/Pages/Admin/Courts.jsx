@@ -3,6 +3,7 @@ import PageHeader from '@/Components/PageHeader';
 import { Head } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import SportIcon from '@/Components/Bookings/SportIcon';
+import CourtDetailsSheet from '@/Components/Courts/CourtDetailsSheet';
 import { useState, useMemo } from 'react';
 import {
     Layers,
@@ -81,6 +82,8 @@ export default function Courts({ facilities = [] }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+    const [selectedCourtForDetails, setSelectedCourtForDetails] = useState(null);
+    const [selectedFacilityForDetails, setSelectedFacilityForDetails] = useState(null);
 
     const totalCourts = facilities.reduce((sum, f) => sum + (f.courts?.length || 0), 0);
     const facilitiesWithCourts = facilities.filter(f => (f.courts || []).length > 0);
@@ -370,7 +373,11 @@ export default function Courts({ facilities = [] }) {
                                             return (
                                                 <div
                                                     key={court.id}
-                                                    className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block"
+                                                    onClick={() => {
+                                                        setSelectedCourtForDetails(court);
+                                                        setSelectedFacilityForDetails(facility);
+                                                    }}
+                                                    className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white p-3.5 shadow-sm transition-all duration-200 hover:border-[#D6FF3F] hover:shadow-lg hover:-translate-y-1 block cursor-pointer"
                                                 >
                                                     <div>
                                                         {/* Court Image Banner with rounded-lg matching landing page */}
@@ -460,7 +467,14 @@ export default function Courts({ facilities = [] }) {
                                                 {facility.filteredCourts.map((court, courtIndex) => {
                                                     const courtImg = getCourtImage(court, facility, courtIndex);
                                                     return (
-                                                        <tr key={court.id} className="hover:bg-[#F5F2EA]/30 transition-colors">
+                                                        <tr
+                                                            key={court.id}
+                                                            onClick={() => {
+                                                                setSelectedCourtForDetails(court);
+                                                                setSelectedFacilityForDetails(facility);
+                                                            }}
+                                                            className="hover:bg-[#F5F2EA]/50 transition-colors cursor-pointer"
+                                                        >
                                                             <td className="px-4 py-2.5 font-bold text-[#101F1A]">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-12 h-9 rounded-lg overflow-hidden shrink-0 border border-[#101F1A]/10 bg-[#101F1A]/5 relative">
@@ -513,6 +527,19 @@ export default function Courts({ facilities = [] }) {
                     </div>
                 )}
             </div>
+
+            {/* ── Court Details Slide-over Sheet ── */}
+            <CourtDetailsSheet
+                isOpen={Boolean(selectedCourtForDetails)}
+                onClose={() => {
+                    setSelectedCourtForDetails(null);
+                    setSelectedFacilityForDetails(null);
+                }}
+                court={selectedCourtForDetails}
+                facility={selectedFacilityForDetails}
+                courtImage={selectedCourtForDetails ? getCourtImage(selectedCourtForDetails, selectedFacilityForDetails) : ''}
+                can={{ edit: false }}
+            />
         </AuthenticatedLayout>
     );
 }
