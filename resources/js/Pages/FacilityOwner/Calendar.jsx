@@ -317,10 +317,10 @@ const layoutDayBookings = (bookings) => {
 
 function StatCard({ label, value, hint }) {
     return (
-        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-3.5 shadow-card">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">{label}</p>
-            <p className="mt-1.5 text-2xl font-black text-[#101F1A]">{value}</p>
-            {hint ? <p className="mt-0.5 text-xs text-[#101F1A]/60 truncate">{hint}</p> : null}
+        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-2.5 sm:p-3 shadow-card shrink-0">
+            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">{label}</p>
+            <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-black text-[#101F1A]">{value}</p>
+            {hint ? <p className="mt-0.5 text-[11px] text-[#101F1A]/60 truncate">{hint}</p> : null}
         </div>
     );
 }
@@ -758,10 +758,10 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         >
             <Head title="Calendar" />
 
-            <div className="w-full space-y-3.5 pb-6">
+            <div className="w-full lg:h-[calc(100vh-105px)] lg:flex lg:flex-col gap-2.5 sm:gap-3 min-h-0 lg:overflow-hidden pb-4 lg:pb-0">
 
                 {/* ── KPI Strip (Aligned with Current Layout) ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
                     <StatCard label="Bookings" value={stats.total} hint={monthLabel || 'All active'} />
                     <StatCard label="Confirmed" value={stats.confirmed} hint={`${stats.pending} awaiting review`} />
                     <StatCard label="Pending" value={stats.pending} hint="Requires verification" />
@@ -769,7 +769,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </div>
 
                 {/* ── Action Toolbar: Cockpit Controls (Elevated Stacking Context over Grid) ── */}
-                <div className="relative z-50 rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 sm:p-3.5 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                <div className="relative z-50 rounded-xl border border-[#101F1A]/10 bg-white/95 p-2.5 sm:p-3 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-2.5 sm:gap-3 shrink-0">
                     
                     {/* Left: Month / Date Title & Navigation */}
                     <div className="flex items-center gap-2">
@@ -885,6 +885,16 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                             </button>
                         </div>
 
+                        {/* Mobile sidebar inspector toggle button */}
+                        <button
+                            type="button"
+                            onClick={() => setIsSidebarExpandedMobile(prev => !prev)}
+                            className="lg:hidden inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#101F1A]/10 bg-white px-2.5 text-xs font-bold text-[#101F1A] shadow-2xs hover:bg-[#F5F2EA] focus:outline-none cursor-pointer"
+                        >
+                            <CalendarCheck size={14} />
+                            <span>{isSidebarExpandedMobile ? 'Hide Inspector' : 'Inspector'}</span>
+                        </button>
+
                         {/* View Switcher: Toggle between Weekly, Daily, and Month Grid */}
                         <CustomSelect
                             value={viewMode}
@@ -908,14 +918,14 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </div>
 
                 {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Compact, Right Grid Widened ── */}
-                <div className="relative z-10 flex flex-col lg:flex-row gap-3.5 items-stretch lg:h-[calc(100vh-185px)] min-h-[620px]">
+                <div className="relative z-10 flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:flex-1 min-h-0 lg:overflow-hidden">
                     
                     {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card: compact 280-290px) ── */}
-                    <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
+                    <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full lg:flex lg:flex-col gap-2.5 sm:gap-3 min-h-0 ${
                         isSidebarExpandedMobile ? 'block' : 'hidden lg:flex'
                     }`}>
                         {/* 1. Mini Month Calendar (Always on the Left) */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3.5 shadow-card backdrop-blur-md shrink-0">
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 shadow-card backdrop-blur-md shrink-0">
                             <div className="flex items-center justify-between mb-3 px-1">
                                 <button
                                     onClick={() => {
