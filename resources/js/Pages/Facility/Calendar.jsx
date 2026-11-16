@@ -169,7 +169,7 @@ function CustomSelect({
     const activeOption = options.find(opt => String(opt.value) === String(value)) || options[0];
 
     return (
-        <div ref={dropdownRef} className={`relative ${className}`}>
+        <div ref={dropdownRef} className={`relative ${isOpen ? 'z-50' : 'z-10'} ${className}`}>
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
@@ -189,7 +189,7 @@ function CustomSelect({
 
             {isOpen && (
                 <div
-                    className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} top-full mt-1.5 z-50 min-w-[210px] max-w-[280px] rounded-xl border border-[#101F1A]/10 bg-white/98 backdrop-blur-md p-1.5 shadow-card animate-in fade-in zoom-in-95 duration-100`}
+                    className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} top-full mt-1.5 z-50 min-w-[210px] max-w-[280px] max-h-72 overflow-y-auto rounded-xl border border-[#101F1A]/15 bg-white p-1.5 shadow-2xl transition-all dark-scrollbar`}
                 >
                     <div className="space-y-0.5">
                         {options.map((option) => {
@@ -629,7 +629,7 @@ export default function CalendarPage({ facilities = [], bookings = [] }) {
             <div className="w-full space-y-3 pb-6">
                 
                 {/* ── Action Toolbar: All Controls Co-located in One Cockpit ── */}
-                <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 sm:p-3.5 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                <div className="relative z-30 rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 sm:p-3.5 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                     
                     {/* Left: Vector Calendar Icon Tile + Current Date Title */}
                     <div className="flex items-center gap-3 shrink-0">
