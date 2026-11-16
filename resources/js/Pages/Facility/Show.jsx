@@ -368,7 +368,7 @@ export default function Show({ facility }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12">
 
-                    {/* Left Column - Details & Gallery */}
+                    {/* Left Column - Details & Galleries */}
                     <div className="lg:col-span-7 xl:col-span-8 space-y-8 sm:space-y-10 lg:space-y-12">
                         {/* Courts */}
                         <section>
