@@ -341,7 +341,7 @@ export default function Show({ facility }) {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-14 lg:py-20 relative z-20">
-                {/* Mobile-Only Compact Rectangle Booking CTA (Directly below banner) */}
+                {/* Mobile-Only Compact Rectangle Booking CTA  */}
                 <div className="block lg:hidden mb-6 sm:mb-8">
                     <div className="bg-[#10221C] p-4 sm:p-5 rounded-2xl shadow-xl border border-white/5 flex items-center justify-between gap-3.5">
                         <div className="min-w-0 flex-1">
