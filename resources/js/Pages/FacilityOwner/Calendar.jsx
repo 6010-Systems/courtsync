@@ -992,8 +992,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                             </div>
                         </div>
 
-                        {/* 2. Active Event Inspector Card (Matching Image & Design Reference) */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md">
+                        {/* 2. Active Event Inspector Card (Fills remaining height below mini calendar) */}
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md lg:flex-1 lg:flex lg:flex-col min-h-0 overflow-hidden">
                             <AnimatePresence mode="wait" initial={false}>
                                 {activeBooking ? (
                                     <motion.div
@@ -1002,97 +1002,147 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.98 }}
                                         transition={{ duration: 0.16, ease: 'easeOut' }}
-                                        className="space-y-3.5"
+                                        className="flex-1 flex flex-col min-h-0 justify-between h-full"
                                     >
-                                        {/* Day volume header link if multiple bookings exist on this date (only in monthly view) */}
-                                        {viewMode === 'Month Grid' && modalDayBookings.length > 1 && (
-                                            <div className="flex items-center justify-between pb-2 border-b border-[#101F1A]/8">
-                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                                    {modalDayBookings.length} bookings on this date
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsDayListModalOpen(true)}
-                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
-                                                >
-                                                    <span>View all ({modalDayBookings.length})</span>
-                                                    <ArrowUpRight size={12} />
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Header: Host / Match Name + Status Color Badge */}
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <h3 className="font-bold text-base text-[#101F1A] tracking-tight truncate">
-                                                    {activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'Match Reservation'}
-                                                </h3>
-                                                <p className="text-xs text-[#101F1A]/60 font-medium truncate mt-0.5">
-                                                    {activeBooking.court?.name || activeBooking.court || 'Court'} · {activeBooking.facility?.name || activeBooking.facility}
-                                                </p>
-                                            </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shrink-0 ${activeTheme.badge}`}>
-                                                {activeTheme.label || activeBooking.status || 'Confirmed'}
-                                            </span>
-                                        </div>
-
-                                        {/* Date & Time Row with Status Color Tint */}
-                                        <div className={`flex items-center gap-2.5 text-xs font-semibold p-2.5 rounded-lg border ${activeTheme.cardBg} ${activeTheme.border}`}>
-                                            <Clock size={14} className="text-[#101F1A]/50 shrink-0" />
-                                            <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
-                                                <span className="truncate">
-                                                    {activeBooking.date} · {formatTimeRange(activeBooking.start_time, activeBooking.end_time)}
-                                                </span>
-                                                <span className="font-black text-[#101F1A] shrink-0">
-                                                    ₱{Number(activeBooking.total_price || 0).toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Court & Payment Specifications Grid */}
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                            <div className="bg-[#FAF9F5] p-2 rounded-lg border border-[#101F1A]/5">
-                                                <span className="text-[10px] font-bold text-[#101F1A]/50 uppercase tracking-wider block">
-                                                    Sport / Surface
-                                                </span>
-                                                <span className="font-bold text-[#101F1A] truncate block mt-0.5">
-                                                    {activeBooking.court_type || activeBooking.court?.type || 'Standard Court'}
-                                                </span>
-                                            </div>
-                                            <div className="bg-[#FAF9F5] p-2 rounded-lg border border-[#101F1A]/5">
-                                                <span className="text-[10px] font-bold text-[#101F1A]/50 uppercase tracking-wider block">
-                                                    Payment
-                                                </span>
-                                                <span className="font-bold text-[#101F1A] uppercase truncate block mt-0.5">
-                                                    {activeBooking.payment?.payment_method || activeBooking.payment_method || 'Venue Pay'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Player Info Row with Status Avatar Accent */}
-                                        <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#101F1A]/5 flex items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs ${activeTheme.avatarBg}`}>
-                                                    {(activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'P')[0]}
+                                        <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto dark-scrollbar pr-0.5">
+                                            {/* Day volume header link if multiple bookings exist on this date (only in monthly view) */}
+                                            {viewMode === 'Month Grid' && modalDayBookings.length > 1 && (
+                                                <div className="flex items-center justify-between pb-2 border-b border-[#101F1A]/8">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                        {modalDayBookings.length} bookings on this date
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsDayListModalOpen(true)}
+                                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                                                    >
+                                                        <span>View all ({modalDayBookings.length})</span>
+                                                        <ArrowUpRight size={12} />
+                                                    </button>
                                                 </div>
+                                            )}
+
+                                            {/* Header: Host / Match Name + Status Color Badge */}
+                                            <div className="flex items-start justify-between gap-2">
                                                 <div className="min-w-0">
-                                                    <div className="text-xs font-bold text-[#101F1A] truncate">
-                                                        {activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'Player'}
-                                                    </div>
-                                                    <div className="text-[10px] text-[#101F1A]/50 truncate">
-                                                        {activeBooking.user?.email || 'Walk-in Match'}
-                                                    </div>
+                                                    <h3 className="font-bold text-base text-[#101F1A] tracking-tight truncate">
+                                                        {activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'Match Reservation'}
+                                                    </h3>
+                                                    <p className="text-xs text-[#101F1A]/60 font-medium truncate mt-0.5">
+                                                        {activeBooking.court?.name || activeBooking.court || 'Court'} · {activeBooking.facility?.name || activeBooking.facility}
+                                                    </p>
+                                                </div>
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shrink-0 ${activeTheme.badge}`}>
+                                                    {activeTheme.label || activeBooking.status || 'Confirmed'}
+                                                </span>
+                                            </div>
+
+                                            {/* Date & Time Row with Status Color Tint */}
+                                            <div className={`flex items-center gap-2.5 text-xs font-semibold p-2.5 rounded-lg border ${activeTheme.cardBg} ${activeTheme.border}`}>
+                                                <Clock size={14} className="text-[#101F1A]/50 shrink-0" />
+                                                <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+                                                    <span className="truncate">
+                                                        {activeBooking.date} · {formatTimeRange(activeBooking.start_time, activeBooking.end_time)}
+                                                    </span>
+                                                    <span className="font-black text-[#101F1A] shrink-0">
+                                                        ₱{Number(activeBooking.total_price || 0).toLocaleString()}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            {activeBooking.payment?.reference_number && (
-                                                <span className="text-[10px] font-mono text-[#101F1A]/60 bg-white px-2 py-0.5 rounded border border-[#101F1A]/10 shrink-0">
-                                                    #{activeBooking.payment.reference_number.slice(-6)}
-                                                </span>
+
+                                            {/* Court & Payment Specifications Grid */}
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                <div className="bg-[#FAF9F5] p-2 rounded-lg border border-[#101F1A]/5">
+                                                    <span className="text-[10px] font-bold text-[#101F1A]/50 uppercase tracking-wider block">
+                                                        Sport / Surface
+                                                    </span>
+                                                    <span className="font-bold text-[#101F1A] truncate block mt-0.5">
+                                                        {activeBooking.court_type || activeBooking.court?.type || 'Standard Court'}
+                                                    </span>
+                                                </div>
+                                                <div className="bg-[#FAF9F5] p-2 rounded-lg border border-[#101F1A]/5">
+                                                    <span className="text-[10px] font-bold text-[#101F1A]/50 uppercase tracking-wider block">
+                                                        Payment
+                                                    </span>
+                                                    <span className="font-bold text-[#101F1A] uppercase truncate block mt-0.5">
+                                                        {activeBooking.payment?.payment_method || activeBooking.payment_method || 'Venue Pay'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Player Info Row with Status Avatar Accent */}
+                                            <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#101F1A]/5 flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs ${activeTheme.avatarBg}`}>
+                                                        {(activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'P')[0]}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="text-xs font-bold text-[#101F1A] truncate">
+                                                            {activeBooking.user?.name || activeBooking.guest_name || activeBooking.player || 'Player'}
+                                                        </div>
+                                                        <div className="text-[10px] text-[#101F1A]/50 truncate">
+                                                            {activeBooking.user?.email || 'Walk-in Match'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {activeBooking.payment?.reference_number && (
+                                                    <span className="text-[10px] font-mono text-[#101F1A]/60 bg-white px-2 py-0.5 rounded border border-[#101F1A]/10 shrink-0">
+                                                        #{activeBooking.payment.reference_number.slice(-6)}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Other Bookings Today (When multiple exist on this day) */}
+                                            {modalDayBookings.length > 1 && (
+                                                <div className="pt-1">
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                            Other Bookings Today ({modalDayBookings.length})
+                                                        </span>
+                                                        {viewMode === 'Month Grid' && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setIsDayListModalOpen(true)}
+                                                                className="text-[10px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                                                            >
+                                                                View all ↗
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto dark-scrollbar pr-0.5">
+                                                        {modalDayBookings.map((b) => {
+                                                            const isCurrent = b.id === activeBooking.id;
+                                                            const bTheme = getBookingThemeByStatus(b);
+                                                            return (
+                                                                <button
+                                                                    key={b.id}
+                                                                    type="button"
+                                                                    onClick={() => setActiveBooking(b)}
+                                                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-all cursor-pointer border ${
+                                                                        isCurrent
+                                                                            ? 'bg-[#101F1A] text-[#D6FF3F] border-[#101F1A] shadow-2xs font-bold'
+                                                                            : 'bg-[#FAF9F5] hover:bg-[#F5F2EA] text-[#101F1A] border-[#101F1A]/6'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isCurrent ? 'bg-[#D6FF3F]' : bTheme.dot}`} />
+                                                                        <span className="truncate text-[11px]">
+                                                                            {b.start_time?.slice(0, 5)} · {cleanCourtName(b.court?.name || b.court)}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className={`text-[10px] font-semibold shrink-0 ml-1.5 ${isCurrent ? 'text-white/80' : 'text-[#101F1A]/50'}`}>
+                                                                        {b.user?.name ? b.user.name.split(' ')[0] : 'Match'}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* Purposeful Actions */}
-                                        <div className="pt-3 border-t border-[#101F1A]/8 flex items-center gap-2">
+                                        {/* Purposeful Actions Pinned to Bottom */}
+                                        <div className="pt-3 border-t border-[#101F1A]/8 flex items-center gap-2 mt-auto shrink-0">
                                             <button
                                                 onClick={() => router.visit(route('facility.bookings'))}
                                                 className="flex-1 py-1.5 rounded-lg bg-[#101F1A] text-[#D6FF3F] text-xs font-bold text-center hover:bg-[#162923] transition-colors cursor-pointer"
@@ -1117,7 +1167,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="text-center py-8"
+                                        className="flex-1 flex flex-col items-center justify-center text-center py-8"
                                     >
                                         <CalendarIcon className="mx-auto text-[#101F1A]/30 mb-2" size={28} />
                                         <p className="text-xs font-bold text-[#101F1A]">No event selected</p>
