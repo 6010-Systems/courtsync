@@ -83,7 +83,7 @@ export default function Show({ facility }) {
 
     const defaultCover = 'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1600&q=80';
     const coverPhoto = facility.cover_photo_url || facility.cover_image_url || facility.verification?.facility_photos?.[0] || defaultCover;
-    
+
     // Gallery photos
     const rawPhotos = facility.verification?.facility_photos || [];
     const photos = (Array.isArray(rawPhotos) ? rawPhotos : [])
@@ -548,7 +548,7 @@ export default function Show({ facility }) {
                                                         <span className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
                                                             +{remainingCount}
                                                         </span>
-                                                       
+
                                                     </div>
                                                 )}
                                             </div>
