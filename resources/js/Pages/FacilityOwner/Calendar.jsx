@@ -730,8 +730,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                     <StatCard label="Booking Value" value={formatPeso(stats.revenue)} hint="Excludes cancellations" />
                 </div>
 
-                {/* ── Action Toolbar: Cockpit Controls ── */}
-                <div className="relative z-30 rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 sm:p-3.5 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                {/* ── Action Toolbar: Cockpit Controls (Elevated Stacking Context over Grid) ── */}
+                <div className="relative z-50 rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 sm:p-3.5 shadow-card backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                     
                     {/* Left: Month / Date Title & Navigation */}
                     <div className="flex items-center gap-2">
@@ -870,7 +870,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </div>
 
                 {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Always Anchored on the Left ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
+                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
                     
                     {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card) ── */}
                     <div className={`lg:col-span-4 xl:col-span-3 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
@@ -1196,7 +1196,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                     {/* Scrollable Hours Matrix with Live Time Line */}
                                     <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none flex flex-col">
                                         {/* Sticky Column Header - Inside scroll container for 1:1 column alignment */}
-                                        <div className="sticky top-0 z-40 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
+                                        <div className="sticky top-0 z-20 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
                                             <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
 
                                             {viewMode === 'Weekly View' ? (
@@ -1275,7 +1275,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             {liveTimeTop !== null && (
                                                 <div
                                                     style={{ top: `${liveTimeTop}px` }}
-                                                    className="absolute inset-x-0 z-40 pointer-events-none flex items-center"
+                                                    className="absolute inset-x-0 z-10 pointer-events-none flex items-center"
                                                 >
                                                     <div className="w-14 sm:w-16 text-right pr-1">
                                                         <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
@@ -1364,9 +1364,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                                 left: booking.styleLeft || '4px',
                                                                                 width: booking.styleWidth || 'calc(100% - 8px)',
                                                                             }}
-                                                                            className={`absolute z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                            className={`absolute z-10 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
                                                                                 isSelected
-                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-30`
+                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-15`
                                                                                     : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
                                                                             }`}
                                                                         >
@@ -1456,9 +1456,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                                 top: `${top}px`,
                                                                                 height: `${height}px`,
                                                                             }}
-                                                                            className={`absolute inset-x-1.5 z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                            className={`absolute inset-x-1.5 z-10 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
                                                                                 isSelected
-                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-30`
+                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-15`
                                                                                     : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
                                                                             }`}
                                                                         >
