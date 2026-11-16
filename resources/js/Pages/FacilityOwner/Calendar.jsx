@@ -1123,33 +1123,29 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         onClick={() => {
                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
                                                         }}
-                                                        className={`min-h-[96px] border-b border-r border-[#101F1A]/5 p-2 text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                                                        className={`min-h-[110px] sm:min-h-[120px] border-b border-r border-[#101F1A]/8 p-2.5 text-left transition-all cursor-pointer flex flex-col justify-between group ${
                                                             isSelectedDay
-                                                                ? 'bg-emerald-500/10 ring-2 ring-inset ring-emerald-500/30'
+                                                                ? 'bg-emerald-500/[0.08] ring-2 ring-inset ring-emerald-500/40'
                                                                 : 'hover:bg-[#101F1A]/[0.02]'
                                                         }`}
                                                     >
+                                                        {/* Cell Header: Day Number */}
                                                         <div className="flex items-center justify-between">
                                                             <span
-                                                                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
+                                                                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black transition-transform group-hover:scale-105 ${
                                                                     isTodayCell
-                                                                        ? 'bg-[#101F1A] text-[#D6FF3F]'
+                                                                        ? 'bg-[#101F1A] text-[#D6FF3F] shadow-2xs'
                                                                         : isSelectedDay
-                                                                        ? 'bg-emerald-600 text-white'
+                                                                        ? 'bg-emerald-600 text-white shadow-2xs'
                                                                         : 'text-[#101F1A]'
                                                                 }`}
                                                             >
                                                                 {day}
                                                             </span>
-                                                            {dayBookings.length > 0 && (
-                                                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
-                                                                    {dayBookings.length}
-                                                                </span>
-                                                            )}
                                                         </div>
 
                                                         {/* Day bookings pills */}
-                                                        <div className="my-1 space-y-1">
+                                                        <div className="my-1.5 space-y-1 w-full">
                                                             {dayBookings.slice(0, 2).map((booking) => {
                                                                 const theme = getBookingThemeByStatus(booking);
                                                                 return (
@@ -1160,7 +1156,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
                                                                             setActiveBooking(booking);
                                                                         }}
-                                                                        className="flex items-center gap-1 truncate text-[10px] font-medium text-[#101F1A]/75 hover:text-[#101F1A]"
+                                                                        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white/80 hover:bg-white border border-[#101F1A]/6 hover:border-[#101F1A]/15 shadow-2xs truncate text-[10px] font-bold text-[#101F1A] transition-all cursor-pointer"
                                                                     >
                                                                         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
                                                                         <span className="truncate">{booking.start_time?.slice(0, 5)} · {cleanCourtName(booking.court?.name || booking.court)}</span>
@@ -1168,14 +1164,28 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                 );
                                                             })}
                                                             {dayBookings.length > 2 && (
-                                                                <p className="text-[10px] font-bold text-[#101F1A]/50">+{dayBookings.length - 2} more</p>
+                                                                <p className="text-[10px] font-bold text-[#101F1A]/50 pl-1">
+                                                                    +{dayBookings.length - 2} more
+                                                                </p>
                                                             )}
                                                         </div>
 
+                                                        {/* Prominent Total Booking Amount & Count Footer */}
                                                         {dayBookings.length > 0 ? (
-                                                            <p className="text-[10px] font-bold text-[#101F1A]/50">{formatPeso(dayRevenue)}</p>
+                                                            <div className="mt-auto pt-1.5 border-t border-[#101F1A]/8 flex items-center justify-between gap-1 w-full">
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-black tracking-tight shadow-2xs truncate ${
+                                                                    dayRevenue > 0
+                                                                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
+                                                                        : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                }`}>
+                                                                    {formatPeso(dayRevenue)}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-[#101F1A]/60 shrink-0">
+                                                                    {dayBookings.length} {dayBookings.length === 1 ? 'booking' : 'bookings'}
+                                                                </span>
+                                                            </div>
                                                         ) : (
-                                                            <div />
+                                                            <div className="mt-auto" />
                                                         )}
                                                     </button>
                                                 );
