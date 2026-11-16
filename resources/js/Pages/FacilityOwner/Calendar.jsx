@@ -346,6 +346,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const [activeBooking, setActiveBooking] = useState(null);
     const [isSidebarExpandedMobile, setIsSidebarExpandedMobile] = useState(false);
 
+    // Entire Day Bookings modal state (for Monthly View box click)
+    const [isDayListModalOpen, setIsDayListModalOpen] = useState(false);
+    const [dayListSearch, setDayListSearch] = useState('');
+    const [dayListFilter, setDayListFilter] = useState('ALL');
+
     // Live time tracker
     const [currentTime, setCurrentTime] = useState(() => new Date());
     const gridScrollRef = useRef(null);
@@ -515,6 +520,32 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const selectedDayBookings = useMemo(() => {
         return bookingsByDate.get(selectedDateIso) || [];
     }, [bookingsByDate, selectedDateIso]);
+
+    // Entire Day Bookings list for modal & inspector
+    const modalDayBookings = selectedDayBookings;
+
+    const filteredModalBookings = useMemo(() => {
+        return modalDayBookings.filter(b => {
+            const bStatus = (b.status || '').toUpperCase();
+            if (dayListFilter === 'CONFIRMED' && bStatus !== 'CONFIRMED') return false;
+            if (dayListFilter === 'PENDING' && bStatus !== 'PENDING') return false;
+            if (dayListSearch.trim()) {
+                const q = dayListSearch.toLowerCase();
+                const playerName = (b.user?.name || b.guest_name || b.player || '').toLowerCase();
+                const courtName = (b.court?.name || b.court || '').toLowerCase();
+                const sport = (b.court_type || b.court?.type || '').toLowerCase();
+                const ref = (b.payment?.reference_number || '').toLowerCase();
+                return playerName.includes(q) || courtName.includes(q) || sport.includes(q) || ref.includes(q);
+            }
+            return true;
+        });
+    }, [modalDayBookings, dayListFilter, dayListSearch]);
+
+    const modalDayRevenue = useMemo(() => {
+        return modalDayBookings
+            .filter(b => String(b.status).toLowerCase() !== 'cancelled')
+            .reduce((sum, b) => sum + Number(b.total_price || 0), 0);
+    }, [modalDayBookings]);
 
     // Automatically synchronize active booking when selected date changes
     useEffect(() => {
@@ -966,6 +997,23 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         transition={{ duration: 0.16, ease: 'easeOut' }}
                                         className="space-y-3.5"
                                     >
+                                        {/* Day volume header link if multiple bookings exist on this date */}
+                                        {modalDayBookings.length > 1 && (
+                                            <div className="flex items-center justify-between pb-2 border-b border-[#101F1A]/8">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                    {modalDayBookings.length} bookings on this date
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsDayListModalOpen(true)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
+                                                >
+                                                    <span>View all ({modalDayBookings.length})</span>
+                                                    <ArrowUpRight size={12} />
+                                                </button>
+                                            </div>
+                                        )}
+
                                         {/* Header: Host / Match Name + Status Color Badge */}
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
@@ -1122,6 +1170,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         type="button"
                                                         onClick={() => {
                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                            if (dayBookings.length > 0) {
+                                                                setIsDayListModalOpen(true);
+                                                            }
                                                         }}
                                                         className={`min-h-[110px] sm:min-h-[120px] border-b border-r border-[#101F1A]/8 p-2.5 text-left transition-all cursor-pointer flex flex-col justify-between group ${
                                                             isSelectedDay
@@ -1160,6 +1211,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                             e.stopPropagation();
                                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
                                                                             setActiveBooking(booking);
+                                                                            setIsDayListModalOpen(true);
                                                                         }}
                                                                         className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white/80 hover:bg-white border border-[#101F1A]/6 hover:border-[#101F1A]/15 shadow-2xs truncate text-[10px] font-bold text-[#101F1A] transition-all cursor-pointer"
                                                                     >
@@ -1169,7 +1221,14 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                 );
                                                             })}
                                                             {dayBookings.length > 2 && (
-                                                                <p className="text-[10px] font-bold text-[#101F1A]/50 pl-1">
+                                                                <p
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                                        setIsDayListModalOpen(true);
+                                                                    }}
+                                                                    className="text-[10px] font-bold text-[#101F1A]/60 hover:text-[#101F1A] pl-1 cursor-pointer underline"
+                                                                >
                                                                     +{dayBookings.length - 2} more
                                                                 </p>
                                                             )}
@@ -1701,6 +1760,219 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                         </PrimaryButton>
                     </div>
                 </form>
+            </Modal>
+
+            {/* ── Entire Day Bookings List Modal (Monthly View Box Click) ── */}
+            <Modal
+                show={isDayListModalOpen}
+                onClose={() => {
+                    setIsDayListModalOpen(false);
+                    setDayListSearch('');
+                }}
+                maxWidth="2xl"
+            >
+                <div className="flex flex-col max-h-[85vh] bg-white">
+                    {/* Header */}
+                    <div className="p-4 sm:p-5 border-b border-[#101F1A]/10 bg-[#FAF9F5] flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#101F1A] text-[#D6FF3F] shadow-2xs shrink-0">
+                                <CalendarIcon size={18} strokeWidth={2.4} />
+                            </div>
+                            <div className="min-w-0">
+                                <h3 className="text-base sm:text-lg font-black text-[#101F1A] tracking-tight truncate">
+                                    {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                </h3>
+                                <p className="text-xs text-[#101F1A]/60 font-semibold mt-0.5">
+                                    {modalDayBookings.length} {modalDayBookings.length === 1 ? 'booking' : 'bookings'} total · <span className="text-emerald-800 font-bold">{formatPeso(modalDayRevenue)} revenue</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsDayListModalOpen(false);
+                                    setViewMode('Daily View');
+                                }}
+                                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#101F1A]/10 bg-white text-xs font-bold text-[#101F1A] shadow-2xs hover:bg-[#F5F2EA] transition-all cursor-pointer"
+                                title="Open in 24-hour Timetable view"
+                            >
+                                <Layers size={13} />
+                                <span>Timetable</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsDayListModalOpen(false)}
+                                className="p-1.5 rounded-lg text-[#101F1A]/40 hover:text-[#101F1A] hover:bg-[#101F1A]/5 transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Toolbar inside Modal: Search & Filter Tabs */}
+                    <div className="p-3 sm:px-5 border-b border-[#101F1A]/8 bg-white flex flex-wrap items-center justify-between gap-2.5">
+                        {/* Search */}
+                        <div className="relative flex-1 min-w-[180px]">
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#101F1A]/40" />
+                            <input
+                                type="text"
+                                value={dayListSearch}
+                                onChange={(e) => setDayListSearch(e.target.value)}
+                                placeholder="Search player, court, or ref..."
+                                className="w-full h-8 pl-8 pr-3 rounded-lg border border-[#101F1A]/10 bg-[#FAF9F5] text-xs font-medium placeholder-[#101F1A]/40 focus:border-[#101F1A] focus:bg-white focus:outline-none transition-all"
+                            />
+                            {dayListSearch && (
+                                <button
+                                    type="button"
+                                    onClick={() => setDayListSearch('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#101F1A]/40 hover:text-[#101F1A]"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Filter pills */}
+                        <div className="inline-flex items-center h-8 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 p-0.5 text-xs font-bold shadow-2xs">
+                            <button
+                                type="button"
+                                onClick={() => setDayListFilter('ALL')}
+                                className={`h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
+                                    dayListFilter === 'ALL'
+                                        ? 'bg-[#101F1A] text-[#D6FF3F] shadow-2xs'
+                                        : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                }`}
+                            >
+                                All ({modalDayBookings.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDayListFilter('CONFIRMED')}
+                                className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
+                                    dayListFilter === 'CONFIRMED'
+                                        ? 'bg-emerald-600 text-white shadow-2xs'
+                                        : 'text-emerald-800 hover:bg-emerald-500/10'
+                                }`}
+                            >
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Confirmed ({modalDayBookings.filter(b => (b.status || '').toUpperCase() === 'CONFIRMED').length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDayListFilter('PENDING')}
+                                className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
+                                    dayListFilter === 'PENDING'
+                                        ? 'bg-amber-500 text-white shadow-2xs'
+                                        : 'text-amber-800 hover:bg-amber-500/10'
+                                }`}
+                            >
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                                Pending ({modalDayBookings.filter(b => (b.status || '').toUpperCase() === 'PENDING').length})
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Scrollable Bookings List */}
+                    <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2.5 dark-scrollbar max-h-[55vh]">
+                        {filteredModalBookings.length > 0 ? (
+                            filteredModalBookings.map((booking) => {
+                                const theme = getBookingThemeByStatus(booking);
+                                return (
+                                    <div
+                                        key={booking.id}
+                                        className={`rounded-xl border p-3 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${theme.cardBg} ${theme.border} hover:shadow-sm`}
+                                    >
+                                        {/* Left details */}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`h-6 w-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs ${theme.avatarBg}`}>
+                                                    {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
+                                                </div>
+                                                <h4 className="font-bold text-sm text-[#101F1A] truncate">
+                                                    {booking.user?.name || booking.guest_name || booking.player || 'Player'}
+                                                </h4>
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border shrink-0 ${theme.badge}`}>
+                                                    {theme.label || booking.status}
+                                                </span>
+                                            </div>
+                                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#101F1A]/70 font-medium">
+                                                <span className="inline-flex items-center gap-1">
+                                                    <Clock size={12} className="text-[#101F1A]/50 shrink-0" />
+                                                    {formatTimeRange(booking.start_time, booking.end_time)}
+                                                </span>
+                                                <span>·</span>
+                                                <span className="truncate">{cleanCourtName(booking.court?.name || booking.court)}</span>
+                                                <span>·</span>
+                                                <span className="uppercase text-[11px] font-semibold text-[#101F1A]/60">
+                                                    {booking.payment?.payment_method || booking.payment_method || 'Cash'}
+                                                </span>
+                                                {booking.payment?.reference_number && (
+                                                    <span className="font-mono text-[10px] bg-white/70 px-1.5 py-0.2 rounded border border-[#101F1A]/10">
+                                                        #{booking.payment.reference_number.slice(-6)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Right Price & Actions */}
+                                        <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#101F1A]/6">
+                                            <span className="text-sm font-black text-[#101F1A]">
+                                                ₱{Number(booking.total_price || 0).toLocaleString()}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveBooking(booking);
+                                                        setIsDayListModalOpen(false);
+                                                    }}
+                                                    className="px-2.5 py-1 rounded-lg bg-[#101F1A] text-[#D6FF3F] text-xs font-bold hover:bg-[#162923] transition-colors cursor-pointer"
+                                                >
+                                                    Inspect
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="py-12 text-center">
+                                <CalendarIcon className="mx-auto text-[#101F1A]/30 mb-2" size={32} />
+                                <p className="text-sm font-bold text-[#101F1A]">No bookings match your filter</p>
+                                <p className="text-xs text-[#101F1A]/50 mt-0.5">Try clearing the search or switching filters</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="p-3 sm:px-5 border-t border-[#101F1A]/10 bg-[#FAF9F5] flex items-center justify-between">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsDayListModalOpen(false);
+                                clearErrors();
+                                setData(prev => ({
+                                    ...prev,
+                                    date: selectedDateIso,
+                                }));
+                                setIsAddModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A] hover:underline cursor-pointer"
+                        >
+                            <Plus size={14} />
+                            <span>Add Event for this Day</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsDayListModalOpen(false)}
+                            className="px-3.5 py-1.5 rounded-lg border border-[#101F1A]/15 bg-white text-xs font-bold text-[#101F1A] hover:bg-[#F5F2EA] transition-colors cursor-pointer"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </AuthenticatedLayout>
     );
