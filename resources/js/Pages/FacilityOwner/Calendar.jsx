@@ -520,10 +520,10 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     useEffect(() => {
         if (selectedDayBookings.length > 0) {
             setActiveBooking(selectedDayBookings[0]);
-        } else if (filteredBookings.length > 0 && !activeBooking) {
-            setActiveBooking(filteredBookings[0]);
+        } else {
+            setActiveBooking(null);
         }
-    }, [selectedDateIso, selectedDayBookings, filteredBookings]);
+    }, [selectedDateIso, selectedDayBookings]);
 
     // Navigation helpers
     const handlePrev = () => {
@@ -966,32 +966,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         transition={{ duration: 0.16, ease: 'easeOut' }}
                                         className="space-y-3.5"
                                     >
-                                        {/* Multiple Bookings Day Selector Strip */}
-                                        {selectedDayBookings.length > 1 && (
-                                            <div className="pb-1 border-b border-[#101F1A]/8">
-                                                <div className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1.5 flex items-center justify-between">
-                                                    <span>{selectedDayBookings.length} bookings on this day</span>
-                                                    <span className="text-[9px] font-normal text-[#101F1A]/40">Click to switch</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-                                                    {selectedDayBookings.map((b) => (
-                                                        <button
-                                                            key={b.id}
-                                                            type="button"
-                                                            onClick={() => setActiveBooking(b)}
-                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer shrink-0 ${
-                                                                activeBooking?.id === b.id
-                                                                    ? 'bg-[#101F1A] text-[#D6FF3F] border-[#101F1A] shadow-2xs'
-                                                                    : 'bg-white text-[#101F1A]/70 border-[#101F1A]/10 hover:bg-[#F5F2EA]'
-                                                            }`}
-                                                        >
-                                                            {b.start_time?.slice(0, 5)} · {cleanCourtName(b.court?.name || b.court)}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
                                         {/* Header: Host / Match Name + Status Color Badge */}
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
