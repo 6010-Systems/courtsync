@@ -729,8 +729,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     }, [facilities]);
 
     const viewOptions = [
-        { value: 'Weekly View', label: 'Weekly View', hint: '7-day court schedule grid' },
         { value: 'Daily View', label: 'Daily View', hint: 'All courts side-by-side' },
+        { value: 'Weekly View', label: 'Weekly View', hint: '7-day court schedule grid' },
         { value: 'Month Grid', label: 'Month Grid', hint: 'Full month overview' },
     ];
 

@@ -608,8 +608,8 @@ export default function CalendarPage({ facilities = [], bookings = [] }) {
     }, [facilities]);
 
     const viewOptions = [
-        { value: 'Weekly View', label: 'Weekly View', hint: '7-day court schedule' },
         { value: 'Daily View', label: 'Daily View', hint: 'All courts side-by-side' },
+        { value: 'Weekly View', label: 'Weekly View', hint: '7-day court schedule' },
     ];
 
     const activeTheme = activeBooking ? getBookingThemeByStatus(activeBooking) : STATUS_THEMES.CONFIRMED;
