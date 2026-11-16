@@ -1155,7 +1155,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                 >
                                     <div className="flex-1 overflow-y-auto dark-scrollbar flex flex-col">
                                         {/* Month Grid Header (Sun - Sat) - Sticky inside scroll container */}
-                                        <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0 shadow-2xs">
+                                        <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0 shadow-2xs min-w-[600px] md:min-w-0">
                                             {WEEKDAYS.map((day) => (
                                                 <div key={day} className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
                                                     {day}
@@ -1164,7 +1164,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         </div>
 
                                         {/* Month Grid 7-Column Cells */}
-                                        <div className="flex-1 grid grid-cols-7">
+                                        <div className="flex-1 grid grid-cols-7 min-w-[600px] md:min-w-0">
                                             {monthGridCells.map((day, index) => {
                                                 if (day === null) {
                                                     return (
@@ -1282,7 +1282,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
 
                                             {viewMode === 'Weekly View' ? (
-                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10">
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 min-w-[600px] md:min-w-0">
                                                     {weekDays.map((dayDate, i) => {
                                                         const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
                                                         const isToday = dayDate.toDateString() === new Date().toDateString();
@@ -1355,7 +1355,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
 
                                             {/* Timetable Grid Columns */}
                                             {viewMode === 'Weekly View' ? (
-                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 relative">
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 relative min-w-[600px] md:min-w-0">
                                                     <div className="absolute inset-0 pointer-events-none">
                                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
                                                             <div
