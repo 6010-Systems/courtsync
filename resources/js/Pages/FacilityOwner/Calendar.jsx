@@ -869,11 +869,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                     </div>
                 </div>
 
-                {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Always Anchored on the Left ── */}
-                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
+                {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Compact, Right Grid Widened ── */}
+                <div className="relative z-10 flex flex-col lg:flex-row gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
                     
-                    {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card) ── */}
-                    <div className={`lg:col-span-4 xl:col-span-3 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
+                    {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card: compact 280-290px) ── */}
+                    <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
                         isSidebarExpandedMobile ? 'block' : 'hidden lg:flex'
                     }`}>
                         {/* 1. Mini Month Calendar (Always on the Left) */}
@@ -1073,8 +1073,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                         </div>
                     </div>
 
-                    {/* ── RIGHT MAIN PANEL (Animated View Transition between Month Grid & Timetable) ── */}
-                    <div className="lg:col-span-8 xl:col-span-9 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[540px] sm:h-[620px] lg:h-full">
+                    {/* ── RIGHT MAIN PANEL (Flex-1 Expanded for Maximum Grid Width) ── */}
+                    <div className="flex-1 min-w-0 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[540px] sm:h-[620px] lg:h-full">
                         <AnimatePresence mode="wait" initial={false}>
                             {viewMode === 'Month Grid' ? (
                                 /* ── VIEW 1: MONTH GRID SURFACE ── */
@@ -1129,8 +1129,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                 : 'hover:bg-[#101F1A]/[0.02]'
                                                         }`}
                                                     >
-                                                        {/* Cell Header: Day Number */}
-                                                        <div className="flex items-center justify-between">
+                                                        {/* Cell Header: Day Number + Booking Volume Count */}
+                                                        <div className="flex items-center justify-between w-full">
                                                             <span
                                                                 className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black transition-transform group-hover:scale-105 ${
                                                                     isTodayCell
@@ -1142,6 +1142,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                             >
                                                                 {day}
                                                             </span>
+                                                            {dayBookings.length > 0 && (
+                                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#101F1A]/5 text-[#101F1A]/60 shrink-0">
+                                                                    {dayBookings.length} {dayBookings.length === 1 ? 'booking' : 'bookings'}
+                                                                </span>
+                                                            )}
                                                         </div>
 
                                                         {/* Day bookings pills */}
@@ -1170,18 +1175,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                             )}
                                                         </div>
 
-                                                        {/* Prominent Total Booking Amount & Count Footer */}
-                                                        {dayBookings.length > 0 ? (
-                                                            <div className="mt-auto pt-1.5 border-t border-[#101F1A]/8 flex items-center justify-between gap-1 w-full">
-                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-black tracking-tight shadow-2xs truncate ${
-                                                                    dayRevenue > 0
-                                                                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-300'
-                                                                        : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                                                }`}>
+                                                        {/* Prominent Total Booking Amount Footer (Uncontested space) */}
+                                                        {dayRevenue > 0 ? (
+                                                            <div className="mt-auto pt-1.5 border-t border-[#101F1A]/8 flex items-center justify-between w-full">
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-black tracking-tight shadow-2xs bg-emerald-50 text-emerald-900 border border-emerald-300">
                                                                     {formatPeso(dayRevenue)}
-                                                                </span>
-                                                                <span className="text-[10px] font-bold text-[#101F1A]/60 shrink-0">
-                                                                    {dayBookings.length} {dayBookings.length === 1 ? 'booking' : 'bookings'}
                                                                 </span>
                                                             </div>
                                                         ) : (
