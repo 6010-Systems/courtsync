@@ -219,7 +219,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                                 <option key={court.id} value={court.id} className="text-gray-900">
                                     {court.name}{court.type ? ` (${court.type})` : ''}
                                     {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate 
-                                        ? ` - ☀️ ₱${Number(court.day_rate).toFixed(0)} / 🌙 ₱${Number(court.night_rate).toFixed(0)}/hr` 
+                                        ? ` - Day: ₱${Number(court.day_rate).toFixed(0)} / Night: ₱${Number(court.night_rate).toFixed(0)}/hr` 
                                         : (court.hourly_rate ? ` - ₱${Number(court.hourly_rate).toFixed(2)}/hr` : '')} · {COURT_STATUS_LABELS[court.status] || court.status}
                                 </option>
                             ))}
@@ -320,7 +320,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                             <span className="text-gray-300 font-medium">{selectedCourt?.name} ({durationHours} hr{durationHours > 1 ? 's' : ''})</span>
                             <span className="font-bold text-white">
                                 {pricingSummary.isSplit
-                                    ? `☀️ ₱${pricingSummary.dayRate} / 🌙 ₱${pricingSummary.nightRate}/hr`
+                                    ? `Day: ₱${pricingSummary.dayRate} / Night: ₱${pricingSummary.nightRate}/hr`
                                     : `₱${price.toFixed(2)}/hr`}
                             </span>
                         </div>

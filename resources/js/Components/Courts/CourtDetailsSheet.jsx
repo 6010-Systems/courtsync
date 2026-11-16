@@ -10,6 +10,7 @@ import {
     Edit3,
     Layers,
     Sun,
+    Moon,
     Zap,
     Users,
     ChevronDown,
@@ -329,11 +330,15 @@ export default function CourtDetailsSheet({
         >
             <div className="p-5 sm:p-6 space-y-5">
                 {/* 1. Media Hero Banner with Gradient Fade */}
-                <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 h-36 sm:h-40 overflow-hidden bg-[#101F1A]">
+                <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 h-40 sm:h-44 overflow-hidden bg-white">
                     <img
                         src={courtImage || DEFAULT_IMAGE}
                         alt={court.name}
                         className="w-full h-full object-cover object-center transition-transform duration-700 ease-out hover:scale-105"
+                        style={{
+                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
+                        }}
                         onError={(e) => {
                             e.currentTarget.src = DEFAULT_IMAGE;
                         }}
@@ -343,7 +348,7 @@ export default function CourtDetailsSheet({
                     <div
                         className="absolute inset-0 pointer-events-none"
                         style={{
-                            background: 'linear-gradient(to bottom, rgba(16,31,26,0.25) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.65) 80%, #ffffff 100%)',
+                            background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
                         }}
                     />
 
@@ -375,11 +380,15 @@ export default function CourtDetailsSheet({
                             {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
                                 <div className="space-y-0.5">
                                     <div className="font-bold text-xs sm:text-sm text-[#101F1A] tracking-tight flex items-center justify-between">
-                                        <span className="text-[#101F1A]/60 font-medium text-[11px]">☀️ Day:</span>
+                                        <span className="inline-flex items-center gap-1 text-[#101F1A]/60 font-medium text-[11px]">
+                                            <Sun size={11} className="text-amber-600" /> Day:
+                                        </span>
                                         <span>₱{Number(court.day_rate).toFixed(0)}</span>
                                     </div>
                                     <div className="font-bold text-xs sm:text-sm text-[#101F1A] tracking-tight flex items-center justify-between">
-                                        <span className="text-[#101F1A]/60 font-medium text-[11px]">🌙 Night:</span>
+                                        <span className="inline-flex items-center gap-1 text-[#101F1A]/60 font-medium text-[11px]">
+                                            <Moon size={11} className="text-indigo-600" /> Night:
+                                        </span>
                                         <span>₱{Number(court.night_rate).toFixed(0)}</span>
                                     </div>
                                 </div>
