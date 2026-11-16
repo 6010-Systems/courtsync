@@ -1270,7 +1270,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                     {/* Scrollable Hours Matrix with Live Time Line */}
                                     <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none flex flex-col">
                                         {/* Sticky Column Header - Inside scroll container for 1:1 column alignment */}
-                                        <div className="sticky top-0 z-20 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
+                                        <div className="sticky top-0 z-30 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
                                             <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
 
                                             {viewMode === 'Weekly View' ? (
@@ -1344,23 +1344,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                     );
                                                 })}
                                             </div>
-
-                                            {/* Live Current Time Line Indicator */}
-                                            {liveTimeTop !== null && (
-                                                <div
-                                                    style={{ top: `${liveTimeTop}px` }}
-                                                    className="absolute inset-x-0 z-10 pointer-events-none flex items-center"
-                                                >
-                                                    <div className="w-14 sm:w-16 text-right pr-1">
-                                                        <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
-                                                            {liveTimeString}
-                                                        </span>
-                                                    </div>
-                                                    <div className="h-[2px] flex-1 bg-rose-500 shadow-xs relative">
-                                                        <div className="absolute -left-1 -top-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                                                    </div>
-                                                </div>
-                                            )}
 
                                             {/* Timetable Grid Columns */}
                                             {viewMode === 'Weekly View' ? (
@@ -1559,6 +1542,23 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                             </div>
                                                         );
                                                     })}
+                                                </div>
+                                            )}
+
+                                            {/* Live Current Time Line Indicator (Positioned above timetable cards) */}
+                                            {liveTimeTop !== null && (
+                                                <div
+                                                    style={{ top: `${liveTimeTop}px` }}
+                                                    className="absolute inset-x-0 z-20 pointer-events-none flex items-center"
+                                                >
+                                                    <div className="w-14 sm:w-16 text-right pr-1">
+                                                        <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
+                                                            {liveTimeString}
+                                                        </span>
+                                                    </div>
+                                                    <div className="h-[2px] flex-1 bg-rose-500 shadow-xs relative">
+                                                        <div className="absolute -left-1 -top-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
