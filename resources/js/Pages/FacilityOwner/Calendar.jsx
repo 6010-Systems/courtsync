@@ -1177,9 +1177,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         type="button"
                                                         onClick={() => {
                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
-                                                            if (dayBookings.length > 0) {
-                                                                setIsDayListModalOpen(true);
-                                                            }
                                                         }}
                                                         className={`min-h-[110px] sm:min-h-[120px] border-b border-r border-[#101F1A]/8 p-2.5 text-left transition-all cursor-pointer flex flex-col justify-between group ${
                                                             isSelectedDay
@@ -1218,7 +1215,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                             e.stopPropagation();
                                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
                                                                             setActiveBooking(booking);
-                                                                            setIsDayListModalOpen(true);
                                                                         }}
                                                                         className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white/80 hover:bg-white border border-[#101F1A]/6 hover:border-[#101F1A]/15 shadow-2xs truncate text-[10px] font-bold text-[#101F1A] transition-all cursor-pointer"
                                                                     >
