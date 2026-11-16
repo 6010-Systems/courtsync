@@ -1091,54 +1091,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                     </span>
                                                 )}
                                             </div>
-
-                                            {/* Other Bookings Today (When multiple exist on this day) */}
-                                            {modalDayBookings.length > 1 && (
-                                                <div className="pt-1">
-                                                    <div className="flex items-center justify-between mb-1.5">
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                                            Other Bookings Today ({modalDayBookings.length})
-                                                        </span>
-                                                        {viewMode === 'Month Grid' && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setIsDayListModalOpen(true)}
-                                                                className="text-[10px] font-bold text-emerald-800 hover:text-emerald-950 underline cursor-pointer"
-                                                            >
-                                                                View all ↗
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto dark-scrollbar pr-0.5">
-                                                        {modalDayBookings.map((b) => {
-                                                            const isCurrent = b.id === activeBooking.id;
-                                                            const bTheme = getBookingThemeByStatus(b);
-                                                            return (
-                                                                <button
-                                                                    key={b.id}
-                                                                    type="button"
-                                                                    onClick={() => setActiveBooking(b)}
-                                                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs transition-all cursor-pointer border ${
-                                                                        isCurrent
-                                                                            ? 'bg-[#101F1A] text-[#D6FF3F] border-[#101F1A] shadow-2xs font-bold'
-                                                                            : 'bg-[#FAF9F5] hover:bg-[#F5F2EA] text-[#101F1A] border-[#101F1A]/6'
-                                                                    }`}
-                                                                >
-                                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isCurrent ? 'bg-[#D6FF3F]' : bTheme.dot}`} />
-                                                                        <span className="truncate text-[11px]">
-                                                                            {b.start_time?.slice(0, 5)} · {cleanCourtName(b.court?.name || b.court)}
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className={`text-[10px] font-semibold shrink-0 ml-1.5 ${isCurrent ? 'text-white/80' : 'text-[#101F1A]/50'}`}>
-                                                                        {b.user?.name ? b.user.name.split(' ')[0] : 'Match'}
-                                                                    </span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* Purposeful Actions Pinned to Bottom */}
