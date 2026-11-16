@@ -1,5 +1,6 @@
 import Sidebar, { MobileMenu } from '@/Components/Sidebar';
 import Dropdown from '@/Components/Dropdown';
+import InstallPwaPrompt from '@/Components/InstallPwaPrompt';
 import { usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -130,6 +131,8 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
                     </div>
                 </main>
             </div>
+
+            <InstallPwaPrompt />
         </div>
     );
 }

@@ -37,6 +37,18 @@ class PlayerBookingsTest extends TestCase
         ], $attributes));
     }
 
+    public function test_player_booking_exposes_the_booking_fee_breakdown(): void
+    {
+        $player = User::factory()->player()->create();
+        $this->booking($player, ['subtotal' => 500, 'booking_fee' => 25, 'total_price' => 525]);
+
+        $this->actingAs($player)->get(route('player.bookings'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Players/Bookings')
+            ->where('bookings.data.0.subtotal', fn ($value) => (float) $value === 500.0)
+            ->where('bookings.data.0.booking_fee', fn ($value) => (float) $value === 25.0)
+            ->where('bookings.data.0.total_price', fn ($value) => (float) $value === 525.0));
+    }
+
     public function test_player_dashboard_shows_only_their_own_reservations_and_separate_payment_status(): void
     {
         $player = User::factory()->player()->create();

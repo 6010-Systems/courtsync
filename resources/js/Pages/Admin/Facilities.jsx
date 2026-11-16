@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import TextInput from '@/Components/TextInput';
@@ -26,7 +26,8 @@ import {
     XCircle,
     HelpCircle,
     Sparkles,
-    ShieldCheck
+    ShieldCheck,
+    BarChart2
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -234,14 +235,23 @@ export default function Facilities({ facilities = [], owners = [] }) {
                     title="Facilities Management"
                     subtitle="Cross-platform oversight, facility details, ownership, and verification states"
                     actions={
-                        <button
-                            type="button"
-                            onClick={openAddModal}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3.5 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-colors hover:bg-[#162923] cursor-pointer"
-                        >
-                            <Plus size={14} strokeWidth={2.4} />
-                            <span>Add Facility</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <Link
+                                href={route('admin.reports.billing')}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#101F1A]/15 bg-white px-3.5 text-xs font-bold text-[#101F1A] transition-colors hover:bg-[#F5F2EA] cursor-pointer"
+                            >
+                                <BarChart2 size={14} strokeWidth={2.4} />
+                                <span>Billing Report</span>
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={openAddModal}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3.5 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-colors hover:bg-[#162923] cursor-pointer"
+                            >
+                                <Plus size={14} strokeWidth={2.4} />
+                                <span>Add Facility</span>
+                            </button>
+                        </div>
                     }
                     showSearch={false}
                     showNotifications={false}

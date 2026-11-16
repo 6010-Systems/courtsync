@@ -52,7 +52,7 @@ const navSections = [
         title: 'Management',
         items: [
             { name: 'Bookings',     href: 'facility.bookings',         icon: CalendarCheck, badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
-            { name: 'Calendar',     href: 'facility.calendar',         icon: Calendar,      badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
+            { name: 'Calendar',     href: 'facility.calendar',          icon: Calendar,      badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
             { name: 'Facilities',   href: 'facilities.index',          icon: Building2,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Facilities',   href: 'admin.facilities',          icon: Building2,     badge: null, roles: ['ADMIN'] },
             { name: 'Courts',       href: 'facility.courts',           icon: ClipboardList, badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
@@ -66,7 +66,7 @@ const navSections = [
             { name: 'Staff',        href: 'facility.staff',            icon: UserCheck,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Owners',       href: 'admin.owners',              icon: UserCheck,     badge: null, roles: ['ADMIN'] },
             { name: 'Staff',        href: 'admin.staff',               icon: UserCheck,     badge: null, roles: ['ADMIN'] },
-            { name: 'Customers',    href: '#',                         icon: Users,         badge: 'Soon', roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
+            { name: 'Customers',    href: 'facility.customers',        icon: Users,         badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF'] },
             { name: 'Payments',     href: 'facility.payments',         icon: CreditCard,    badge: null, roles: ['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] },
             { name: 'Payment Settings', href: 'facility.payment-settings', icon: Wallet, badge: null, roles: ['FACILITY_OWNER'] },
         ],
@@ -74,7 +74,8 @@ const navSections = [
     {
         title: 'System',
         items: [
-            { name: 'Reports',       href: '#',                        icon: BarChart2,     badge: 'Soon', roles: ['FACILITY_OWNER', 'ADMIN'] },
+            { name: 'Billing Report', href: 'admin.reports.billing',      icon: BarChart2,    badge: null, roles: ['ADMIN'] },
+            { name: 'Reports',       href: 'facility.reports',         icon: BarChart2,     badge: null, roles: ['FACILITY_OWNER'] },
             { name: 'Verifications', href: 'admin.verifications',      icon: ShieldCheck,   badge: null, roles: ['ADMIN'] },
         ],
     },

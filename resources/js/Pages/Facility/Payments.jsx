@@ -3,11 +3,25 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
 import { Head, router } from '@inertiajs/react';
 import { Check, X, Eye, FileText, AlertCircle } from 'lucide-react';
+import { formatPeso } from '@/Components/MetricCard';
+import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 
 export default function Payments({ auth, payments }) {
     const [processingId, setProcessingId] = useState(null);
-    const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedBooking, setSelectedBooking] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', bookingId: null, title: '', message: '', btnText: '', btnColor: '' });
+
+    const openBookingDetails = (payment) => {
+        if (!payment?.booking) {
+            return;
+        }
+
+        setSelectedBooking({
+            ...payment.booking,
+            payment,
+            user: payment.user ?? payment.booking.user ?? null,
+        });
+    };
 
     const handleVerify = (bookingId) => {
         setConfirmModal({
@@ -102,9 +116,20 @@ export default function Payments({ auth, payments }) {
                                                 
                                                 const startTime = formatTime(payment.booking?.start_time);
                                                 const endTime = formatTime(payment.booking?.end_time);
+
+                                                const bookingFee = Number(payment.booking?.booking_fee ?? 0);
+                                                const bookingTotal = Number(payment.booking?.total_price ?? payment.amount);
+                                                const courtRate = payment.booking?.subtotal != null
+                                                    ? Number(payment.booking.subtotal)
+                                                    : Math.max(0, bookingTotal - bookingFee);
                                                 
                                                 return (
-                                                <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                                <tr
+                                                    key={payment.id}
+                                                    onClick={() => openBookingDetails(payment)}
+                                                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    title="Click to view booking details"
+                                                >
                                                     <td className="px-6 py-4 font-medium text-blue-600">
                                                         {payment.booking?.guest_name || payment.user?.name || 'Guest'}
                                                     </td>
@@ -121,14 +146,21 @@ export default function Payments({ auth, payments }) {
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold text-[#10221C]">₱{Number(payment.amount).toFixed(2)}</span>
+                                                            <span className="font-bold text-[#10221C]">{formatPeso(payment.amount)}</span>
+                                                            <span className="text-[10px] text-gray-500">
+                                                                Court {formatPeso(courtRate)}
+                                                                {bookingFee > 0 ? ` + Fee ${formatPeso(bookingFee)}` : ' Â· no booking fee'}
+                                                            </span>
                                                             <span className="text-xs text-gray-400 uppercase tracking-wider">{payment.payment_method}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         {payment.proof_path ? (
                                                             <button 
-                                                                onClick={() => setSelectedImage(payment.proof_path.startsWith('http') ? payment.proof_path : `/storage/${payment.proof_path}`)}
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    openBookingDetails(payment);
+                                                                }}
                                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors"
                                                             >
                                                                 <Eye className="w-3.5 h-3.5" /> View Receipt
@@ -146,7 +178,7 @@ export default function Payments({ auth, payments }) {
                                                         {payment.status === 'pending' && (
                                                             <div className="flex items-center justify-end gap-2">
                                                                 <button 
-                                                                    onClick={() => handleVerify(payment.booking_id)}
+                                                                    onClick={(event) => { event.stopPropagation(); handleVerify(payment.booking_id); }}
                                                                     disabled={processingId === payment.booking_id}
                                                                     className="inline-flex items-center gap-1 bg-[#10221C] text-white hover:bg-[#1a362d] px-3 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50"
                                                                 >
@@ -154,7 +186,7 @@ export default function Payments({ auth, payments }) {
                                                                     Verify
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => handleReject(payment.booking_id)}
+                                                                    onClick={(event) => { event.stopPropagation(); handleReject(payment.booking_id); }}
                                                                     disabled={processingId === payment.booking_id}
                                                                     className="inline-flex items-center gap-1 bg-white text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50"
                                                                 >
@@ -185,24 +217,12 @@ export default function Payments({ auth, payments }) {
                         </div>
             </div>
 
-            {/* Image Preview Modal */}
-            {selectedImage && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedImage(null)}>
-                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
-                        <button 
-                            onClick={() => setSelectedImage(null)}
-                            className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors bg-white/10 hover:bg-white/20 p-2 rounded-full"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                        <img 
-                            src={selectedImage} 
-                            alt="Payment Receipt" 
-                            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-                        />
-                    </div>
-                </div>
-            )}
+            <BookingDetailDrawer
+                isOpen={!!selectedBooking}
+                booking={selectedBooking}
+                mode="view"
+                onClose={() => setSelectedBooking(null)}
+            />
 
             {/* Beautiful Confirmation Modal */}
             {confirmModal.isOpen && (

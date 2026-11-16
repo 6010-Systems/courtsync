@@ -25,7 +25,7 @@ export default function Book({ facility }) {
         dates,
         goNext, goPrev,
         handleBooking,
-        price, durationHours, totalPrice, pricingSummary,
+        price, durationHours, subtotal, bookingFee, totalPrice, pricingSummary,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile
@@ -78,6 +78,8 @@ export default function Book({ facility }) {
                 endTime={endTime}
                 formatTimeString={formatTimeString}
                 durationHours={durationHours}
+                subtotal={subtotal}
+                bookingFee={bookingFee}
                 totalPrice={totalPrice}
             />
         },
@@ -87,6 +89,8 @@ export default function Book({ facility }) {
             component: <Step4Payment 
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
+                subtotal={subtotal}
+                bookingFee={bookingFee}
                 totalPrice={totalPrice}
                 proofFile={proofFile}
                 setProofFile={setProofFile}
