@@ -12,6 +12,8 @@ export default function Step3Confirm({
     endTime, 
     formatTimeString, 
     durationHours, 
+    subtotal,
+    bookingFee,
     totalPrice 
 }) {
     return (
@@ -65,6 +67,19 @@ export default function Step3Confirm({
                     </div>
                 )}
             </div>
+
+            {bookingFee > 0 && (
+                <div className="mt-6 space-y-1.5 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                        <span>Court rate</span>
+                        <span className="font-bold text-[#10221C]">{formatPeso(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                        <span>Booking fee</span>
+                        <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
+                    </div>
+                </div>
+            )}
 
             <div className="mt-6 pt-5 border-t-2 border-dashed border-gray-200 flex justify-between items-end">
                 <span className="text-sm font-medium text-gray-500">Total Amount</span>

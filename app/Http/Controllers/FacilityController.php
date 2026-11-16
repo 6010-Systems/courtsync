@@ -7,6 +7,7 @@ use App\Models\FacilityVerification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class FacilityController extends Controller
@@ -386,13 +387,22 @@ class FacilityController extends Controller
             'maya_number' => 'nullable|string|max:255',
             'maya_qr' => 'nullable|image|max:5120',
             'clear_maya_qr' => 'sometimes|boolean',
+            'booking_fee_type' => ['sometimes', 'required', Rule::in(Facility::BOOKING_FEE_TYPES)],
+            'booking_fee_value' => [
+                'sometimes',
+                'numeric',
+                'min:0',
+                Rule::when($request->input('booking_fee_type') === 'PERCENT', 'max:100', 'max:100000'),
+            ],
         ]);
 
         $updateData = [
-            'gcash_name' => $validated['gcash_name'],
-            'gcash_number' => $validated['gcash_number'],
-            'maya_name' => $validated['maya_name'],
-            'maya_number' => $validated['maya_number'],
+            'gcash_name' => $validated['gcash_name'] ?? null,
+            'gcash_number' => $validated['gcash_number'] ?? null,
+            'maya_name' => $validated['maya_name'] ?? null,
+            'maya_number' => $validated['maya_number'] ?? null,
+            'booking_fee_type' => $validated['booking_fee_type'] ?? $facility->booking_fee_type ?? 'FIXED',
+            'booking_fee_value' => $validated['booking_fee_value'] ?? $facility->booking_fee_value ?? 0,
         ];
 
         if ($request->hasFile('gcash_qr')) {

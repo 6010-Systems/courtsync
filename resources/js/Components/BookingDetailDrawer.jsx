@@ -2,6 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, MapPin, User, Banknote, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import PrimaryButton from '@/Components/PrimaryButton';
+import { formatPeso } from '@/Components/MetricCard';
+import { receiptUrl } from '@/Utils/receiptUrl';
 
 export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = 'view' }) {
     if (!booking) return null;
@@ -19,6 +21,12 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
     };
 
     const isSuccess = mode === 'success';
+
+    const bookingFee = Number(booking.booking_fee ?? 0);
+    const totalPrice = Number(booking.total_price ?? 0);
+    const courtRate = booking.subtotal != null
+        ? Number(booking.subtotal)
+        : Math.max(0, totalPrice - bookingFee);
 
     return (
         <AnimatePresence>
@@ -68,7 +76,7 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
                             </div>
 
                             {/* Bottom Section (Details) */}
-                            <div className="p-4 bg-[#F8F9FA]">
+                            <div className="max-h-[72vh] overflow-y-auto bg-[#F8F9FA] p-4">
                                 <div className="space-y-2 mb-4">
                                     
                                     {/* Main Info Card */}
@@ -127,10 +135,76 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
                                                 Total Price
                                             </span>
                                             <span className="text-lg font-black text-[#10221C] leading-tight truncate relative z-10">
-                                                ₱{Number(booking.total_price).toLocaleString()}
+                                                {formatPeso(totalPrice)}
                                             </span>
                                         </div>
                                     </div>
+
+                                    {!isSuccess && (
+                                        <div className="rounded-xl border border-[#10221C]/10 bg-[#FAFAF8] p-3 text-xs">
+                                            <div className="mb-1.5 flex items-center justify-between">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
+                                                    Payment breakdown
+                                                </span>
+                                                {booking.payment?.status && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#10221C]/60">
+                                                        {booking.payment.status}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-[#10221C]/70">
+                                                <span>Court rate</span>
+                                                <span className="font-bold text-[#10221C]">{formatPeso(courtRate)}</span>
+                                            </div>
+
+                                            <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
+                                                <span>Booking fee</span>
+                                                <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
+                                            </div>
+
+                                            <div className="mt-1.5 flex items-center justify-between border-t border-dashed border-[#10221C]/15 pt-1.5">
+                                                <span className="font-black uppercase tracking-wide text-[#10221C]/60">Total</span>
+                                                <span className="font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {!isSuccess && booking.payment?.proof_path && (
+                                        <div className="overflow-hidden rounded-xl border border-[#10221C]/10 bg-white">
+                                            <div className="flex items-center justify-between border-b border-[#10221C]/10 px-3 py-1.5">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
+                                                    Payment receipt
+                                                </span>
+                                                <a
+                                                    href={receiptUrl(booking.payment.proof_path)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[10px] font-bold text-blue-600 underline"
+                                                >
+                                                    Open in new tab
+                                                </a>
+                                            </div>
+                                            <a
+                                                href={receiptUrl(booking.payment.proof_path)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="block bg-gray-50"
+                                            >
+                                                <img
+                                                    src={receiptUrl(booking.payment.proof_path)}
+                                                    alt="Payment receipt"
+                                                    className="max-h-60 w-full object-contain"
+                                                />
+                                            </a>
+                                        </div>
+                                    )}
+
+                                    {!isSuccess && booking.payment && !booking.payment.proof_path && (
+                                        <p className="rounded-xl border border-dashed border-[#10221C]/15 bg-white/60 px-3 py-2 text-center text-[11px] text-[#10221C]/50">
+                                            No payment receipt uploaded for this booking.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Footer / Actions */}

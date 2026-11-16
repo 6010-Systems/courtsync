@@ -31,8 +31,20 @@ class Booking extends Model
     }
 
     protected $fillable = [
-        'facility_id', 'user_id', 'guest_name', 'court_id', 'date', 'start_time', 'end_time', 'total_price', 'status',
+        'facility_id', 'user_id', 'guest_name', 'court_id', 'date', 'start_time', 'end_time', 'subtotal', 'booking_fee', 'total_price', 'status',
     ];
+
+    /**
+     * @var array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'subtotal' => 'decimal:2',
+            'booking_fee' => 'decimal:2',
+            'total_price' => 'decimal:2',
+        ];
+    }
 
     public function facility()
     {

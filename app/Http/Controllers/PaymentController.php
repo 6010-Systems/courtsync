@@ -24,7 +24,7 @@ class PaymentController extends Controller
             $facilityIds = null;
         }
 
-        $query = Payment::with(['booking.court', 'booking.facility', 'user'])->latest();
+        $query = Payment::with(['booking.court', 'booking.facility', 'booking.user:id,name,email', 'user'])->latest();
 
         if ($facilityIds !== null) {
             $query->whereHas('booking', function ($query) use ($facilityIds) {
