@@ -182,7 +182,7 @@ function CustomSelect({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`inline-flex items-center gap-2 h-8 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 hover:bg-[#F5F2EA] px-2.5 text-xs font-bold text-[#101F1A] shadow-2xs transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-2 h-8 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 hover:bg-[#F5F2EA] px-2.5 text-xs font-bold text-[#101F1A] shadow-2xs transition-all focus:outline-none cursor-pointer ${
                     isOpen ? 'ring-2 ring-[#101F1A]/10 border-[#101F1A]/30 bg-white' : ''
                 }`}
             >
@@ -756,20 +756,20 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                         <div className="flex items-center gap-1 border-l border-[#101F1A]/10 pl-2 ml-1">
                             <button
                                 onClick={handlePrev}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#101F1A]/10 bg-white text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] cursor-pointer"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#101F1A]/10 bg-white text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] focus:outline-none cursor-pointer"
                                 title="Previous"
                             >
                                 <ChevronLeft size={15} />
                             </button>
                             <button
                                 onClick={handleToday}
-                                className="inline-flex h-8 items-center px-2.5 rounded-lg border border-[#101F1A]/10 bg-white text-xs font-bold text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] cursor-pointer"
+                                className="inline-flex h-8 items-center px-2.5 rounded-lg border border-[#101F1A]/10 bg-white text-xs font-bold text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] focus:outline-none cursor-pointer"
                             >
                                 Today
                             </button>
                             <button
                                 onClick={handleNext}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#101F1A]/10 bg-white text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] cursor-pointer"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#101F1A]/10 bg-white text-[#101F1A] shadow-2xs transition-all hover:bg-[#F5F2EA] focus:outline-none cursor-pointer"
                                 title="Next"
                             >
                                 <ChevronRight size={15} />
@@ -808,15 +808,15 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                             />
                         )}
 
-                        {/* Status Legend / Quick Filter */}
-                        <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-lg border border-[#101F1A]/10 bg-[#FAF9F5] text-[10px] font-bold">
+                        {/* Status Legend / Quick Filter (Consistent Height, Background & Stacking) */}
+                        <div className="hidden sm:inline-flex items-center h-8 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 p-0.5 text-xs font-bold shadow-2xs">
                             <button
                                 type="button"
                                 onClick={() => setScopeFilter('ALL')}
-                                className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
+                                className={`h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
                                     scopeFilter === 'ALL'
-                                        ? 'bg-[#101F1A] text-white shadow-2xs'
-                                        : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                        ? 'bg-[#101F1A] text-[#D6FF3F] shadow-2xs'
+                                        : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-[#101F1A]/5'
                                 }`}
                             >
                                 All
@@ -824,10 +824,10 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                             <button
                                 type="button"
                                 onClick={() => setScopeFilter(scopeFilter === 'CONFIRMED' ? 'ALL' : 'CONFIRMED')}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded transition-all cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
                                     scopeFilter === 'CONFIRMED'
                                         ? 'bg-emerald-600 text-white shadow-2xs'
-                                        : 'text-emerald-800 hover:bg-emerald-50'
+                                        : 'text-emerald-800 hover:bg-emerald-500/10'
                                 }`}
                             >
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -836,13 +836,13 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                             <button
                                 type="button"
                                 onClick={() => setScopeFilter(scopeFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded transition-all cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-bold transition-all focus:outline-none cursor-pointer ${
                                     scopeFilter === 'PENDING'
-                                        ? 'bg-amber-600 text-white shadow-2xs'
-                                        : 'text-amber-800 hover:bg-amber-50'
+                                        ? 'bg-amber-500 text-white shadow-2xs'
+                                        : 'text-amber-800 hover:bg-amber-500/10'
                                 }`}
                             >
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                                 Pending
                             </button>
                         </div>
@@ -861,7 +861,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                 clearErrors();
                                 setIsAddModalOpen(true);
                             }}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3.5 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all hover:bg-[#162923] cursor-pointer"
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#101F1A] px-3.5 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all hover:bg-[#162923] focus:outline-none cursor-pointer"
                         >
                             <Plus size={14} strokeWidth={2.4} />
                             <span>Add Event</span>
@@ -1112,99 +1112,101 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                     transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                                     className="h-full flex flex-col overflow-hidden"
                                 >
-                                    {/* Month Grid Header (Sun - Sat) */}
-                                    <div className="grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0">
-                                        {WEEKDAYS.map((day) => (
-                                            <div key={day} className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                                {day}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <div className="flex-1 overflow-y-auto dark-scrollbar flex flex-col">
+                                        {/* Month Grid Header (Sun - Sat) - Sticky inside scroll container */}
+                                        <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0 shadow-2xs">
+                                            {WEEKDAYS.map((day) => (
+                                                <div key={day} className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                    {day}
+                                                </div>
+                                            ))}
+                                        </div>
 
-                                    {/* Month Grid 7-Column Cells */}
-                                    <div className="flex-1 grid grid-cols-7 overflow-y-auto dark-scrollbar">
-                                        {monthGridCells.map((day, index) => {
-                                            if (day === null) {
+                                        {/* Month Grid 7-Column Cells */}
+                                        <div className="flex-1 grid grid-cols-7">
+                                            {monthGridCells.map((day, index) => {
+                                                if (day === null) {
+                                                    return (
+                                                        <div
+                                                            key={`empty-${index}`}
+                                                            className="min-h-[96px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
+                                                        />
+                                                    );
+                                                }
+
+                                                const dateKey = `${String(monthGridYear)}-${String(monthGridMonthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                                const dayBookings = bookingsByDate.get(dateKey) ?? [];
+                                                const dayRevenue = dayBookings
+                                                    .filter((booking) => String(booking.status).toLowerCase() !== 'cancelled')
+                                                    .reduce((sum, booking) => sum + Number(booking.total_price || 0), 0);
+                                                const isSelectedDay = dateKey === selectedDateIso;
+                                                const isTodayCell = dateKey === today;
+
                                                 return (
-                                                    <div
-                                                        key={`empty-${index}`}
-                                                        className="min-h-[96px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
-                                                    />
-                                                );
-                                            }
-
-                                            const dateKey = `${String(monthGridYear)}-${String(monthGridMonthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                            const dayBookings = bookingsByDate.get(dateKey) ?? [];
-                                            const dayRevenue = dayBookings
-                                                .filter((booking) => String(booking.status).toLowerCase() !== 'cancelled')
-                                                .reduce((sum, booking) => sum + Number(booking.total_price || 0), 0);
-                                            const isSelectedDay = dateKey === selectedDateIso;
-                                            const isTodayCell = dateKey === today;
-
-                                            return (
-                                                <button
-                                                    key={dateKey}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSelectedDate(new Date(`${dateKey}T12:00:00`));
-                                                    }}
-                                                    className={`min-h-[96px] border-b border-r border-[#101F1A]/5 p-2 text-left transition-colors cursor-pointer flex flex-col justify-between ${
-                                                        isSelectedDay
-                                                            ? 'bg-emerald-500/10 ring-2 ring-inset ring-emerald-500/30'
-                                                            : 'hover:bg-[#101F1A]/[0.02]'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <span
-                                                            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
-                                                                isTodayCell
-                                                                    ? 'bg-[#101F1A] text-[#D6FF3F]'
-                                                                    : isSelectedDay
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'text-[#101F1A]'
-                                                            }`}
-                                                        >
-                                                            {day}
-                                                        </span>
-                                                        {dayBookings.length > 0 && (
-                                                            <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
-                                                                {dayBookings.length}
+                                                    <button
+                                                        key={dateKey}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                        }}
+                                                        className={`min-h-[96px] border-b border-r border-[#101F1A]/5 p-2 text-left transition-colors cursor-pointer flex flex-col justify-between ${
+                                                            isSelectedDay
+                                                                ? 'bg-emerald-500/10 ring-2 ring-inset ring-emerald-500/30'
+                                                                : 'hover:bg-[#101F1A]/[0.02]'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span
+                                                                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
+                                                                    isTodayCell
+                                                                        ? 'bg-[#101F1A] text-[#D6FF3F]'
+                                                                        : isSelectedDay
+                                                                        ? 'bg-emerald-600 text-white'
+                                                                        : 'text-[#101F1A]'
+                                                                }`}
+                                                            >
+                                                                {day}
                                                             </span>
-                                                        )}
-                                                    </div>
+                                                            {dayBookings.length > 0 && (
+                                                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
+                                                                    {dayBookings.length}
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                    {/* Day bookings pills */}
-                                                    <div className="my-1 space-y-1">
-                                                        {dayBookings.slice(0, 2).map((booking) => {
-                                                            const theme = getBookingThemeByStatus(booking);
-                                                            return (
-                                                                <div
-                                                                    key={booking.id}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedDate(new Date(`${dateKey}T12:00:00`));
-                                                                        setActiveBooking(booking);
-                                                                    }}
-                                                                    className="flex items-center gap-1 truncate text-[10px] font-medium text-[#101F1A]/75 hover:text-[#101F1A]"
-                                                                >
-                                                                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
-                                                                    <span className="truncate">{booking.start_time?.slice(0, 5)} · {cleanCourtName(booking.court?.name || booking.court)}</span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {dayBookings.length > 2 && (
-                                                            <p className="text-[10px] font-bold text-[#101F1A]/50">+{dayBookings.length - 2} more</p>
-                                                        )}
-                                                    </div>
+                                                        {/* Day bookings pills */}
+                                                        <div className="my-1 space-y-1">
+                                                            {dayBookings.slice(0, 2).map((booking) => {
+                                                                const theme = getBookingThemeByStatus(booking);
+                                                                return (
+                                                                    <div
+                                                                        key={booking.id}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                                            setActiveBooking(booking);
+                                                                        }}
+                                                                        className="flex items-center gap-1 truncate text-[10px] font-medium text-[#101F1A]/75 hover:text-[#101F1A]"
+                                                                    >
+                                                                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
+                                                                        <span className="truncate">{booking.start_time?.slice(0, 5)} · {cleanCourtName(booking.court?.name || booking.court)}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {dayBookings.length > 2 && (
+                                                                <p className="text-[10px] font-bold text-[#101F1A]/50">+{dayBookings.length - 2} more</p>
+                                                            )}
+                                                        </div>
 
-                                                    {dayBookings.length > 0 ? (
-                                                        <p className="text-[10px] font-bold text-[#101F1A]/50">{formatPeso(dayRevenue)}</p>
-                                                    ) : (
-                                                        <div />
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
+                                                        {dayBookings.length > 0 ? (
+                                                            <p className="text-[10px] font-bold text-[#101F1A]/50">{formatPeso(dayRevenue)}</p>
+                                                        ) : (
+                                                            <div />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 </motion.div>
                             ) : (
@@ -1217,66 +1219,66 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                     transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                                     className="h-full flex flex-col overflow-hidden"
                                 >
-                                    {/* Column Header */}
-                                    <div className="flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
-                                        <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
-
-                                        {viewMode === 'Weekly View' ? (
-                                            <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10">
-                                                {weekDays.map((dayDate, i) => {
-                                                    const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
-                                                    const isToday = dayDate.toDateString() === new Date().toDateString();
-                                                    return (
-                                                        <button
-                                                            key={i}
-                                                            type="button"
-                                                            onClick={() => setSelectedDate(dayDate)}
-                                                            className={`py-2 px-1 text-center transition-all cursor-pointer ${
-                                                                isSelectedDay
-                                                                    ? 'bg-emerald-500/10'
-                                                                    : isToday
-                                                                    ? 'bg-emerald-500/[0.04]'
-                                                                    : 'hover:bg-black/[0.02]'
-                                                            }`}
-                                                        >
-                                                            <span className={`block text-[10px] font-bold uppercase tracking-wider ${
-                                                                isSelectedDay ? 'text-emerald-950 font-black' : 'text-[#101F1A]/50'
-                                                            }`}>
-                                                                {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
-                                                            </span>
-                                                            <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-black mt-0.5 ${
-                                                                isToday
-                                                                    ? 'bg-[#101F1A] text-[#D6FF3F]'
-                                                                    : isSelectedDay
-                                                                    ? 'bg-emerald-600 text-white'
-                                                                    : 'text-[#101F1A]'
-                                                            }`}>
-                                                                {dayDate.getDate()}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <div className="flex-1 flex divide-x divide-[#101F1A]/10 overflow-x-auto hide-scrollbar">
-                                                {activeCourts.map(court => (
-                                                    <div key={court.id} className="flex-1 min-w-[160px] py-2 px-3 text-left">
-                                                        <span className="block text-xs font-black text-[#101F1A] truncate">
-                                                            {cleanCourtName(court.name)}
-                                                        </span>
-                                                        <span className="text-[10px] font-semibold text-[#101F1A]/50 uppercase tracking-wider">
-                                                            {court.type || 'Court'} · ₱{Number(court.hourly_rate || court.day_rate || 0)}/hr
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
                                     {/* Scrollable Hours Matrix with Live Time Line */}
-                                    <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none">
+                                    <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none flex flex-col">
+                                        {/* Sticky Column Header - Inside scroll container for 1:1 column alignment */}
+                                        <div className="sticky top-0 z-40 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
+                                            <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
+
+                                            {viewMode === 'Weekly View' ? (
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10">
+                                                    {weekDays.map((dayDate, i) => {
+                                                        const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
+                                                        const isToday = dayDate.toDateString() === new Date().toDateString();
+                                                        return (
+                                                            <button
+                                                                key={i}
+                                                                type="button"
+                                                                onClick={() => setSelectedDate(dayDate)}
+                                                                className={`py-2 px-1 text-center transition-all cursor-pointer focus:outline-none ${
+                                                                    isSelectedDay
+                                                                        ? 'bg-emerald-500/10'
+                                                                        : isToday
+                                                                        ? 'bg-emerald-500/[0.04]'
+                                                                        : 'hover:bg-black/[0.02]'
+                                                                }`}
+                                                            >
+                                                                <span className={`block text-[10px] font-bold uppercase tracking-wider ${
+                                                                    isSelectedDay ? 'text-emerald-950 font-black' : 'text-[#101F1A]/50'
+                                                                }`}>
+                                                                    {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                                                                </span>
+                                                                <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-black mt-0.5 ${
+                                                                    isToday
+                                                                        ? 'bg-[#101F1A] text-[#D6FF3F]'
+                                                                        : isSelectedDay
+                                                                        ? 'bg-emerald-600 text-white'
+                                                                        : 'text-[#101F1A]'
+                                                                }`}>
+                                                                    {dayDate.getDate()}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="flex-1 flex divide-x divide-[#101F1A]/10 overflow-x-auto hide-scrollbar">
+                                                    {activeCourts.map(court => (
+                                                        <div key={court.id} className="flex-1 min-w-[160px] py-2 px-3 text-left">
+                                                            <span className="block text-xs font-black text-[#101F1A] truncate">
+                                                                {cleanCourtName(court.name)}
+                                                            </span>
+                                                            <span className="text-[10px] font-semibold text-[#101F1A]/50 uppercase tracking-wider">
+                                                                {court.type || 'Court'} · ₱{Number(court.hourly_rate || court.day_rate || 0)}/hr
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div
-                                            className="relative flex"
+                                            className="relative flex shrink-0"
                                             style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
                                         >
                                             {/* Left Gutter: Hourly Markers */}
@@ -1314,7 +1316,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
 
                                             {/* Timetable Grid Columns */}
                                             {viewMode === 'Weekly View' ? (
-                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/8 relative">
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 relative">
                                                     <div className="absolute inset-0 pointer-events-none">
                                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
                                                             <div
