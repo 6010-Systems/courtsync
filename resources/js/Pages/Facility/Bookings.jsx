@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Modal from '@/Components/Modal';
-import { LayoutGrid, List, Plus, Search, X } from 'lucide-react';
+import { Calendar, LayoutGrid, List, Plus, Search, X } from 'lucide-react';
 import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
 import { formatPeso } from '@/Components/MetricCard';
