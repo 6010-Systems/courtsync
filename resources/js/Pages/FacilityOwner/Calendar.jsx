@@ -358,9 +358,19 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         }
     }, [viewMode]);
 
-    // Live time tracker
+    // Live time tracker & responsive viewport
     const [currentTime, setCurrentTime] = useState(() => new Date());
+    const [isMobile, setIsMobile] = useState(false);
     const gridScrollRef = useRef(null);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const hourHeight = isMobile ? 52 : 72;
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 30000);
@@ -371,9 +381,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         if (gridScrollRef.current) {
             const nowH = new Date().getHours();
             const targetHour = Math.max(0, Math.min(nowH - START_HOUR - 1, TOTAL_HOURS - 6));
-            gridScrollRef.current.scrollTop = targetHour * HOUR_HEIGHT;
+            gridScrollRef.current.scrollTop = targetHour * hourHeight;
         }
-    }, [viewMode]);
+    }, [viewMode, hourHeight]);
 
     // Active facility object and courts
     const activeFacility = useMemo(() => {
@@ -622,15 +632,15 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         if (!timeString) return 0;
         const [h, m] = String(timeString).split(':').map(Number);
         const minutesFromStart = (h - START_HOUR) * 60 + (m || 0);
-        return Math.max(0, (minutesFromStart / 60) * HOUR_HEIGHT);
+        return Math.max(0, (minutesFromStart / 60) * hourHeight);
     };
 
     const durationToHeight = (startTime, endTime) => {
-        if (!startTime || !endTime) return HOUR_HEIGHT;
+        if (!startTime || !endTime) return hourHeight;
         const [sh, sm] = String(startTime).split(':').map(Number);
         const [eh, em] = String(endTime).split(':').map(Number);
         const diffMinutes = (eh * 60 + (em || 0)) - (sh * 60 + (sm || 0));
-        return Math.max(34, (diffMinutes / 60) * HOUR_HEIGHT - 4);
+        return Math.max(isMobile ? 26 : 34, (diffMinutes / 60) * hourHeight - 4);
     };
 
     const formatHourLabel = (h) => {
@@ -644,8 +654,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         const m = currentTime.getMinutes();
         if (h < START_HOUR || h > END_HOUR) return null;
         const mins = (h - START_HOUR) * 60 + m;
-        return (mins / 60) * HOUR_HEIGHT;
-    }, [currentTime]);
+        return (mins / 60) * hourHeight;
+    }, [currentTime, hourHeight]);
 
     const liveTimeString = useMemo(() => {
         return currentTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -758,7 +768,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         >
             <Head title="Calendar" />
 
-            <div className="w-full lg:h-[calc(100vh-105px)] lg:flex lg:flex-col gap-2.5 sm:gap-3 min-h-0 lg:overflow-hidden pb-4 lg:pb-0">
+            <div className="w-full flex flex-col gap-3 sm:gap-3.5 lg:h-[calc(100vh-105px)] min-h-0 lg:overflow-hidden pb-6 lg:pb-0">
 
                 {/* ── KPI Strip (Aligned with Current Layout) ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
@@ -918,11 +928,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </div>
 
                 {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Compact, Right Grid Widened ── */}
-                <div className="relative z-10 flex flex-col lg:flex-row gap-2.5 sm:gap-3 items-stretch lg:flex-1 min-h-0 lg:overflow-hidden">
+                <div className="relative z-10 flex flex-col lg:flex-row gap-3 sm:gap-3.5 items-stretch lg:flex-1 min-h-0 lg:overflow-hidden">
                     
                     {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card: compact 280-290px) ── */}
-                    <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full lg:flex lg:flex-col gap-2.5 sm:gap-3 min-h-0 ${
-                        isSidebarExpandedMobile ? 'block' : 'hidden lg:flex'
+                    <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full flex flex-col gap-3 min-h-0 ${
+                        isSidebarExpandedMobile ? 'flex' : 'hidden lg:flex'
                     }`}>
                         {/* 1. Mini Month Calendar (Always on the Left) */}
                         <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3 shadow-card backdrop-blur-md shrink-0">
@@ -1141,15 +1151,15 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                     </div>
 
                     {/* ── RIGHT MAIN PANEL (Responsive Height: Compact on Small Screens, Full on Desktop) ── */}
-                    <div className="flex-1 min-w-0 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[400px] sm:h-[460px] md:h-[520px] lg:h-full">
+                    <div className="flex-1 min-w-0 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[360px] sm:h-[420px] md:h-[500px] lg:h-full">
                         <AnimatePresence mode="wait" initial={false}>
                             {viewMode === 'Month Grid' ? (
                                 /* ── VIEW 1: MONTH GRID SURFACE ── */
                                 <motion.div
                                     key="month-grid-view"
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -6 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                                     className="h-full flex flex-col overflow-hidden"
                                 >
@@ -1157,7 +1167,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         {/* Month Grid Header (Sun - Sat) - Sticky inside scroll container */}
                                         <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0 shadow-2xs min-w-[600px] md:min-w-0">
                                             {WEEKDAYS.map((day) => (
-                                                <div key={day} className="px-1.5 py-2 sm:px-2 sm:py-2.5 text-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                <div key={day} className="px-1.5 py-1.5 sm:px-2 sm:py-2.5 text-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
                                                     {day}
                                                 </div>
                                             ))}
@@ -1170,7 +1180,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                     return (
                                                         <div
                                                             key={`empty-${index}`}
-                                                            className="min-h-[64px] sm:min-h-[80px] lg:min-h-[96px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
+                                                            className="min-h-[50px] sm:min-h-[70px] lg:min-h-[96px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
                                                         />
                                                     );
                                                 }
@@ -1188,9 +1198,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         key={dateKey}
                                                         type="button"
                                                         onClick={() => {
-                                                            setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                             setSelectedDate(new Date(`${dateKey}T12:00:00`));
                                                         }}
-                                                        className={`min-h-[74px] sm:min-h-[92px] lg:min-h-[110px] border-b border-r border-[#101F1A]/8 p-1.5 sm:p-2 lg:p-2.5 text-left transition-all cursor-pointer flex flex-col justify-between group ${
+                                                        className={`min-h-[62px] sm:min-h-[84px] lg:min-h-[110px] border-b border-r border-[#101F1A]/8 p-1 sm:p-2 lg:p-2.5 text-left transition-all cursor-pointer flex flex-col justify-between group ${
                                                             isSelectedDay
                                                                 ? 'bg-emerald-500/[0.08] ring-2 ring-inset ring-emerald-500/40'
                                                                 : 'hover:bg-[#101F1A]/[0.02]'
@@ -1269,20 +1279,20 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                 /* ── VIEW 2: TIMETABLE SCHEDULE SURFACE (Weekly & Daily) ── */
                                 <motion.div
                                     key={viewMode}
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -6 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
                                     className="h-full flex flex-col overflow-hidden"
                                 >
                                     {/* Scrollable Hours Matrix with Live Time Line */}
-                                    <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none flex flex-col">
+                                    <div ref={gridScrollRef} className="flex-1 overflow-auto relative dark-scrollbar select-none flex flex-col">
                                         {/* Sticky Column Header - Inside scroll container for 1:1 column alignment */}
                                         <div className="sticky top-0 z-30 flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
-                                            <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
+                                            <div className="w-12 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2 sm:py-2.5 text-center text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40 sticky left-0 z-40 bg-[#FAF9F5]" />
 
                                             {viewMode === 'Weekly View' ? (
-                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 min-w-[600px] md:min-w-0">
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 min-w-[560px] md:min-w-0">
                                                     {weekDays.map((dayDate, i) => {
                                                         const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
                                                         const isToday = dayDate.toDateString() === new Date().toDateString();
@@ -1318,9 +1328,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                     })}
                                                 </div>
                                             ) : (
-                                                <div className="flex-1 flex divide-x divide-[#101F1A]/10 overflow-x-auto hide-scrollbar">
+                                                <div className="flex-1 flex divide-x divide-[#101F1A]/10">
                                                     {activeCourts.map(court => (
-                                                        <div key={court.id} className="flex-1 min-w-[140px] sm:min-w-[160px] py-1.5 sm:py-2 px-2 sm:px-3 text-left">
+                                                        <div key={court.id} className="flex-1 min-w-[120px] sm:min-w-[150px] py-1.5 sm:py-2 px-2 sm:px-3 text-left">
                                                             <span className="block text-[11px] sm:text-xs font-black text-[#101F1A] truncate">
                                                                 {cleanCourtName(court.name)}
                                                             </span>
@@ -1335,17 +1345,17 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
 
                                         <div
                                             className="relative flex shrink-0"
-                                            style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
+                                            style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
                                         >
-                                            {/* Left Gutter: Hourly Markers */}
-                                            <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 bg-[#FAF9F5]/40 relative">
+                                            {/* Left Gutter: Hourly Markers (Sticky to Left on Horizontal Scroll) */}
+                                            <div className="w-12 sm:w-16 shrink-0 border-r border-[#101F1A]/10 bg-[#FAF9F5] sticky left-0 z-20">
                                                 {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
                                                     const hour = START_HOUR + i;
                                                     return (
                                                         <div
                                                             key={hour}
-                                                            style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
-                                                            className="absolute inset-x-0 border-b border-[#101F1A]/8 px-1.5 pt-1 text-right text-[10px] font-bold text-[#101F1A]/40"
+                                                            style={{ top: `${i * hourHeight}px`, height: `${hourHeight}px` }}
+                                                            className="absolute inset-x-0 border-b border-[#101F1A]/8 px-1 sm:px-1.5 pt-0.5 sm:pt-1 text-right text-[9px] sm:text-[10px] font-bold text-[#101F1A]/40"
                                                         >
                                                             {formatHourLabel(hour)}
                                                         </div>
@@ -1355,12 +1365,12 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
 
                                             {/* Timetable Grid Columns */}
                                             {viewMode === 'Weekly View' ? (
-                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 relative min-w-[600px] md:min-w-0">
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10 relative min-w-[560px] md:min-w-0">
                                                     <div className="absolute inset-0 pointer-events-none">
                                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
                                                             <div
                                                                 key={i}
-                                                                style={{ top: `${i * HOUR_HEIGHT}px` }}
+                                                                style={{ top: `${i * hourHeight}px` }}
                                                                 className="absolute inset-x-0 border-b border-[#101F1A]/6"
                                                             />
                                                         ))}
@@ -1381,7 +1391,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                 onClick={(e) => {
                                                                     const rect = e.currentTarget.getBoundingClientRect();
                                                                     const offsetY = e.clientY - rect.top;
-                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
+                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / hourHeight) + START_HOUR));
                                                                     const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
                                                                     const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
 
@@ -1426,30 +1436,30 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                             style={{
                                                                                 top: `${top}px`,
                                                                                 height: `${height}px`,
-                                                                                left: booking.styleLeft || '4px',
-                                                                                width: booking.styleWidth || 'calc(100% - 8px)',
+                                                                                left: booking.styleLeft || (isMobile ? '2px' : '4px'),
+                                                                                width: booking.styleWidth || (isMobile ? 'calc(100% - 4px)' : 'calc(100% - 8px)'),
                                                                             }}
-                                                                            className={`absolute z-10 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                            className={`absolute z-10 rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 md:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
                                                                                 isSelected
                                                                                     ? `${theme.activeRing} -translate-y-0.5 z-15`
                                                                                     : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
                                                                             }`}
                                                                         >
                                                                             <div className="min-w-0">
-                                                                                <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
+                                                                                <h4 className={`text-[11px] sm:text-xs md:text-[13px] font-bold tracking-tight truncate leading-tight ${theme.titleColor}`}>
                                                                                     {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
                                                                                 </h4>
-                                                                                <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
+                                                                                <p className={`text-[9.5px] sm:text-[11px] truncate mt-0.5 leading-none ${theme.timeColor}`}>
                                                                                     {formatTimeRange(booking.start_time, booking.end_time)}
                                                                                 </p>
                                                                             </div>
 
-                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
-                                                                                <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
+                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1">
+                                                                                <div className={`flex h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 items-center justify-center rounded-full text-[9px] sm:text-[10px] font-bold ring-1.5 sm:ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
                                                                                     {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
                                                                                 </div>
                                                                                 {booking.user?.avatar && (
-                                                                                    <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
+                                                                                    <img src={booking.user.avatar} alt="" className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 rounded-full ring-1.5 sm:ring-2 ring-white object-cover" />
                                                                                 )}
                                                                             </div>
                                                                         </div>
@@ -1466,7 +1476,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
                                                             <div
                                                                 key={i}
-                                                                style={{ top: `${i * HOUR_HEIGHT}px` }}
+                                                                style={{ top: `${i * hourHeight}px` }}
                                                                 className="absolute inset-x-0 border-b border-[#101F1A]/6"
                                                             />
                                                         ))}
@@ -1481,11 +1491,11 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                         return (
                                                             <div
                                                                 key={court.id}
-                                                                className="flex-1 min-w-[160px] relative h-full transition-colors hover:bg-black/[0.01]"
+                                                                className="flex-1 min-w-[120px] sm:min-w-[150px] relative h-full transition-colors hover:bg-black/[0.01]"
                                                                 onClick={(e) => {
                                                                     const rect = e.currentTarget.getBoundingClientRect();
                                                                     const offsetY = e.clientY - rect.top;
-                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
+                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / hourHeight) + START_HOUR));
                                                                     const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
                                                                     const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
 
@@ -1521,27 +1531,27 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                                                 top: `${top}px`,
                                                                                 height: `${height}px`,
                                                                             }}
-                                                                            className={`absolute inset-x-1.5 z-10 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                            className={`absolute inset-x-1 sm:inset-x-1.5 z-10 rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 md:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
                                                                                 isSelected
                                                                                     ? `${theme.activeRing} -translate-y-0.5 z-15`
                                                                                     : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
                                                                             }`}
                                                                         >
                                                                             <div className="min-w-0">
-                                                                                <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
+                                                                                <h4 className={`text-[11px] sm:text-xs md:text-[13px] font-bold tracking-tight truncate leading-tight ${theme.titleColor}`}>
                                                                                     {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
                                                                                 </h4>
-                                                                                <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
+                                                                                <p className={`text-[9.5px] sm:text-[11px] truncate mt-0.5 leading-none ${theme.timeColor}`}>
                                                                                     {formatTimeRange(booking.start_time, booking.end_time)}
                                                                                 </p>
                                                                             </div>
 
-                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
-                                                                                <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
+                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1">
+                                                                                <div className={`flex h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 items-center justify-center rounded-full text-[9px] sm:text-[10px] font-bold ring-1.5 sm:ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
                                                                                     {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
                                                                                 </div>
                                                                                 {booking.user?.avatar && (
-                                                                                    <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
+                                                                                    <img src={booking.user.avatar} alt="" className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 rounded-full ring-1.5 sm:ring-2 ring-white object-cover" />
                                                                                 )}
                                                                             </div>
                                                                         </div>
@@ -1559,7 +1569,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                     style={{ top: `${liveTimeTop}px` }}
                                                     className="absolute inset-x-0 z-20 pointer-events-none flex items-center"
                                                 >
-                                                    <div className="w-14 sm:w-16 text-right pr-1">
+                                                    <div className="w-12 sm:w-16 text-right pr-1">
                                                         <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
                                                             {liveTimeString}
                                                         </span>
