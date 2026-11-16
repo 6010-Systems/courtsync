@@ -148,7 +148,7 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                 <span>Looking to book courts as a <strong>player</strong>?</span>
                             </div>
                             <Link
-                                href="/"
+                                href="/#venues"
                                 className="inline-flex items-center gap-1 text-xs font-bold text-[#10221C] hover:underline"
                             >
                                 Find court <ArrowRight className="h-3 w-3" />
