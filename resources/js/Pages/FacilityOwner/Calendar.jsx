@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar as CalendarIcon,
     CalendarDays,
@@ -26,7 +27,7 @@ import {
     LayoutList,
     User,
     MapPin,
-    Grid,
+    ArrowUpRight,
 } from 'lucide-react';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -37,12 +38,12 @@ const END_HOUR = 23;    // 11:00 PM
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 
 /**
- * Status color system matching design guidelines:
- * - CONFIRMED: Emerald Green (verified payment, active match)
- * - PENDING: Warm Amber (pending payment, reservation hold)
- * - OPEN_PLAY: Sky Blue (community match, open drop-in)
- * - CANCELLED: Soft Rose (cancelled booking, rejected payment)
- * - COMPLETED: Cool Slate (past concluded match)
+ * Status color system:
+ * - CONFIRMED: Emerald Green
+ * - PENDING: Warm Amber
+ * - OPEN_PLAY: Sky Blue
+ * - CANCELLED: Soft Rose
+ * - COMPLETED: Cool Slate
  */
 const STATUS_THEMES = {
     CONFIRMED: {
@@ -137,19 +138,12 @@ const formatTimeRange = (start, end) => {
     return `${sDisplay}:${sm} ${sSuffix} – ${eDisplay}:${em} ${eSuffix}`;
 };
 
-function formatDayLong(value) {
-    if (!value) return '';
-    return new Date(`${value}T12:00:00`).toLocaleDateString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-    });
-}
-
 function monthKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 /**
- * Custom Dropdown / Select Component
+ * Custom Dropdown / Select Component with elevated stacking context
  */
 function CustomSelect({
     value,
@@ -250,8 +244,7 @@ function CustomSelect({
 
 /**
  * Calendar collision layout algorithm:
- * Clusters overlapping events in the same day column and distributes them
- * into non-overlapping sub-column slices.
+ * Distributes overlapping events into non-overlapping sub-column slices.
  */
 const layoutDayBookings = (bookings) => {
     if (!bookings || bookings.length === 0) return [];
@@ -327,7 +320,7 @@ function StatCard({ label, value, hint }) {
         <div className="rounded-xl border border-[#101F1A]/10 bg-white p-3.5 shadow-card">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">{label}</p>
             <p className="mt-1.5 text-2xl font-black text-[#101F1A]">{value}</p>
-            {hint ? <p className="mt-0.5 text-xs text-[#101F1A]/60">{hint}</p> : null}
+            {hint ? <p className="mt-0.5 text-xs text-[#101F1A]/60 truncate">{hint}</p> : null}
         </div>
     );
 }
@@ -338,14 +331,13 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         today ? new Date(`${today}T12:00:00`) : new Date()
     ));
 
-    // View mode: 'Weekly View', 'Daily View', or 'Month Grid' (the previous view from pull)
+    // View mode: 'Weekly View', 'Daily View', or 'Month Grid'
     const [viewMode, setViewMode] = useState('Weekly View');
-    const [scopeFilter, setScopeFilter] = useState('ALL'); // ALL, CONFIRMED, PENDING, OPEN_PLAY
+    const [scopeFilter, setScopeFilter] = useState('ALL'); // ALL, CONFIRMED, PENDING
     const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [selectedFacilityId, setSelectedFacilityId] = useState(filters?.facility_id || 'ALL');
     
-    // In Weekly View, default to focusing on the first court for clean full-width cards
+    // In Weekly View, court focus selector
     const [selectedCourtId, setSelectedCourtId] = useState(() => {
         return facilities[0]?.courts?.[0]?.id || 'ALL';
     });
@@ -353,9 +345,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [activeBooking, setActiveBooking] = useState(null);
     const [isSidebarExpandedMobile, setIsSidebarExpandedMobile] = useState(false);
-
-    // Month grid selected day (for Month Grid view)
-    const [selectedDay, setSelectedDay] = useState(() => today || new Date().toISOString().split('T')[0]);
 
     // Live time tracker
     const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -507,7 +496,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 const bStatus = (b.status || '').toUpperCase();
                 if (scopeFilter === 'CONFIRMED' && bStatus !== 'CONFIRMED') return false;
                 if (scopeFilter === 'PENDING' && bStatus !== 'PENDING') return false;
-                if (scopeFilter === 'OPEN_PLAY' && bStatus !== 'OPEN_PLAY') return false;
             }
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase();
@@ -522,11 +510,20 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
         });
     }, [bookings, selectedFacilityId, selectedCourtId, scopeFilter, searchQuery, viewMode]);
 
+    // Selected date ISO string
+    const selectedDateIso = selectedDate.toISOString().split('T')[0];
+    const selectedDayBookings = useMemo(() => {
+        return bookingsByDate.get(selectedDateIso) || [];
+    }, [bookingsByDate, selectedDateIso]);
+
+    // Automatically synchronize active booking when selected date changes
     useEffect(() => {
-        if (!activeBooking && filteredBookings.length > 0) {
+        if (selectedDayBookings.length > 0) {
+            setActiveBooking(selectedDayBookings[0]);
+        } else if (filteredBookings.length > 0 && !activeBooking) {
             setActiveBooking(filteredBookings[0]);
         }
-    }, [filteredBookings, activeBooking]);
+    }, [selectedDateIso, selectedDayBookings, filteredBookings]);
 
     // Navigation helpers
     const handlePrev = () => {
@@ -562,7 +559,6 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const handleToday = () => {
         const now = new Date();
         setSelectedDate(now);
-        setSelectedDay(now.toISOString().split('T')[0]);
         if (viewMode === 'Month Grid') {
             navigateMonth(monthKey(now));
         }
@@ -697,16 +693,10 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const viewOptions = [
         { value: 'Weekly View', label: 'Weekly View', hint: '7-day court schedule grid' },
         { value: 'Daily View', label: 'Daily View', hint: 'All courts side-by-side' },
-        { value: 'Month Grid', label: 'Month Grid', hint: 'Full month overview (previous view)' },
+        { value: 'Month Grid', label: 'Month Grid', hint: 'Full month overview' },
     ];
 
     const activeTheme = activeBooking ? getBookingThemeByStatus(activeBooking) : STATUS_THEMES.CONFIRMED;
-
-    // Selected day panel bookings for "Month Grid" view
-    const selectedBookingsForMonthDay = bookingsByDate.get(selectedDay) ?? [];
-    const selectedRevenueForMonthDay = selectedBookingsForMonthDay
-        .filter((booking) => String(booking.status).toLowerCase() !== 'cancelled')
-        .reduce((sum, booking) => sum + Number(booking.total_price || 0), 0);
 
     return (
         <AuthenticatedLayout
@@ -797,6 +787,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                 onChange={setSelectedFacilityId}
                                 options={facilityOptions}
                                 icon={Building2}
+                                align="left"
                             />
                         )}
 
@@ -813,6 +804,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         hint: c.type || 'Court',
                                     })),
                                 ]}
+                                align="left"
                             />
                         )}
 
@@ -877,245 +869,130 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                     </div>
                 </div>
 
-                {/* ── VIEW A: MONTH GRID VIEW (The previous view from pull) ── */}
-                {viewMode === 'Month Grid' && (
-                    <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-3">
-                        {/* Month matrix cells */}
-                        <div className="overflow-hidden rounded-xl border border-[#101F1A]/10 bg-white shadow-card xl:col-span-2">
-                            <div className="grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#101F1A]/[0.02]">
-                                {WEEKDAYS.map((day) => (
-                                    <div key={day} className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                        {day}
+                {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Always Anchored on the Left ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
+                    
+                    {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card) ── */}
+                    <div className={`lg:col-span-4 xl:col-span-3 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
+                        isSidebarExpandedMobile ? 'block' : 'hidden lg:flex'
+                    }`}>
+                        {/* 1. Mini Month Calendar (Always on the Left) */}
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3.5 shadow-card backdrop-blur-md shrink-0">
+                            <div className="flex items-center justify-between mb-3 px-1">
+                                <button
+                                    onClick={() => {
+                                        const next = new Date(selectedDate);
+                                        next.setMonth(next.getMonth() - 1);
+                                        setSelectedDate(next);
+                                    }}
+                                    className="p-1 rounded-md text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-[#F5F2EA] transition-colors cursor-pointer"
+                                    title="Previous Month"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <span className="font-bold text-xs sm:text-sm text-[#101F1A]">
+                                    {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        const next = new Date(selectedDate);
+                                        next.setMonth(next.getMonth() + 1);
+                                        setSelectedDate(next);
+                                    }}
+                                    className="p-1 rounded-md text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-[#F5F2EA] transition-colors cursor-pointer"
+                                    title="Next Month"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-7 text-center mb-1.5 text-[11px] font-bold text-[#101F1A]/50">
+                                <span>Su</span>
+                                <span>Mo</span>
+                                <span>Tu</span>
+                                <span>We</span>
+                                <span>Th</span>
+                                <span>Fr</span>
+                                <span>Sa</span>
+                            </div>
+
+                            <div className="space-y-1">
+                                {miniMonth.map((week, wIndex) => (
+                                    <div key={wIndex} className="grid grid-cols-7 text-center gap-1">
+                                        {week.map((dayObj, dIndex) => {
+                                            const isSelected =
+                                                dayObj.isCurrentMonth &&
+                                                dayObj.date.toDateString() === selectedDate.toDateString();
+                                            const isToday =
+                                                dayObj.date.toDateString() === new Date().toDateString();
+                                            const dateString = dayObj.date.toISOString().split('T')[0];
+                                            const hasBookings = filteredBookings.some(b => b.date === dateString);
+
+                                            return (
+                                                <button
+                                                    key={dIndex}
+                                                    onClick={() => setSelectedDate(dayObj.date)}
+                                                    className={`h-7 w-7 sm:h-8 sm:w-8 mx-auto rounded-full flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer relative ${
+                                                        isSelected
+                                                            ? 'bg-[#101F1A] text-white shadow-xs'
+                                                            : isToday
+                                                            ? 'border-2 border-[#101F1A] text-[#101F1A]'
+                                                            : dayObj.isCurrentMonth
+                                                            ? 'text-[#101F1A] hover:bg-[#F5F2EA]'
+                                                            : 'text-[#101F1A]/20 pointer-events-none'
+                                                    }`}
+                                                >
+                                                    <span>{dayObj.day}</span>
+                                                    {hasBookings && !isSelected && (
+                                                        <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[#101F1A]/60" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 ))}
                             </div>
-                            <div className="grid grid-cols-7">
-                                {monthGridCells.map((day, index) => {
-                                    if (day === null) {
-                                        return (
-                                            <div
-                                                key={`empty-${index}`}
-                                                className="min-h-[104px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
-                                            />
-                                        );
-                                    }
-
-                                    const dateKey = `${String(monthGridYear)}-${String(monthGridMonthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                    const dayBookings = bookingsByDate.get(dateKey) ?? [];
-                                    const dayRevenue = dayBookings
-                                        .filter((booking) => String(booking.status).toLowerCase() !== 'cancelled')
-                                        .reduce((sum, booking) => sum + Number(booking.total_price || 0), 0);
-                                    const isSelectedDay = dateKey === selectedDay;
-
-                                    return (
-                                        <button
-                                            key={dateKey}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedDay(dateKey);
-                                                setSelectedDate(new Date(`${dateKey}T12:00:00`));
-                                            }}
-                                            className={`min-h-[104px] border-b border-r border-[#101F1A]/5 p-2 text-left transition-colors cursor-pointer ${
-                                                isSelectedDay
-                                                    ? 'bg-[#D6FF3F]/15 ring-1 ring-inset ring-[#D6FF3F]'
-                                                    : 'hover:bg-[#101F1A]/[0.02]'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span
-                                                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
-                                                        dateKey === today ? 'bg-[#101F1A] text-[#D6FF3F]' : 'text-[#101F1A]'
-                                                    }`}
-                                                >
-                                                    {day}
-                                                </span>
-                                                {dayBookings.length > 0 && (
-                                                    <span className="text-[10px] font-bold text-[#101F1A]/50">{dayBookings.length}</span>
-                                                )}
-                                            </div>
-
-                                            <div className="mt-1 space-y-1">
-                                                {dayBookings.slice(0, 2).map((booking) => {
-                                                    const theme = getBookingThemeByStatus(booking);
-                                                    return (
-                                                        <div key={booking.id} className="flex items-center gap-1 truncate text-[10px] text-[#101F1A]/70">
-                                                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
-                                                            <span className="truncate">{booking.start_time?.slice(0, 5)} · {booking.court}</span>
-                                                        </div>
-                                                    );
-                                                })}
-                                                {dayBookings.length > 2 && (
-                                                    <p className="text-[10px] font-bold text-[#101F1A]/50">+{dayBookings.length - 2} more</p>
-                                                )}
-                                            </div>
-
-                                            {dayBookings.length > 0 && (
-                                                <p className="mt-1 text-[10px] font-bold text-[#101F1A]/40">{formatPeso(dayRevenue)}</p>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         </div>
 
-                        {/* Selected day panel (Previous View Panel) */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white shadow-card flex flex-col justify-between">
-                            <div>
-                                <div className="border-b border-[#101F1A]/10 p-4 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/50">Selected day</p>
-                                        <h2 className="mt-0.5 text-base font-black text-[#101F1A]">{formatDayLong(selectedDay)}</h2>
-                                        <p className="text-xs text-[#101F1A]/60">
-                                            {selectedBookingsForMonthDay.length} booking{selectedBookingsForMonthDay.length === 1 ? '' : 's'} · {formatPeso(selectedRevenueForMonthDay)}
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedDate(new Date(`${selectedDay}T12:00:00`));
-                                            setViewMode('Daily View');
-                                        }}
-                                        className="text-xs font-bold text-[#101F1A] bg-[#F5F2EA] hover:bg-[#101F1A] hover:text-[#D6FF3F] px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-                                    >
-                                        Open Day
-                                    </button>
-                                </div>
-
-                                <div className="max-h-[520px] divide-y divide-[#101F1A]/5 overflow-y-auto">
-                                    {selectedBookingsForMonthDay.length === 0 ? (
-                                        <div className="p-8 text-center">
-                                            <CalendarDays className="mx-auto text-[#101F1A]/25" size={28} />
-                                            <p className="mt-2 text-sm font-bold text-[#101F1A]">No bookings on this day</p>
-                                            <p className="mt-1 text-xs text-[#101F1A]/60">Click on any date to inspect reservations or switch to Timetable view.</p>
-                                        </div>
-                                    ) : (
-                                        selectedBookingsForMonthDay.map((booking) => {
-                                            const theme = getBookingThemeByStatus(booking);
-                                            return (
-                                                <div key={booking.id} className="p-4 hover:bg-black/[0.01] transition-colors">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A]">
-                                                            <Clock size={12} />
-                                                            {formatTimeRange(booking.start_time, booking.end_time)}
-                                                        </span>
-                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase border ${theme.badge}`}>
-                                                            {theme.label}
-                                                        </span>
-                                                    </div>
-
-                                                    <p className="mt-1.5 text-sm font-bold text-[#101F1A]">{booking.court}</p>
-
-                                                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-[#101F1A]/60">
-                                                        <span className="inline-flex items-center gap-1">
-                                                            <User size={11} /> {booking.player || booking.user?.name || booking.guest_name}
-                                                        </span>
-                                                        {booking.facility && (
-                                                            <span className="inline-flex items-center gap-1">
-                                                                <MapPin size={11} /> {booking.facility}
-                                                            </span>
-                                                        )}
-                                                        <span className="font-bold text-[#101F1A]">{formatPeso(booking.total_price)}</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* ── VIEW B: TIMETABLE VIEWS (Weekly & Daily Views Developed Before Pull) ── */}
-                {viewMode !== 'Month Grid' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
-                        
-                        {/* ── LEFT SIDEBAR: Mini Month Calendar + Active Event Inspector Card ── */}
-                        <div className={`lg:col-span-4 xl:col-span-3 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
-                            isSidebarExpandedMobile ? 'block' : 'hidden lg:flex'
-                        }`}>
-                            {/* 1. Mini Month Calendar */}
-                            <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3.5 shadow-card backdrop-blur-md shrink-0">
-                                <div className="flex items-center justify-between mb-3 px-1">
-                                    <button
-                                        onClick={() => {
-                                            const next = new Date(selectedDate);
-                                            next.setMonth(next.getMonth() - 1);
-                                            setSelectedDate(next);
-                                        }}
-                                        className="p-1 rounded-md text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-[#F5F2EA] transition-colors cursor-pointer"
-                                        title="Previous Month"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <span className="font-bold text-xs sm:text-sm text-[#101F1A]">
-                                        {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                    </span>
-                                    <button
-                                        onClick={() => {
-                                            const next = new Date(selectedDate);
-                                            next.setMonth(next.getMonth() + 1);
-                                            setSelectedDate(next);
-                                        }}
-                                        className="p-1 rounded-md text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-[#F5F2EA] transition-colors cursor-pointer"
-                                        title="Next Month"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-7 text-center mb-1.5 text-[11px] font-bold text-[#101F1A]/50">
-                                    <span>Su</span>
-                                    <span>Mo</span>
-                                    <span>Tu</span>
-                                    <span>We</span>
-                                    <span>Th</span>
-                                    <span>Fr</span>
-                                    <span>Sa</span>
-                                </div>
-
-                                <div className="space-y-1">
-                                    {miniMonth.map((week, wIndex) => (
-                                        <div key={wIndex} className="grid grid-cols-7 text-center gap-1">
-                                            {week.map((dayObj, dIndex) => {
-                                                const isSelected =
-                                                    dayObj.isCurrentMonth &&
-                                                    dayObj.date.toDateString() === selectedDate.toDateString();
-                                                const isToday =
-                                                    dayObj.date.toDateString() === new Date().toDateString();
-                                                const dateString = dayObj.date.toISOString().split('T')[0];
-                                                const hasBookings = filteredBookings.some(b => b.date === dateString);
-
-                                                return (
-                                                    <button
-                                                        key={dIndex}
-                                                        onClick={() => setSelectedDate(dayObj.date)}
-                                                        className={`h-7 w-7 sm:h-8 sm:w-8 mx-auto rounded-full flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer relative ${
-                                                            isSelected
-                                                                ? 'bg-[#101F1A] text-white shadow-xs'
-                                                                : isToday
-                                                                ? 'border-2 border-[#101F1A] text-[#101F1A]'
-                                                                : dayObj.isCurrentMonth
-                                                                ? 'text-[#101F1A] hover:bg-[#F5F2EA]'
-                                                                : 'text-[#101F1A]/20 pointer-events-none'
-                                                        }`}
-                                                    >
-                                                        <span>{dayObj.day}</span>
-                                                        {hasBookings && !isSelected && (
-                                                            <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[#101F1A]/60" />
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 2. Active Event Inspector Card */}
-                            <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md">
+                        {/* 2. Active Event Inspector Card (Matching Image & Design Reference) */}
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md">
+                            <AnimatePresence mode="wait" initial={false}>
                                 {activeBooking ? (
-                                    <div className="space-y-3.5">
+                                    <motion.div
+                                        key={activeBooking.id}
+                                        initial={{ opacity: 0, scale: 0.98 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.98 }}
+                                        transition={{ duration: 0.16, ease: 'easeOut' }}
+                                        className="space-y-3.5"
+                                    >
+                                        {/* Multiple Bookings Day Selector Strip */}
+                                        {selectedDayBookings.length > 1 && (
+                                            <div className="pb-1 border-b border-[#101F1A]/8">
+                                                <div className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1.5 flex items-center justify-between">
+                                                    <span>{selectedDayBookings.length} bookings on this day</span>
+                                                    <span className="text-[9px] font-normal text-[#101F1A]/40">Click to switch</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+                                                    {selectedDayBookings.map((b) => (
+                                                        <button
+                                                            key={b.id}
+                                                            type="button"
+                                                            onClick={() => setActiveBooking(b)}
+                                                            className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer shrink-0 ${
+                                                                activeBooking?.id === b.id
+                                                                    ? 'bg-[#101F1A] text-[#D6FF3F] border-[#101F1A] shadow-2xs'
+                                                                    : 'bg-white text-[#101F1A]/70 border-[#101F1A]/10 hover:bg-[#F5F2EA]'
+                                                            }`}
+                                                        >
+                                                            {b.start_time?.slice(0, 5)} · {cleanCourtName(b.court?.name || b.court)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Header: Host / Match Name + Status Color Badge */}
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0">
                                                 <h3 className="font-bold text-base text-[#101F1A] tracking-tight truncate">
@@ -1130,6 +1007,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             </span>
                                         </div>
 
+                                        {/* Date & Time Row with Status Color Tint */}
                                         <div className={`flex items-center gap-2.5 text-xs font-semibold p-2.5 rounded-lg border ${activeTheme.cardBg} ${activeTheme.border}`}>
                                             <Clock size={14} className="text-[#101F1A]/50 shrink-0" />
                                             <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
@@ -1142,6 +1020,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             </div>
                                         </div>
 
+                                        {/* Court & Payment Specifications Grid */}
                                         <div className="grid grid-cols-2 gap-2 text-xs">
                                             <div className="bg-[#FAF9F5] p-2 rounded-lg border border-[#101F1A]/5">
                                                 <span className="text-[10px] font-bold text-[#101F1A]/50 uppercase tracking-wider block">
@@ -1161,6 +1040,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             </div>
                                         </div>
 
+                                        {/* Player Info Row with Status Avatar Accent */}
                                         <div className="p-2 rounded-lg bg-[#FAF9F5] border border-[#101F1A]/5 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center shrink-0 shadow-2xs ${activeTheme.avatarBg}`}>
@@ -1182,6 +1062,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                             )}
                                         </div>
 
+                                        {/* Purposeful Actions */}
                                         <div className="pt-3 border-t border-[#101F1A]/8 flex items-center gap-2">
                                             <button
                                                 onClick={() => router.visit(route('facility.bookings'))}
@@ -1200,320 +1081,443 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                                 Cancel
                                             </button>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 ) : (
-                                    <div className="text-center py-8">
+                                    <motion.div
+                                        key="empty-inspector"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="text-center py-8"
+                                    >
                                         <CalendarIcon className="mx-auto text-[#101F1A]/30 mb-2" size={28} />
                                         <p className="text-xs font-bold text-[#101F1A]">No event selected</p>
                                         <p className="text-[11px] text-[#101F1A]/50 mt-0.5">Click any court card to inspect</p>
-                                    </div>
+                                    </motion.div>
                                 )}
-                            </div>
+                            </AnimatePresence>
                         </div>
+                    </div>
 
-                        {/* ── RIGHT MAIN PANEL (Timetable Grid) ── */}
-                        <div className="lg:col-span-8 xl:col-span-9 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[540px] sm:h-[620px] lg:h-full">
-                            
-                            {/* Column Header */}
-                            <div className="flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
-                                <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
+                    {/* ── RIGHT MAIN PANEL (Animated View Transition between Month Grid & Timetable) ── */}
+                    <div className="lg:col-span-8 xl:col-span-9 rounded-xl border border-[#101F1A]/10 bg-white shadow-card overflow-hidden flex flex-col h-[540px] sm:h-[620px] lg:h-full">
+                        <AnimatePresence mode="wait" initial={false}>
+                            {viewMode === 'Month Grid' ? (
+                                /* ── VIEW 1: MONTH GRID SURFACE ── */
+                                <motion.div
+                                    key="month-grid-view"
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                                    className="h-full flex flex-col overflow-hidden"
+                                >
+                                    {/* Month Grid Header (Sun - Sat) */}
+                                    <div className="grid grid-cols-7 border-b border-[#101F1A]/10 bg-[#FAF9F5] shrink-0">
+                                        {WEEKDAYS.map((day) => (
+                                            <div key={day} className="px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                {day}
+                                            </div>
+                                        ))}
+                                    </div>
 
-                                {viewMode === 'Weekly View' ? (
-                                    <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10">
-                                        {weekDays.map((dayDate, i) => {
-                                            const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
-                                            const isToday = dayDate.toDateString() === new Date().toDateString();
+                                    {/* Month Grid 7-Column Cells */}
+                                    <div className="flex-1 grid grid-cols-7 overflow-y-auto dark-scrollbar">
+                                        {monthGridCells.map((day, index) => {
+                                            if (day === null) {
+                                                return (
+                                                    <div
+                                                        key={`empty-${index}`}
+                                                        className="min-h-[96px] border-b border-r border-[#101F1A]/5 bg-[#101F1A]/[0.015]"
+                                                    />
+                                                );
+                                            }
+
+                                            const dateKey = `${String(monthGridYear)}-${String(monthGridMonthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                            const dayBookings = bookingsByDate.get(dateKey) ?? [];
+                                            const dayRevenue = dayBookings
+                                                .filter((booking) => String(booking.status).toLowerCase() !== 'cancelled')
+                                                .reduce((sum, booking) => sum + Number(booking.total_price || 0), 0);
+                                            const isSelectedDay = dateKey === selectedDateIso;
+                                            const isTodayCell = dateKey === today;
+
                                             return (
                                                 <button
-                                                    key={i}
+                                                    key={dateKey}
                                                     type="button"
-                                                    onClick={() => setSelectedDate(dayDate)}
-                                                    className={`py-2 px-1 text-center transition-all cursor-pointer ${
+                                                    onClick={() => {
+                                                        setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                    }}
+                                                    className={`min-h-[96px] border-b border-r border-[#101F1A]/5 p-2 text-left transition-colors cursor-pointer flex flex-col justify-between ${
                                                         isSelectedDay
-                                                            ? 'bg-emerald-500/10'
-                                                            : isToday
-                                                            ? 'bg-emerald-500/[0.04]'
-                                                            : 'hover:bg-black/[0.02]'
+                                                            ? 'bg-emerald-500/10 ring-2 ring-inset ring-emerald-500/30'
+                                                            : 'hover:bg-[#101F1A]/[0.02]'
                                                     }`}
                                                 >
-                                                    <span className={`block text-[10px] font-bold uppercase tracking-wider ${
-                                                        isSelectedDay ? 'text-emerald-950 font-black' : 'text-[#101F1A]/50'
-                                                    }`}>
-                                                        {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
-                                                    </span>
-                                                    <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-black mt-0.5 ${
-                                                        isToday
-                                                            ? 'bg-[#101F1A] text-[#D6FF3F]'
-                                                            : isSelectedDay
-                                                            ? 'bg-emerald-600 text-white'
-                                                            : 'text-[#101F1A]'
-                                                    }`}>
-                                                        {dayDate.getDate()}
-                                                    </span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span
+                                                            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
+                                                                isTodayCell
+                                                                    ? 'bg-[#101F1A] text-[#D6FF3F]'
+                                                                    : isSelectedDay
+                                                                    ? 'bg-emerald-600 text-white'
+                                                                    : 'text-[#101F1A]'
+                                                            }`}
+                                                        >
+                                                            {day}
+                                                        </span>
+                                                        {dayBookings.length > 0 && (
+                                                            <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
+                                                                {dayBookings.length}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Day bookings pills */}
+                                                    <div className="my-1 space-y-1">
+                                                        {dayBookings.slice(0, 2).map((booking) => {
+                                                            const theme = getBookingThemeByStatus(booking);
+                                                            return (
+                                                                <div
+                                                                    key={booking.id}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedDate(new Date(`${dateKey}T12:00:00`));
+                                                                        setActiveBooking(booking);
+                                                                    }}
+                                                                    className="flex items-center gap-1 truncate text-[10px] font-medium text-[#101F1A]/75 hover:text-[#101F1A]"
+                                                                >
+                                                                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${theme.dot}`} />
+                                                                    <span className="truncate">{booking.start_time?.slice(0, 5)} · {cleanCourtName(booking.court?.name || booking.court)}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {dayBookings.length > 2 && (
+                                                            <p className="text-[10px] font-bold text-[#101F1A]/50">+{dayBookings.length - 2} more</p>
+                                                        )}
+                                                    </div>
+
+                                                    {dayBookings.length > 0 ? (
+                                                        <p className="text-[10px] font-bold text-[#101F1A]/50">{formatPeso(dayRevenue)}</p>
+                                                    ) : (
+                                                        <div />
+                                                    )}
                                                 </button>
                                             );
                                         })}
                                     </div>
-                                ) : (
-                                    <div className="flex-1 flex divide-x divide-[#101F1A]/10 overflow-x-auto hide-scrollbar">
-                                        {activeCourts.map(court => (
-                                            <div key={court.id} className="flex-1 min-w-[160px] py-2 px-3 text-left">
-                                                <span className="block text-xs font-black text-[#101F1A] truncate">
-                                                    {cleanCourtName(court.name)}
-                                                </span>
-                                                <span className="text-[10px] font-semibold text-[#101F1A]/50 uppercase tracking-wider">
-                                                    {court.type || 'Court'} · ₱{Number(court.hourly_rate || court.day_rate || 0)}/hr
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Scrollable Hours Matrix with Live Time Line */}
-                            <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none">
-                                <div
-                                    className="relative flex"
-                                    style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
+                                </motion.div>
+                            ) : (
+                                /* ── VIEW 2: TIMETABLE SCHEDULE SURFACE (Weekly & Daily) ── */
+                                <motion.div
+                                    key={viewMode}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                                    className="h-full flex flex-col overflow-hidden"
                                 >
-                                    {/* Left Gutter: Hourly Markers */}
-                                    <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 bg-[#FAF9F5]/40 relative">
-                                        {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
-                                            const hour = START_HOUR + i;
-                                            return (
-                                                <div
-                                                    key={hour}
-                                                    style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
-                                                    className="absolute inset-x-0 border-b border-[#101F1A]/8 px-1.5 pt-1 text-right text-[10px] font-bold text-[#101F1A]/40"
-                                                >
-                                                    {formatHourLabel(hour)}
-                                                </div>
-                                            );
-                                        })}
+                                    {/* Column Header */}
+                                    <div className="flex border-b border-[#101F1A]/10 bg-[#FAF9F5] select-none shrink-0 shadow-2xs">
+                                        <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/40" />
+
+                                        {viewMode === 'Weekly View' ? (
+                                            <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/10">
+                                                {weekDays.map((dayDate, i) => {
+                                                    const isSelectedDay = dayDate.toDateString() === selectedDate.toDateString();
+                                                    const isToday = dayDate.toDateString() === new Date().toDateString();
+                                                    return (
+                                                        <button
+                                                            key={i}
+                                                            type="button"
+                                                            onClick={() => setSelectedDate(dayDate)}
+                                                            className={`py-2 px-1 text-center transition-all cursor-pointer ${
+                                                                isSelectedDay
+                                                                    ? 'bg-emerald-500/10'
+                                                                    : isToday
+                                                                    ? 'bg-emerald-500/[0.04]'
+                                                                    : 'hover:bg-black/[0.02]'
+                                                            }`}
+                                                        >
+                                                            <span className={`block text-[10px] font-bold uppercase tracking-wider ${
+                                                                isSelectedDay ? 'text-emerald-950 font-black' : 'text-[#101F1A]/50'
+                                                            }`}>
+                                                                {dayDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                                                            </span>
+                                                            <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-black mt-0.5 ${
+                                                                isToday
+                                                                    ? 'bg-[#101F1A] text-[#D6FF3F]'
+                                                                    : isSelectedDay
+                                                                    ? 'bg-emerald-600 text-white'
+                                                                    : 'text-[#101F1A]'
+                                                            }`}>
+                                                                {dayDate.getDate()}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="flex-1 flex divide-x divide-[#101F1A]/10 overflow-x-auto hide-scrollbar">
+                                                {activeCourts.map(court => (
+                                                    <div key={court.id} className="flex-1 min-w-[160px] py-2 px-3 text-left">
+                                                        <span className="block text-xs font-black text-[#101F1A] truncate">
+                                                            {cleanCourtName(court.name)}
+                                                        </span>
+                                                        <span className="text-[10px] font-semibold text-[#101F1A]/50 uppercase tracking-wider">
+                                                            {court.type || 'Court'} · ₱{Number(court.hourly_rate || court.day_rate || 0)}/hr
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Live Current Time Line Indicator */}
-                                    {liveTimeTop !== null && (
+                                    {/* Scrollable Hours Matrix with Live Time Line */}
+                                    <div ref={gridScrollRef} className="flex-1 overflow-y-auto relative dark-scrollbar select-none">
                                         <div
-                                            style={{ top: `${liveTimeTop}px` }}
-                                            className="absolute inset-x-0 z-40 pointer-events-none flex items-center"
+                                            className="relative flex"
+                                            style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
                                         >
-                                            <div className="w-14 sm:w-16 text-right pr-1">
-                                                <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
-                                                    {liveTimeString}
-                                                </span>
-                                            </div>
-                                            <div className="h-[2px] flex-1 bg-rose-500 shadow-xs relative">
-                                                <div className="absolute -left-1 -top-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Timetable Grid Columns */}
-                                    {viewMode === 'Weekly View' ? (
-                                        <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/8 relative">
-                                            {/* Horizontal Hour Grid Guidelines */}
-                                            <div className="absolute inset-0 pointer-events-none">
-                                                {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
-                                                    <div
-                                                        key={i}
-                                                        style={{ top: `${i * HOUR_HEIGHT}px` }}
-                                                        className="absolute inset-x-0 border-b border-[#101F1A]/6"
-                                                    />
-                                                ))}
+                                            {/* Left Gutter: Hourly Markers */}
+                                            <div className="w-14 sm:w-16 shrink-0 border-r border-[#101F1A]/10 bg-[#FAF9F5]/40 relative">
+                                                {Array.from({ length: TOTAL_HOURS }).map((_, i) => {
+                                                    const hour = START_HOUR + i;
+                                                    return (
+                                                        <div
+                                                            key={hour}
+                                                            style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                                                            className="absolute inset-x-0 border-b border-[#101F1A]/8 px-1.5 pt-1 text-right text-[10px] font-bold text-[#101F1A]/40"
+                                                        >
+                                                            {formatHourLabel(hour)}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
 
-                                            {weekDays.map((dayDate, dayIndex) => {
-                                                const dayIso = dayDate.toISOString().split('T')[0];
-                                                const rawDayBookings = filteredBookings.filter(b => b.date === dayIso);
-                                                const dayBookings = layoutDayBookings(rawDayBookings);
-                                                const isToday = dayDate.toDateString() === new Date().toDateString();
-
-                                                return (
-                                                    <div
-                                                        key={dayIndex}
-                                                        className={`relative h-full transition-colors hover:bg-black/[0.01] ${
-                                                            isToday ? 'bg-emerald-500/[0.015]' : ''
-                                                        }`}
-                                                        onClick={(e) => {
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            const offsetY = e.clientY - rect.top;
-                                                            const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
-                                                            const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
-                                                            const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
-
-                                                            const targetFacilityId = selectedFacilityId !== 'ALL'
-                                                                ? selectedFacilityId
-                                                                : (facilities[0]?.id || data.facility_id);
-
-                                                            const facCourts = facilities.find(f => String(f.id) === String(targetFacilityId))?.courts || [];
-                                                            const targetCourtId = selectedCourtId !== 'ALL'
-                                                                ? selectedCourtId
-                                                                : (facCourts[0]?.id || data.court_id);
-
-                                                            const currentCourt = facCourts.find(c => String(c.id) === String(targetCourtId));
-                                                            const defaultPrice = currentCourt?.hourly_rate || currentCourt?.day_rate || 350;
-
-                                                            clearErrors();
-                                                            setData(prev => ({
-                                                                ...prev,
-                                                                facility_id: targetFacilityId,
-                                                                court_id: targetCourtId,
-                                                                date: dayIso,
-                                                                start_time: startStr,
-                                                                end_time: endStr,
-                                                                total_price: defaultPrice,
-                                                            }));
-                                                            setIsAddModalOpen(true);
-                                                        }}
-                                                    >
-                                                        {dayBookings.map((booking) => {
-                                                            const top = timeToTop(booking.start_time);
-                                                            const height = durationToHeight(booking.start_time, booking.end_time);
-                                                            const theme = getBookingThemeByStatus(booking);
-                                                            const isSelected = activeBooking?.id === booking.id;
-
-                                                            return (
-                                                                <div
-                                                                    key={booking.id}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActiveBooking(booking);
-                                                                    }}
-                                                                    style={{
-                                                                        top: `${top}px`,
-                                                                        height: `${height}px`,
-                                                                        left: booking.styleLeft || '4px',
-                                                                        width: booking.styleWidth || 'calc(100% - 8px)',
-                                                                    }}
-                                                                    className={`absolute z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
-                                                                        isSelected
-                                                                            ? `${theme.activeRing} -translate-y-0.5 z-30`
-                                                                            : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
-                                                                    }`}
-                                                                >
-                                                                    <div className="min-w-0">
-                                                                        <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
-                                                                            {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
-                                                                        </h4>
-                                                                        <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
-                                                                            {formatTimeRange(booking.start_time, booking.end_time)}
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
-                                                                        <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
-                                                                            {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
-                                                                        </div>
-                                                                        {booking.user?.avatar && (
-                                                                            <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                            {/* Live Current Time Line Indicator */}
+                                            {liveTimeTop !== null && (
+                                                <div
+                                                    style={{ top: `${liveTimeTop}px` }}
+                                                    className="absolute inset-x-0 z-40 pointer-events-none flex items-center"
+                                                >
+                                                    <div className="w-14 sm:w-16 text-right pr-1">
+                                                        <span className="bg-rose-500 text-white font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
+                                                            {liveTimeString}
+                                                        </span>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        /* Daily View Timetable Grid (Columns = Courts) */
-                                        <div className="flex-1 flex divide-x divide-[#101F1A]/8 relative">
-                                            <div className="absolute inset-0 pointer-events-none">
-                                                {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
-                                                    <div
-                                                        key={i}
-                                                        style={{ top: `${i * HOUR_HEIGHT}px` }}
-                                                        className="absolute inset-x-0 border-b border-[#101F1A]/6"
-                                                    />
-                                                ))}
-                                            </div>
-
-                                            {activeCourts.map(court => {
-                                                const dayIso = selectedDate.toISOString().split('T')[0];
-                                                const courtBookings = filteredBookings.filter(
-                                                    b => b.date === dayIso && String(b.court_id) === String(court.id)
-                                                );
-
-                                                return (
-                                                    <div
-                                                        key={court.id}
-                                                        className="flex-1 min-w-[160px] relative h-full transition-colors hover:bg-black/[0.01]"
-                                                        onClick={(e) => {
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            const offsetY = e.clientY - rect.top;
-                                                            const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
-                                                            const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
-                                                            const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
-
-                                                            const defaultPrice = court.hourly_rate || court.day_rate || 350;
-
-                                                            clearErrors();
-                                                            setData(prev => ({
-                                                                ...prev,
-                                                                facility_id: court.facility_id || prev.facility_id,
-                                                                court_id: court.id,
-                                                                date: dayIso,
-                                                                start_time: startStr,
-                                                                end_time: endStr,
-                                                                total_price: defaultPrice,
-                                                            }));
-                                                            setIsAddModalOpen(true);
-                                                        }}
-                                                    >
-                                                        {courtBookings.map(booking => {
-                                                            const top = timeToTop(booking.start_time);
-                                                            const height = durationToHeight(booking.start_time, booking.end_time);
-                                                            const theme = getBookingThemeByStatus(booking);
-                                                            const isSelected = activeBooking?.id === booking.id;
-
-                                                            return (
-                                                                <div
-                                                                    key={booking.id}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setActiveBooking(booking);
-                                                                    }}
-                                                                    style={{
-                                                                        top: `${top}px`,
-                                                                        height: `${height}px`,
-                                                                    }}
-                                                                    className={`absolute inset-x-1.5 z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
-                                                                        isSelected
-                                                                            ? `${theme.activeRing} -translate-y-0.5 z-30`
-                                                                            : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
-                                                                    }`}
-                                                                >
-                                                                    <div className="min-w-0">
-                                                                        <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
-                                                                            {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
-                                                                        </h4>
-                                                                        <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
-                                                                            {formatTimeRange(booking.start_time, booking.end_time)}
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
-                                                                        <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
-                                                                            {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
-                                                                        </div>
-                                                                        {booking.user?.avatar && (
-                                                                            <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
+                                                    <div className="h-[2px] flex-1 bg-rose-500 shadow-xs relative">
+                                                        <div className="absolute -left-1 -top-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white" />
                                                     </div>
-                                                );
-                                            })}
+                                                </div>
+                                            )}
+
+                                            {/* Timetable Grid Columns */}
+                                            {viewMode === 'Weekly View' ? (
+                                                <div className="flex-1 grid grid-cols-7 divide-x divide-[#101F1A]/8 relative">
+                                                    <div className="absolute inset-0 pointer-events-none">
+                                                        {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
+                                                            <div
+                                                                key={i}
+                                                                style={{ top: `${i * HOUR_HEIGHT}px` }}
+                                                                className="absolute inset-x-0 border-b border-[#101F1A]/6"
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {weekDays.map((dayDate, dayIndex) => {
+                                                        const dayIso = dayDate.toISOString().split('T')[0];
+                                                        const rawDayBookings = filteredBookings.filter(b => b.date === dayIso);
+                                                        const dayBookings = layoutDayBookings(rawDayBookings);
+                                                        const isToday = dayDate.toDateString() === new Date().toDateString();
+
+                                                        return (
+                                                            <div
+                                                                key={dayIndex}
+                                                                className={`relative h-full transition-colors hover:bg-black/[0.01] ${
+                                                                    isToday ? 'bg-emerald-500/[0.015]' : ''
+                                                                }`}
+                                                                onClick={(e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    const offsetY = e.clientY - rect.top;
+                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
+                                                                    const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
+                                                                    const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
+
+                                                                    const targetFacilityId = selectedFacilityId !== 'ALL'
+                                                                        ? selectedFacilityId
+                                                                        : (facilities[0]?.id || data.facility_id);
+
+                                                                    const facCourts = facilities.find(f => String(f.id) === String(targetFacilityId))?.courts || [];
+                                                                    const targetCourtId = selectedCourtId !== 'ALL'
+                                                                        ? selectedCourtId
+                                                                        : (facCourts[0]?.id || data.court_id);
+
+                                                                    const currentCourt = facCourts.find(c => String(c.id) === String(targetCourtId));
+                                                                    const defaultPrice = currentCourt?.hourly_rate || currentCourt?.day_rate || 350;
+
+                                                                    clearErrors();
+                                                                    setData(prev => ({
+                                                                        ...prev,
+                                                                        facility_id: targetFacilityId,
+                                                                        court_id: targetCourtId,
+                                                                        date: dayIso,
+                                                                        start_time: startStr,
+                                                                        end_time: endStr,
+                                                                        total_price: defaultPrice,
+                                                                    }));
+                                                                    setIsAddModalOpen(true);
+                                                                }}
+                                                            >
+                                                                {dayBookings.map((booking) => {
+                                                                    const top = timeToTop(booking.start_time);
+                                                                    const height = durationToHeight(booking.start_time, booking.end_time);
+                                                                    const theme = getBookingThemeByStatus(booking);
+                                                                    const isSelected = activeBooking?.id === booking.id;
+
+                                                                    return (
+                                                                        <div
+                                                                            key={booking.id}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setActiveBooking(booking);
+                                                                            }}
+                                                                            style={{
+                                                                                top: `${top}px`,
+                                                                                height: `${height}px`,
+                                                                                left: booking.styleLeft || '4px',
+                                                                                width: booking.styleWidth || 'calc(100% - 8px)',
+                                                                            }}
+                                                                            className={`absolute z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                                isSelected
+                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-30`
+                                                                                    : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="min-w-0">
+                                                                                <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
+                                                                                    {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
+                                                                                </h4>
+                                                                                <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
+                                                                                    {formatTimeRange(booking.start_time, booking.end_time)}
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
+                                                                                <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
+                                                                                    {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
+                                                                                </div>
+                                                                                {booking.user?.avatar && (
+                                                                                    <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                /* Daily View Timetable Grid (Columns = Courts) */
+                                                <div className="flex-1 flex divide-x divide-[#101F1A]/8 relative">
+                                                    <div className="absolute inset-0 pointer-events-none">
+                                                        {Array.from({ length: TOTAL_HOURS }).map((_, i) => (
+                                                            <div
+                                                                key={i}
+                                                                style={{ top: `${i * HOUR_HEIGHT}px` }}
+                                                                className="absolute inset-x-0 border-b border-[#101F1A]/6"
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {activeCourts.map(court => {
+                                                        const dayIso = selectedDate.toISOString().split('T')[0];
+                                                        const courtBookings = filteredBookings.filter(
+                                                            b => b.date === dayIso && String(b.court_id) === String(court.id)
+                                                        );
+
+                                                        return (
+                                                            <div
+                                                                key={court.id}
+                                                                className="flex-1 min-w-[160px] relative h-full transition-colors hover:bg-black/[0.01]"
+                                                                onClick={(e) => {
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    const offsetY = e.clientY - rect.top;
+                                                                    const clickedHour = Math.max(START_HOUR, Math.min(END_HOUR - 1, Math.floor(offsetY / HOUR_HEIGHT) + START_HOUR));
+                                                                    const startStr = `${String(clickedHour).padStart(2, '0')}:00`;
+                                                                    const endStr = `${String(clickedHour + 1).padStart(2, '0')}:00`;
+
+                                                                    const defaultPrice = court.hourly_rate || court.day_rate || 350;
+
+                                                                    clearErrors();
+                                                                    setData(prev => ({
+                                                                        ...prev,
+                                                                        facility_id: court.facility_id || prev.facility_id,
+                                                                        court_id: court.id,
+                                                                        date: dayIso,
+                                                                        start_time: startStr,
+                                                                        end_time: endStr,
+                                                                        total_price: defaultPrice,
+                                                                    }));
+                                                                    setIsAddModalOpen(true);
+                                                                }}
+                                                            >
+                                                                {courtBookings.map(booking => {
+                                                                    const top = timeToTop(booking.start_time);
+                                                                    const height = durationToHeight(booking.start_time, booking.end_time);
+                                                                    const theme = getBookingThemeByStatus(booking);
+                                                                    const isSelected = activeBooking?.id === booking.id;
+
+                                                                    return (
+                                                                        <div
+                                                                            key={booking.id}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setActiveBooking(booking);
+                                                                            }}
+                                                                            style={{
+                                                                                top: `${top}px`,
+                                                                                height: `${height}px`,
+                                                                            }}
+                                                                            className={`absolute inset-x-1.5 z-20 rounded-2xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden text-left ${theme.cardBg} ${theme.border} ${
+                                                                                isSelected
+                                                                                    ? `${theme.activeRing} -translate-y-0.5 z-30`
+                                                                                    : 'shadow-2xs hover:shadow-md hover:-translate-y-0.5'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="min-w-0">
+                                                                                <h4 className={`text-xs sm:text-[13px] font-bold tracking-tight truncate ${theme.titleColor}`}>
+                                                                                    {booking.user?.name || booking.guest_name || booking.player || 'Court Match'}
+                                                                                </h4>
+                                                                                <p className={`text-[11px] truncate mt-0.5 ${theme.timeColor}`}>
+                                                                                    {formatTimeRange(booking.start_time, booking.end_time)}
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <div className="flex items-center -space-x-1.5 mt-auto pt-1.5">
+                                                                                <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white shadow-2xs ${theme.avatarBg}`}>
+                                                                                    {(booking.user?.name || booking.guest_name || booking.player || 'P')[0]}
+                                                                                </div>
+                                                                                {booking.user?.avatar && (
+                                                                                    <img src={booking.user.avatar} alt="" className="h-5 w-5 sm:h-6 sm:w-6 rounded-full ring-2 ring-white object-cover" />
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* ── Add Event / Booking Modal with Automated Collision Prevention ── */}
