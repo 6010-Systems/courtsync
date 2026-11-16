@@ -346,10 +346,17 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
     const [activeBooking, setActiveBooking] = useState(null);
     const [isSidebarExpandedMobile, setIsSidebarExpandedMobile] = useState(false);
 
-    // Entire Day Bookings modal state (for Monthly View box click)
+    // Entire Day Bookings modal state (only available in Month Grid view)
     const [isDayListModalOpen, setIsDayListModalOpen] = useState(false);
     const [dayListSearch, setDayListSearch] = useState('');
     const [dayListFilter, setDayListFilter] = useState('ALL');
+
+    // Ensure Day Bookings modal is closed whenever view mode changes away from Month Grid
+    useEffect(() => {
+        if (viewMode !== 'Month Grid') {
+            setIsDayListModalOpen(false);
+        }
+    }, [viewMode]);
 
     // Live time tracker
     const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -997,8 +1004,8 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         transition={{ duration: 0.16, ease: 'easeOut' }}
                                         className="space-y-3.5"
                                     >
-                                        {/* Day volume header link if multiple bookings exist on this date */}
-                                        {modalDayBookings.length > 1 && (
+                                        {/* Day volume header link if multiple bookings exist on this date (only in monthly view) */}
+                                        {viewMode === 'Month Grid' && modalDayBookings.length > 1 && (
                                             <div className="flex items-center justify-between pb-2 border-b border-[#101F1A]/8">
                                                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
                                                     {modalDayBookings.length} bookings on this date
@@ -1762,9 +1769,9 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </form>
             </Modal>
 
-            {/* ── Entire Day Bookings List Modal (Monthly View Box Click) ── */}
+            {/* ── Entire Day Bookings List Modal (Only Available in Monthly View) ── */}
             <Modal
-                show={isDayListModalOpen}
+                show={isDayListModalOpen && viewMode === 'Month Grid'}
                 onClose={() => {
                     setIsDayListModalOpen(false);
                     setDayListSearch('');
