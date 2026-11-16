@@ -16,7 +16,7 @@ import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
-export default function Edit({ mustVerifyEmail, status }) {
+export default function Edit({ mustVerifyEmail, status, canDeleteAccount = true }) {
     const user = usePage().props.auth.user;
 
     const initials = user?.name
@@ -101,10 +101,12 @@ export default function Edit({ mustVerifyEmail, status }) {
                             </div>
                         </div>
 
-                        {/* Danger Zone Deletion Card */}
-                        <div className="rounded-xl border border-[#FF5A36]/20 bg-white p-6 shadow-card">
-                            <DeleteUserForm />
-                        </div>
+                        {/* Danger Zone Deletion Card (venue accounts only) */}
+                        {canDeleteAccount && (
+                            <div className="rounded-xl border border-[#FF5A36]/20 bg-white p-6 shadow-card">
+                                <DeleteUserForm />
+                            </div>
+                        )}
 
                     </div>
                 </div>

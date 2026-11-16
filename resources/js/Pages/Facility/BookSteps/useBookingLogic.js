@@ -402,7 +402,18 @@ export function useBookingLogic(facility) {
     }, [selectedCourt, startTime, endTime]);
 
     const durationHours = pricingSummary.durationHours;
-    const totalPrice = pricingSummary.totalPrice;
+    const subtotal = pricingSummary.totalPrice;
+    const bookingFee = useMemo(() => {
+        const value = Number(facility.booking_fee_value || 0);
+        if (value <= 0) {
+            return 0;
+        }
+        if (facility.booking_fee_type === 'PERCENT') {
+            return Math.round(subtotal * Math.min(value, 100)) / 100;
+        }
+        return value;
+    }, [facility.booking_fee_type, facility.booking_fee_value, subtotal]);
+    const totalPrice = Math.round((subtotal + bookingFee) * 100) / 100;
     const price = pricingSummary.isSplit
         ? (pricingSummary.dayRate || 0)
         : (selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0);
@@ -426,7 +437,8 @@ export function useBookingLogic(facility) {
             date: selectedDate,
             start_time: startTime,
             end_time: endTime,
-            total_price: totalPrice,
+            // Court subtotal only: the server adds the facility booking fee itself.
+            total_price: subtotal,
             payment_method: paymentMethod,
             proof_file: proofFile
         }, {
@@ -507,7 +519,7 @@ export function useBookingLogic(facility) {
         dates,
         goNext, goPrev,
         handleBooking,
-        price, durationHours, totalPrice, pricingSummary,
+        price, durationHours, subtotal, bookingFee, totalPrice, pricingSummary,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile

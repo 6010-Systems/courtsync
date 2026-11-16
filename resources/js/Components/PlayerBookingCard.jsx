@@ -14,6 +14,10 @@ export default function PlayerBookingCard({ booking }) {
     const time = (value) => new Date(`2000-01-01T${value}`).toLocaleTimeString('en-US', {
         hour: 'numeric', minute: '2-digit',
     });
+    const pesos = (value) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
+    const total = Number(booking.total_price);
+    const bookingFee = Number(booking.booking_fee ?? 0);
+    const subtotal = booking.subtotal != null ? Number(booking.subtotal) : total - bookingFee;
 
     return (
         <article className="rounded-xl border border-[#101F1A]/10 bg-white p-5 shadow-card sm:p-6">
@@ -31,7 +35,14 @@ export default function PlayerBookingCard({ booking }) {
                 <p className="flex items-center gap-2"><CalendarCheck size={16} aria-hidden="true" />{date}</p>
                 <p className="flex items-center gap-2"><Clock size={16} aria-hidden="true" />{time(booking.start_time)} – {time(booking.end_time)}</p>
                 <p className="flex items-center gap-2"><MapPin size={16} aria-hidden="true" />{[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Location unavailable'}</p>
-                <p className="font-bold text-[#101F1A]">{new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(booking.total_price))}</p>
+                <div>
+                    <p className="font-bold text-[#101F1A]">{pesos(total)}</p>
+                    {bookingFee > 0 && (
+                        <p className="text-xs text-[#101F1A]/60">
+                            {pesos(subtotal)} court rate + {pesos(bookingFee)} booking fee
+                        </p>
+                    )}
+                </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#101F1A]/10 pt-4">
                 <p className="text-xs text-[#101F1A]/60">

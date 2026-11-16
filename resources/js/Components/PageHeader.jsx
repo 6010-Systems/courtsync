@@ -22,35 +22,30 @@ function urlBase64ToUint8Array(base64String) {
     return output;
 }
 
-const announcedNotificationIds = new Set();
-
-function announceNotifications(items) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-        return;
+const isIosDevice = () => {
+    if (typeof navigator === 'undefined') {
+        return false;
     }
 
-    items.forEach((item) => {
-        if (item.read_at !== null || announcedNotificationIds.has(item.id)) {
-            return;
-        }
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
 
-        announcedNotificationIds.add(item.id);
+const isStandaloneApp = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
 
-        const popup = new Notification(item.title || 'CourtSync', {
-            body: item.message || '',
-            icon: '/assets/ball.png',
-            tag: item.id,
-            requireInteraction: true,
-        });
+    return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
 
-        popup.onclick = () => {
-            window.focus();
-            popup.close();
+async function storeSubscription(subscription) {
+    const payload = subscription.toJSON();
 
-            if (item.url) {
-                router.visit(item.url);
-            }
-        };
+    await window.axios.post(route('push-subscriptions.store'), {
+        endpoint: payload.endpoint,
+        keys: payload.keys,
+        content_encoding: 'aes128gcm',
     });
 }
 
@@ -157,7 +152,6 @@ export default function PageHeader({
         window.axios.get(route('notifications.index')).then(({ data }) => {
             setLiveItems(data.notifications);
             setLiveUnreadCount(data.unread_count);
-            announceNotifications(data.notifications);
         }).catch(() => {
             // Keep the last list when a refresh fails.
         });
@@ -175,7 +169,20 @@ export default function PageHeader({
     }, [liveNotifications, loadNotifications]);
 
     useEffect(() => {
-        if (!liveNotifications || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        if (!liveNotifications) {
+            return undefined;
+        }
+
+        // iOS/iPadOS only allows Web Push from an installed (Home Screen) app.
+        if (isIosDevice() && !isStandaloneApp()) {
+            setPushStatus('ios-install');
+
+            return undefined;
+        }
+
+        if (!vapidPublicKey || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            setPushStatus('unsupported');
+
             return undefined;
         }
 
@@ -187,25 +194,64 @@ export default function PageHeader({
 
         let active = true;
 
-        navigator.serviceWorker.getRegistration('/sw.js').then(async (registration) => {
-            await registration?.update();
-            const subscription = await registration?.pushManager.getSubscription();
+        (async () => {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                let subscription = await registration.pushManager.getSubscription();
 
-            if (active) {
-                setPushStatus(subscription ? 'enabled' : 'default');
+                // Permission is already granted (e.g. from a previous session) but the
+                // subscription was lost/cleared: recreate it silently so background
+                // notifications keep working without another click.
+                let createdNow = false;
+
+                if (!subscription && Notification.permission === 'granted') {
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                    });
+                    createdNow = true;
+                }
+
+                if (!active) {
+                    return;
+                }
+
+                if (!subscription) {
+                    setPushStatus('default');
+
+                    return;
+                }
+
+                setPushStatus('enabled');
+
+                // Re-sync at most every 6 hours so the server keeps a valid endpoint.
+                const lastSyncedAt = Number(sessionStorage.getItem('courtsync-push-synced-at') || 0);
+
+                if (!createdNow && Date.now() - lastSyncedAt < 6 * 60 * 60 * 1000) {
+                    return;
+                }
+
+                await storeSubscription(subscription);
+                sessionStorage.setItem('courtsync-push-synced-at', String(Date.now()));
+            } catch (error) {
+                if (active) {
+                    setPushStatus('default');
+                }
             }
-        }).catch(() => {
-            if (active) {
-                setPushStatus('default');
-            }
-        });
+        })();
 
         return () => {
             active = false;
         };
-    }, [liveNotifications]);
+    }, [liveNotifications, vapidPublicKey]);
 
     const enablePush = async () => {
+        if (isIosDevice() && !isStandaloneApp()) {
+            setPushStatus('ios-install');
+
+            return;
+        }
+
         if (!vapidPublicKey || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
             setPushStatus('unsupported');
 
@@ -229,13 +275,8 @@ export default function PageHeader({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             });
-            const payload = subscription.toJSON();
 
-            await window.axios.post(route('push-subscriptions.store'), {
-                endpoint: payload.endpoint,
-                keys: payload.keys,
-                content_encoding: 'aes128gcm',
-            });
+            await storeSubscription(subscription);
             setPushStatus('enabled');
         } catch {
             setPushStatus('error');
@@ -437,6 +478,10 @@ export default function PageHeader({
                                             </button>
                                         ) : pushStatus === 'denied' ? (
                                             <p className="text-[11px] font-medium text-[#101F1A]/60">Notifications are blocked in this browser.</p>
+                                        ) : pushStatus === 'ios-install' ? (
+                                            <p className="text-[11px] font-medium text-[#101F1A]/60">
+                                                On iPhone/iPad, tap Share then &quot;Add to Home Screen&quot; and enable notifications inside the installed app.
+                                            </p>
                                         ) : pushStatus === 'unsupported' ? (
                                             <p className="text-[11px] font-medium text-[#101F1A]/60">This browser cannot receive notifications.</p>
                                         ) : pushStatus === 'error' ? (

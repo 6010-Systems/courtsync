@@ -42,4 +42,14 @@ class PushSubscriptionController extends Controller
 
         return response()->noContent();
     }
+
+    /**
+     * Public VAPID key used by the service worker to re-subscribe.
+     */
+    public function vapidPublicKey(): JsonResponse
+    {
+        return response()->json([
+            'public_key' => config('webpush.vapid.public_key'),
+        ]);
+    }
 }
