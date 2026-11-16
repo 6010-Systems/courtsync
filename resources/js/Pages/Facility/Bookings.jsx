@@ -263,14 +263,23 @@ export default function Bookings({ bookings, facilities, filters }) {
                         ))}
                         <div className="hidden sm:flex border border-[#10221C]/12 rounded-lg bg-white p-1 gap-1 ml-2 h-full items-center">
                             <button 
+                                onClick={() => router.visit(route('facility.calendar'))}
+                                className="p-1.5 rounded-md text-gray-400 hover:text-[#10221C] transition-colors"
+                                title="Calendar Matrix View"
+                            >
+                                <Calendar size={18} />
+                            </button>
+                            <button 
                                 onClick={() => setViewMode('table')}
                                 className={`p-1.5 rounded-md transition-colors ${viewMode === 'table' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                                title="Table View"
                             >
                                 <List size={18} />
                             </button>
                             <button 
                                 onClick={() => setViewMode('card')}
                                 className={`p-1.5 rounded-md transition-colors ${viewMode === 'card' ? 'bg-[#10221C]/5 text-[#10221C]' : 'text-gray-400 hover:text-[#10221C]'}`}
+                                title="Card View"
                             >
                                 <LayoutGrid size={18} />
                             </button>

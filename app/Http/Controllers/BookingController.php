@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Court;
 use App\Models\Facility;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
@@ -29,7 +30,7 @@ class BookingController extends Controller
         $filter = $request->input('filter', 'All');
 
         $query = Booking::whereIn('facility_id', $facilityIds)
-            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name']);
+            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name', 'payment']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -65,6 +66,35 @@ class BookingController extends Controller
                 'search' => $search,
                 'filter' => $filter,
             ],
+        ]);
+    }
+
+    public function calendar(Request $request)
+    {
+        $user = $request->user();
+
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        } elseif ($user->role === 'ADMIN') {
+            $facilityIds = Facility::pluck('id');
+        }
+
+        $facilities = Facility::whereIn('id', $facilityIds)
+            ->with(['courts:id,facility_id,name,type,hourly_rate,day_rate,night_rate,status'])
+            ->get();
+
+        $bookings = Booking::whereIn('facility_id', $facilityIds)
+            ->with(['user:id,name,email,avatar', 'court:id,name,type', 'facility:id,name', 'payment'])
+            ->orderBy('date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get();
+
+        return inertia('Facility/Calendar', [
+            'facilities' => $facilities,
+            'bookings' => $bookings,
         ]);
     }
 
@@ -116,18 +146,29 @@ class BookingController extends Controller
         $user = $request->user();
 
         //  Prevent Double Booking
+        $reqStart = strlen($validated['start_time']) === 5 ? $validated['start_time'].':00' : $validated['start_time'];
+        $reqEnd = strlen($validated['end_time']) === 5 ? $validated['end_time'].':00' : $validated['end_time'];
+
         $conflict = Booking::where('court_id', $validated['court_id'])
             ->where('date', $validated['date'])
-            ->where(function ($query) use ($validated) {
+            ->where(function ($query) use ($reqStart, $reqEnd) {
                 // A requested time [A, B] overlaps with an existing time [C, D] if A < D and B > C.
-                $query->where('start_time', '<', $validated['end_time'])
-                    ->where('end_time', '>', $validated['start_time']);
+                $query->where('start_time', '<', $reqEnd)
+                    ->where('end_time', '>', $reqStart);
             })
-            ->where('status', '!=', 'cancelled')
-            ->exists();
+            ->whereNotIn(DB::raw('LOWER(status)'), ['cancelled', 'rejected'])
+            ->with(['user:id,name', 'court:id,name'])
+            ->first();
 
         if ($conflict) {
-            return back()->withErrors(['conflict' => 'Sorry, this court is already booked for that time.']);
+            $conflictHost = $conflict->user?->name ?? $conflict->guest_name ?? 'another player';
+            $conflictStart = date('g:i A', strtotime($conflict->start_time));
+            $conflictEnd = date('g:i A', strtotime($conflict->end_time));
+
+            return back()->withErrors([
+                'conflict' => "Sorry, this court is already booked by {$conflictHost} from {$conflictStart} to {$conflictEnd}.",
+                'start_time' => 'This time slot overlaps with an existing reservation.',
+            ]);
         }
 
         // Determine user_id based on whether a guest name is provided

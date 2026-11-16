@@ -112,6 +112,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
     Route::post('/facility/{facility}/branding', [RootFacilityController::class, 'updateBranding'])->name('facility.branding.update');
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
+    Route::get('/facility/calendar', [BookingController::class, 'calendar'])->name('facility.calendar');
     Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
     Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
