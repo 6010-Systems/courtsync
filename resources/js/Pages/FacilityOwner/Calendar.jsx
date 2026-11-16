@@ -908,7 +908,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                 </div>
 
                 {/* ── UNIFIED 2-COLUMN LAYOUT: Left Sidebar Compact, Right Grid Widened ── */}
-                <div className="relative z-10 flex flex-col lg:flex-row gap-3.5 items-stretch lg:h-[calc(100vh-250px)] min-h-[580px]">
+                <div className="relative z-10 flex flex-col lg:flex-row gap-3.5 items-stretch lg:h-[calc(100vh-185px)] min-h-[620px]">
                     
                     {/* ── LEFT SIDEBAR (Mini Calendar + Active Booking Inspector Card: compact 280-290px) ── */}
                     <div className={`w-full lg:w-[280px] xl:w-[290px] shrink-0 lg:h-full lg:flex lg:flex-col gap-3.5 min-h-0 ${
@@ -993,7 +993,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                         </div>
 
                         {/* 2. Active Event Inspector Card (Fills remaining height below mini calendar) */}
-                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md lg:flex-1 lg:flex lg:flex-col min-h-0 overflow-hidden">
+                        <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-3.5 sm:p-4 shadow-card backdrop-blur-md lg:flex-1 lg:flex lg:flex-col min-h-[260px] overflow-hidden">
                             <AnimatePresence mode="wait" initial={false}>
                                 {activeBooking ? (
                                     <motion.div
@@ -1004,7 +1004,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         transition={{ duration: 0.16, ease: 'easeOut' }}
                                         className="flex-1 flex flex-col min-h-0 justify-between h-full"
                                     >
-                                        <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto dark-scrollbar pr-0.5">
+                                        <div className="space-y-3 flex-1 min-h-0 overflow-y-auto dark-scrollbar pr-0.5">
                                             {/* Day volume header link if multiple bookings exist on this date (only in monthly view) */}
                                             {viewMode === 'Month Grid' && modalDayBookings.length > 1 && (
                                                 <div className="flex items-center justify-between pb-2 border-b border-[#101F1A]/8">
@@ -1094,7 +1094,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
                                         </div>
 
                                         {/* Purposeful Actions Pinned to Bottom */}
-                                        <div className="pt-3 border-t border-[#101F1A]/8 flex items-center gap-2 mt-auto shrink-0">
+                                        <div className="pt-2.5 border-t border-[#101F1A]/8 flex items-center gap-2 mt-auto shrink-0">
                                             <button
                                                 onClick={() => router.visit(route('facility.bookings'))}
                                                 className="flex-1 py-1.5 rounded-lg bg-[#101F1A] text-[#D6FF3F] text-xs font-bold text-center hover:bg-[#162923] transition-colors cursor-pointer"
