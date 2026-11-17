@@ -53,6 +53,7 @@ class PlayerController extends Controller
                     'created_at' => $player->created_at,
                     'facility_id' => $facility->id,
                     'facility_name' => $facility->name,
+                    'facility_slug' => $facility->slug,
                     'status' => $player->pivot->status,
                 ];
             }
