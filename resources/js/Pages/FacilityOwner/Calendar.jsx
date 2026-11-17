@@ -19,6 +19,7 @@ import {
     ChevronRight,
     ChevronDown,
     Check,
+    CheckCircle2,
     X,
     Building2,
     CalendarCheck,
@@ -28,6 +29,7 @@ import {
     User,
     MapPin,
     ArrowUpRight,
+    Banknote,
 } from 'lucide-react';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -315,12 +317,30 @@ const layoutDayBookings = (bookings) => {
     return laidOutEvents;
 };
 
-function StatCard({ label, value, hint }) {
+
+function StatCard({ label, value, hint, icon: Icon }) {
     return (
-        <div className="rounded-xl border border-[#101F1A]/10 bg-white p-2.5 sm:p-3 shadow-card shrink-0">
-            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">{label}</p>
-            <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-black text-[#101F1A]">{value}</p>
-            {hint ? <p className="mt-0.5 text-[11px] text-[#101F1A]/60 truncate">{hint}</p> : null}
+        <div className="rounded-xl sm:rounded-2xl border border-[#101F1A]/10 bg-white p-2.5 sm:p-3 shadow-card hover:shadow-md transition-all shrink-0 flex items-center justify-between gap-2.5 overflow-hidden">
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    {Icon && (
+                        <div className="flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F] text-[#101F1A] shadow-2xs font-bold">
+                            <Icon size={13} strokeWidth={2.4} />
+                        </div>
+                    )}
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60 truncate">
+                        {label}
+                    </p>
+                </div>
+                <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-black text-[#101F1A] tracking-tight">
+                    {value}
+                </p>
+                {hint ? (
+                    <p className="mt-0.5 text-[10px] sm:text-[11px] text-[#101F1A]/60 truncate">
+                        {hint}
+                    </p>
+                ) : null}
+            </div>
         </div>
     );
 }
@@ -531,6 +551,7 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
             return true;
         });
     }, [bookings, selectedFacilityId, selectedCourtId, scopeFilter, searchQuery, viewMode]);
+
 
     // Selected date ISO string
     const selectedDateIso = selectedDate.toISOString().split('T')[0];
@@ -772,10 +793,30 @@ export default function Calendar({ filters = {}, monthLabel, today, bookings = [
 
                 {/* ── KPI Strip (Aligned with Current Layout) ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
-                    <StatCard label="Bookings" value={stats.total} hint={monthLabel || 'All active'} />
-                    <StatCard label="Confirmed" value={stats.confirmed} hint={`${stats.pending} awaiting review`} />
-                    <StatCard label="Pending" value={stats.pending} hint="Requires verification" />
-                    <StatCard label="Booking Value" value={formatPeso(stats.revenue)} hint="Excludes cancellations" />
+                    <StatCard
+                        label="Bookings"
+                        value={stats.total}
+                        hint={monthLabel || 'All active'}
+                        icon={CalendarDays}
+                    />
+                    <StatCard
+                        label="Confirmed"
+                        value={stats.confirmed}
+                        hint={`${stats.pending} awaiting review`}
+                        icon={CheckCircle2}
+                    />
+                    <StatCard
+                        label="Pending"
+                        value={stats.pending}
+                        hint="Requires verification"
+                        icon={Clock}
+                    />
+                    <StatCard
+                        label="Booking Value"
+                        value={formatPeso(stats.revenue)}
+                        hint="Excludes cancellations"
+                        icon={Banknote}
+                    />
                 </div>
 
                 {/* ── Action Toolbar: Cockpit Controls (Elevated Stacking Context over Grid) ── */}
