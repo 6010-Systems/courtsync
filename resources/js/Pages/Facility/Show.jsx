@@ -83,7 +83,7 @@ export default function Show({ facility }) {
 
     const defaultCover = 'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1600&q=80';
     const coverPhoto = facility.cover_photo_url || facility.cover_image_url || facility.verification?.facility_photos?.[0] || defaultCover;
-    
+
     // Gallery photos
     const rawPhotos = facility.verification?.facility_photos || [];
     const photos = (Array.isArray(rawPhotos) ? rawPhotos : [])
@@ -341,7 +341,7 @@ export default function Show({ facility }) {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-14 lg:py-20 relative z-20">
-                {/* Mobile-Only Compact Rectangle Booking CTA (Directly below banner) */}
+                {/* Mobile-Only Compact Rectangle Booking CTA  */}
                 <div className="block lg:hidden mb-6 sm:mb-8">
                     <div className="bg-[#10221C] p-4 sm:p-5 rounded-2xl shadow-xl border border-white/5 flex items-center justify-between gap-3.5">
                         <div className="min-w-0 flex-1">
@@ -368,7 +368,7 @@ export default function Show({ facility }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10 lg:gap-12">
 
-                    {/* Left Column - Details & Gallery */}
+                    {/* Left Column - Details & Galleries */}
                     <div className="lg:col-span-7 xl:col-span-8 space-y-8 sm:space-y-10 lg:space-y-12">
                         {/* Courts */}
                         <section>
@@ -548,7 +548,7 @@ export default function Show({ facility }) {
                                                         <span className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg">
                                                             +{remainingCount}
                                                         </span>
-                                                       
+
                                                     </div>
                                                 )}
                                             </div>

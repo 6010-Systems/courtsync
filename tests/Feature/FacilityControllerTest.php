@@ -21,13 +21,17 @@ class FacilityControllerTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Show'));
     }
 
-    public function test_guest_book_page_redirects_to_login(): void
+    public function test_guest_is_redirected_to_the_facility_player_login_page(): void
     {
         $facility = Facility::factory()->create();
 
         $response = $this->get(route('facility.book', $facility->slug));
 
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(route('player.login', $facility->slug));
+        $this->assertSame(
+            route('facility.book', $facility->slug),
+            session('url.intended'),
+        );
     }
 
     public function test_authenticated_book_page_renders_facility_book(): void
