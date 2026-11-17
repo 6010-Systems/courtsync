@@ -1,8 +1,12 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
+
+import { formatPeso } from '@/Components/MetricCard';
 export default function Step2DateTime({ 
     selectedCourt, 
     price, 
+    pricingSummary,
+    totalPrice,
     dates, 
     selectedDate, 
     setSelectedDate, 
@@ -16,12 +20,22 @@ export default function Step2DateTime({
     formatDateString, 
     formatTimeString 
 }) {
+    const hasSplitRates = selectedCourt?.pricing_mode === 'SPLIT' && Boolean(selectedCourt?.day_rate && selectedCourt?.night_rate);
+
     return (
         <div className="p-6 sm:p-10">
             <div className="mb-8">
                 <h2 className="text-2xl sm:text-3xl font-black text-[#10221C] mb-1">Select Date & Time</h2>
                 <p className="text-sm text-gray-500">
-                    Booking <strong className="text-[#10221C]">{selectedCourt?.name}</strong> · ₱{price.toFixed(2)}/hr
+                    Booking <strong className="text-[#10221C]">{selectedCourt?.name}</strong> · {hasSplitRates ? (
+                        <span className="font-semibold text-[#10221C]">
+                            <span className="text-amber-700">☀️ {formatPeso(selectedCourt.day_rate)}/hr Day</span>
+                            <span className="text-gray-300 mx-1.5">·</span>
+                            <span className="text-indigo-700">🌙 {formatPeso(selectedCourt.night_rate)}/hr Night</span>
+                        </span>
+                    ) : (
+                        `${formatPeso(price)}/hr`
+                    )}
                 </p>
             </div>
             
@@ -96,7 +110,7 @@ export default function Step2DateTime({
                                     <option value="">Select start</option>
                                     {timeOptions.slice(0, -1).map((opt) => (
                                         <option key={opt.value} value={opt.value} disabled={opt.isBooked}>
-                                            {opt.label} {opt.labelSuffix}
+                                            {opt.label} {opt.rateTag ? `(${opt.rateTag})` : ''} {opt.labelSuffix}
                                         </option>
                                     ))}
                                 </select>
@@ -121,7 +135,7 @@ export default function Step2DateTime({
                                         if (firstBookedAfterStart === -1) firstBookedAfterStart = timeOptions.length - 1;
                                         
                                         return timeOptions.filter((opt, index) => startTime && index > startIndex && index <= firstBookedAfterStart).map((opt) => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            <option key={opt.value} value={opt.value}>{opt.label} {opt.rateTag ? `(${opt.rateTag})` : ''}</option>
                                         ));
                                     })()}
                                 </select>
@@ -132,10 +146,27 @@ export default function Step2DateTime({
                         </div>
                     </div>
                     {durationHours > 0 && (
-                        <div className="mt-4 flex items-center gap-2.5 bg-[#D6FF3F]/20 rounded-xl px-4 py-3">
-                            <svg className="w-5 h-5 text-[#10221C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span className="text-sm font-bold text-[#10221C]">{formatTimeString(startTime)} – {formatTimeString(endTime)}</span>
-                            <span className="ml-auto text-xs font-bold bg-[#10221C] text-white px-2 py-0.5 rounded-full">{durationHours} hr{durationHours > 1 ? 's' : ''}</span>
+                        <div className="mt-4 space-y-2">
+                            <div className="flex items-center gap-2.5 bg-[#D6FF3F]/20 rounded-xl px-4 py-3">
+                                <svg className="w-5 h-5 text-[#10221C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span className="text-sm font-bold text-[#10221C]">{formatTimeString(startTime)} – {formatTimeString(endTime)}</span>
+                                <span className="ml-auto text-xs font-bold bg-[#10221C] text-white px-2 py-0.5 rounded-full">{durationHours} hr{durationHours > 1 ? 's' : ''}</span>
+                            </div>
+
+                            {pricingSummary?.isSplit && (
+                                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs space-y-1.5">
+                                    <div className="flex justify-between items-center text-[#10221C] font-bold">
+                                        <span>⏱️ Rate Breakdown</span>
+                                        <span className="text-sm font-black">Total: {formatPeso(totalPrice || 0)}</span>
+                                    </div>
+                                    {pricingSummary.breakdown?.map((item, idx) => (
+                                        <div key={idx} className="flex justify-between text-gray-600">
+                                            <span>• {item.label}: {item.hours} hr{item.hours > 1 ? 's' : ''} @ {formatPeso(item.rate)}/hr</span>
+                                            <span className="font-semibold text-[#10221C]">{formatPeso(item.subtotal)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

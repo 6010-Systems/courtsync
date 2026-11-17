@@ -159,4 +159,39 @@ class PaymentControllerTest extends TestCase
             ->component('Facility/Payments')
             ->where('payments', fn ($payments) => count($payments) === 1));
     }
+
+    public function test_payment_records_expose_the_booking_fee_breakdown(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->create(['facility_id' => $facility->id]);
+
+        $booking = Booking::query()->create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'date' => '2026-09-27',
+            'start_time' => '08:00:00',
+            'end_time' => '09:00:00',
+            'subtotal' => 300,
+            'booking_fee' => 25,
+            'total_price' => 325,
+            'status' => 'confirmed',
+        ]);
+
+        Payment::query()->create([
+            'booking_id' => $booking->id,
+            'amount' => '325.00',
+            'payment_method' => 'gcash',
+            'status' => 'verified',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('facility.payments'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Payments')
+                ->where('payments.0.booking.subtotal', fn ($value) => (float) $value === 300.0)
+                ->where('payments.0.booking.booking_fee', fn ($value) => (float) $value === 25.0)
+                ->where('payments.0.amount', fn ($value) => (float) $value === 325.0));
+    }
 }

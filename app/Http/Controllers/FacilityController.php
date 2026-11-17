@@ -7,6 +7,7 @@ use App\Models\FacilityVerification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class FacilityController extends Controller
@@ -386,13 +387,22 @@ class FacilityController extends Controller
             'maya_number' => 'nullable|string|max:255',
             'maya_qr' => 'nullable|image|max:5120',
             'clear_maya_qr' => 'sometimes|boolean',
+            'booking_fee_type' => ['sometimes', 'required', Rule::in(Facility::BOOKING_FEE_TYPES)],
+            'booking_fee_value' => [
+                'sometimes',
+                'numeric',
+                'min:0',
+                Rule::when($request->input('booking_fee_type') === 'PERCENT', 'max:100', 'max:100000'),
+            ],
         ]);
 
         $updateData = [
-            'gcash_name' => $validated['gcash_name'],
-            'gcash_number' => $validated['gcash_number'],
-            'maya_name' => $validated['maya_name'],
-            'maya_number' => $validated['maya_number'],
+            'gcash_name' => $validated['gcash_name'] ?? null,
+            'gcash_number' => $validated['gcash_number'] ?? null,
+            'maya_name' => $validated['maya_name'] ?? null,
+            'maya_number' => $validated['maya_number'] ?? null,
+            'booking_fee_type' => $validated['booking_fee_type'] ?? $facility->booking_fee_type ?? 'FIXED',
+            'booking_fee_value' => $validated['booking_fee_value'] ?? $facility->booking_fee_value ?? 0,
         ];
 
         if ($request->hasFile('gcash_qr')) {
@@ -412,5 +422,48 @@ class FacilityController extends Controller
         $facility->update($updateData);
 
         return back()->with('success', 'Payment settings updated successfully.');
+    }
+
+    public function updateBranding(Request $request, Facility $facility)
+    {
+        $user = $request->user();
+        if ($user->role !== 'ADMIN' && ($user->role !== 'FACILITY_OWNER' || $facility->user_id !== $user->id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'cover_photo' => 'nullable|image|max:10240',
+            'cover_photo_url' => 'nullable|string|max:2048',
+            'clear_cover_photo' => 'sometimes|boolean',
+            'logo' => 'nullable|image|max:5120',
+            'logo_url' => 'nullable|string|max:2048',
+            'clear_logo' => 'sometimes|boolean',
+        ]);
+
+        $updateData = [];
+
+        if ($request->hasFile('cover_photo')) {
+            $path = $request->file('cover_photo')->store('facilities/covers', 'public');
+            $updateData['cover_photo_url'] = '/storage/'.$path;
+        } elseif ($request->filled('cover_photo_url')) {
+            $updateData['cover_photo_url'] = $request->cover_photo_url;
+        } elseif ($request->boolean('clear_cover_photo')) {
+            $updateData['cover_photo_url'] = null;
+        }
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('facilities/logos', 'public');
+            $updateData['logo_url'] = '/storage/'.$path;
+        } elseif ($request->filled('logo_url')) {
+            $updateData['logo_url'] = $request->logo_url;
+        } elseif ($request->boolean('clear_logo')) {
+            $updateData['logo_url'] = null;
+        }
+
+        if (! empty($updateData)) {
+            $facility->update($updateData);
+        }
+
+        return back()->with('success', 'Facility branding updated successfully.');
     }
 }

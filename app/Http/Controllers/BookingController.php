@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Court;
 use App\Models\Facility;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class BookingController extends Controller
 {
@@ -29,7 +31,7 @@ class BookingController extends Controller
         $filter = $request->input('filter', 'All');
 
         $query = Booking::whereIn('facility_id', $facilityIds)
-            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name']);
+            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name', 'payment:id,booking_id,amount,status,payment_method,proof_path']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -58,9 +60,19 @@ class BookingController extends Controller
             ->with('courts')
             ->get();
 
+        $countQuery = Booking::query()->whereIn('facility_id', $facilityIds);
+
+        $counts = [
+            'all' => (clone $countQuery)->count(),
+            'today' => (clone $countQuery)->where('date', now()->toDateString())->count(),
+            'upcoming' => (clone $countQuery)->where('date', '>', now()->toDateString())->count(),
+            'pending' => (clone $countQuery)->where('status', 'pending')->count(),
+        ];
+
         return inertia('Facility/Bookings', [
             'bookings' => $bookings,
             'facilities' => $facilities,
+            'counts' => $counts,
             'filters' => [
                 'search' => $search,
                 'filter' => $filter,
@@ -133,16 +145,26 @@ class BookingController extends Controller
         // Determine user_id based on whether a guest name is provided
         $userId = ! empty($validated['guest_name']) ? null : $user->id;
 
+        $court = Court::findOrFail($validated['court_id']);
+        $facility = $court->facility()->firstOrFail();
+
+        $pricingResult = $court->calculatePriceForRange($validated['start_time'], $validated['end_time']);
+        $subtotal = $pricingResult['total'] > 0 ? $pricingResult['total'] : (float) $validated['total_price'];
+        $bookingFee = $facility->calculateBookingFee($subtotal);
+        $finalPrice = round($subtotal + $bookingFee, 2);
+
         // Create the booking
         $booking = Booking::create([
-            'facility_id' => $validated['facility_id'],
+            'facility_id' => $facility->id,
             'user_id' => $userId,
             'guest_name' => $validated['guest_name'] ?? null,
             'court_id' => $validated['court_id'],
             'date' => $validated['date'],
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
-            'total_price' => $validated['total_price'],
+            'subtotal' => $subtotal,
+            'booking_fee' => $bookingFee,
+            'total_price' => $finalPrice,
             'status' => 'pending',
         ]);
 
@@ -155,7 +177,7 @@ class BookingController extends Controller
 
             $booking->payment()->create([
                 'user_id' => $userId,
-                'amount' => $validated['total_price'],
+                'amount' => $finalPrice,
                 'payment_method' => $request->input('payment_method'),
                 'proof_path' => $proofPath,
                 'status' => 'pending',
@@ -163,7 +185,6 @@ class BookingController extends Controller
         }
 
         //  Register the player to the facility's player list
-        $facility = Facility::findOrFail($validated['facility_id']);
         $facility->players()->syncWithoutDetaching([
             $user->id => ['status' => 'ACTIVE'],
         ]);
@@ -201,7 +222,30 @@ class BookingController extends Controller
      */
     public function update(Request $request, Booking $booking)
     {
-        //
+        $user = $request->user();
+
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        }
+
+        if (! $facilityIds->contains($booking->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(['pending', 'confirmed', 'cancelled'])],
+        ]);
+
+        $booking->update(['status' => $validated['status']]);
+
+        if ($validated['status'] === 'cancelled' && $booking->payment?->status === 'pending') {
+            $booking->payment->update(['status' => 'rejected']);
+        }
+
+        return redirect()->back()->with('success', 'Booking updated successfully.');
     }
 
     /**

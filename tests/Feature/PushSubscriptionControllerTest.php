@@ -153,6 +153,23 @@ class PushSubscriptionControllerTest extends TestCase
         $this->assertSame(1, $player->pushSubscriptions()->count());
     }
 
+    public function test_authenticated_user_can_fetch_the_vapid_public_key(): void
+    {
+        config(['webpush.vapid.public_key' => 'test-public-key']);
+
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->getJson(route('push-subscriptions.vapid-public-key'))
+            ->assertOk()
+            ->assertExactJson(['public_key' => 'test-public-key']);
+    }
+
+    public function test_guests_cannot_fetch_the_vapid_public_key(): void
+    {
+        $this->getJson(route('push-subscriptions.vapid-public-key'))->assertUnauthorized();
+    }
+
     /**
      * @return array{endpoint: string, keys: array{p256dh: string, auth: string}, content_encoding: string}
      */

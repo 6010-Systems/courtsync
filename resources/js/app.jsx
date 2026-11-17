@@ -8,6 +8,15 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
+// Register the service worker for PWA installability and background Web Push.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Push notifications stay unavailable when registration fails.
+        });
+    });
+}
+
 const appName = import.meta.env.VITE_APP_NAME || 'CourtSync';
 
 createInertiaApp({

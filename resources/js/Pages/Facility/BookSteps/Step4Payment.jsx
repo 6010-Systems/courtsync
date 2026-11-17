@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone } from 'lucide-react';
 
-export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMethod, proofFile, setProofFile, facility }) {
+import { formatPeso } from '@/Components/MetricCard';
+
+export default function Step4Payment({ totalPrice, subtotal, bookingFee, paymentMethod, setPaymentMethod, proofFile, setProofFile, facility }) {
     const hasDefaulted = useRef(false);
 
     const handleFileChange = (e) => {
@@ -40,7 +42,12 @@ export default function Step4Payment({ totalPrice, paymentMethod, setPaymentMeth
                 </div>
                 <div className="text-right">
                     <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Amount to Pay</span>
-                    <span className="text-2xl font-black text-[#10221C]">₱{totalPrice.toFixed(2)}</span>
+                    <span className="text-2xl font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
+                    {bookingFee > 0 && (
+                        <span className="block text-[10px] font-medium text-gray-400 mt-0.5">
+                            Includes {formatPeso(bookingFee)} booking fee
+                        </span>
+                    )}
                 </div>
             </div>
 

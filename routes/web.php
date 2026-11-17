@@ -1,14 +1,18 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Auth\PlayerRegisteredUserController;
 use App\Http\Controllers\Auth\PlayerSessionController;
 use App\Http\Controllers\Auth\SocialiteController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\FacilityController as RootFacilityController;
+use App\Http\Controllers\FacilityOwner\CalendarController;
 use App\Http\Controllers\FacilityOwner\CourtController;
+use App\Http\Controllers\FacilityOwner\CustomerController;
 use App\Http\Controllers\FacilityOwner\FacilityController;
 use App\Http\Controllers\FacilityOwner\PlayerController;
+use App\Http\Controllers\FacilityOwner\ReportController as FacilityReportController;
 use App\Http\Controllers\FacilityOwner\StaffController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
@@ -26,7 +30,7 @@ use Inertia\Inertia;
 
 // ── Public Platform Landing ───────────────────────────────────────────
 Route::get('/', function () {
-    $facilities = Facility::select('id', 'name', 'slug', 'city', 'province', 'description')
+    $facilities = Facility::select('id', 'name', 'slug', 'logo_url', 'cover_photo_url', 'city', 'province', 'description')
         ->with('verification:id,facility_id,facility_photos')
         ->where('verification_status', 'APPROVED')
         ->latest()
@@ -53,6 +57,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+    Route::get('/push-subscriptions/vapid-public-key', [PushSubscriptionController::class, 'vapidPublicKey'])->name('push-subscriptions.vapid-public-key');
 });
 
 require __DIR__.'/auth.php';
@@ -107,7 +112,18 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
 
     Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
+    Route::post('/facility/{facility}/branding', [RootFacilityController::class, 'updateBranding'])->name('facility.branding.update');
+    // Calendar
+    Route::get('/facility/calendar', [CalendarController::class, 'index'])->name('facility.calendar');
+
+    // Customers
+    Route::get('/facility/customers', [CustomerController::class, 'index'])->name('facility.customers');
+
+    // Reports
+    Route::get('/facility/reports', [FacilityReportController::class, 'billing'])->name('facility.reports');
+
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
+    Route::patch('/bookings/{booking}', [BookingController::class, 'update'])->name('bookings.update');
     Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
     Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
@@ -137,6 +153,9 @@ Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admi
     Route::put('/facilities/{id}', [AdminController::class, 'updateFacility'])->name('facilities.update');
 
     Route::get('/courts', [AdminController::class, 'courts'])->name('courts');
+
+    Route::get('/reports/billing', [ReportController::class, 'billing'])->name('reports.billing');
+    Route::post('/reports/billing/{facility}', [ReportController::class, 'updateBillingStatus'])->name('reports.billing.status');
 });
 
 // ── Tenant Player Auth Routes ─────────────────────────────────────────

@@ -925,8 +925,10 @@ export default function Facilities({ auth, facilities = [] }) {
                             const courtsCount = facility.courts_count ?? (facility.courts?.length || 0);
                             const photos = facility.verification?.facility_photos || [];
                             const validPhotos = photos.filter(p => Boolean(p && typeof p === 'string' && p.trim()));
-                            const hasCustomPhoto = validPhotos.length > 0;
-                            const coverPhoto = hasCustomPhoto
+                            const hasCustomPhoto = Boolean(facility.cover_photo_url) || validPhotos.length > 0;
+                            const coverPhoto = facility.cover_photo_url
+                                ? facility.cover_photo_url
+                                : validPhotos.length > 0
                                 ? validPhotos[0]
                                 : MOCK_FACILITY_IMAGES[(facility.id || i) % MOCK_FACILITY_IMAGES.length];
 
@@ -992,9 +994,19 @@ export default function Facilities({ auth, facilities = [] }) {
                                     <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center justify-between gap-2 h-6 sm:h-7">
-                                                <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors truncate flex-1" title={facility.name}>
-                                                    {facility.name}
-                                                </h3>
+                                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                    {facility.logo_url && (
+                                                        <img
+                                                            src={facility.logo_url}
+                                                            alt="Logo"
+                                                            className="w-5 h-5 rounded-md object-cover border border-[#101F1A]/10 shrink-0"
+                                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                        />
+                                                    )}
+                                                    <h3 className="font-display text-base sm:text-lg font-bold tracking-tight text-[#10221C] group-hover:text-[#FF5A36] transition-colors truncate" title={facility.name}>
+                                                        {facility.name}
+                                                    </h3>
+                                                </div>
                                                 {facility.verification_status === 'APPROVED' && (
                                                     <span className="shrink-0 text-emerald-600" title="Verified Facility Partner">
                                                         <ShieldCheck size={16} />

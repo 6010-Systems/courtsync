@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -19,6 +20,30 @@ class ProfileTest extends TestCase
             ->get('/profile');
 
         $response->assertOk();
+    }
+
+    public function test_player_account_does_not_expose_account_deletion(): void
+    {
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)->get('/profile')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Profile/Edit')
+                ->where('canDeleteAccount', false));
+    }
+
+    public function test_venue_accounts_expose_account_deletion(): void
+    {
+        foreach (['FACILITY_OWNER', 'FACILITY_STAFF', 'ADMIN'] as $role) {
+            $user = User::factory()->create(['role' => $role, 'status' => 'VERIFIED']);
+
+            $this->actingAs($user)->get('/profile')
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('Profile/Edit')
+                    ->where('canDeleteAccount', true));
+        }
     }
 
     public function test_profile_information_can_be_updated(): void
