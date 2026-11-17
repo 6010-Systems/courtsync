@@ -809,10 +809,10 @@ export default function Courts({ facilities = [], can = {} }) {
                                     <button
                                         key={tab.key}
                                         onClick={() => setStatusFilter(tab.key)}
-                                        className={`px-2 sm:px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                                             statusFilter === tab.key
-                                                ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
-                                                : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-white/40'
+                                                ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                                : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50'
                                         }`}
                                     >
                                         {tab.label}
@@ -1173,7 +1173,7 @@ export default function Courts({ facilities = [], can = {} }) {
                                     onClick={() => setData('pricing_mode', 'FLAT')}
                                     className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                                         data.pricing_mode === 'FLAT'
-                                            ? 'bg-[#101F1A] text-white shadow-xs'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
                                             : 'text-[#101F1A]/60 hover:text-[#101F1A]'
                                     }`}
                                 >
@@ -1184,7 +1184,7 @@ export default function Courts({ facilities = [], can = {} }) {
                                     onClick={() => setData('pricing_mode', 'SPLIT')}
                                     className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                                         data.pricing_mode === 'SPLIT'
-                                            ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
                                             : 'text-[#101F1A]/60 hover:text-[#101F1A]'
                                     }`}
                                 >

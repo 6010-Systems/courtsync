@@ -372,28 +372,22 @@ export default function Facilities({ facilities = [], owners = [] }) {
                     {/* Status Tabs */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
                         {[
-                            { id: 'ALL', label: 'All', count: stats.total },
-                            { id: 'APPROVED', label: 'Approved', count: stats.approved },
-                            { id: 'UNDER_REVIEW', label: 'Under Review', count: stats.pending },
-                            { id: 'DRAFT', label: 'Draft', count: facilities.filter(f => f.verification_status === 'DRAFT').length },
+                            { id: 'ALL', label: 'All' },
+                            { id: 'APPROVED', label: 'Approved' },
+                            { id: 'UNDER_REVIEW', label: 'Under Review' },
+                            { id: 'DRAFT', label: 'Draft' },
                         ].map((filter) => (
                             <button
                                 key={filter.id}
                                 onClick={() => setStatusFilter(filter.id)}
                                 className={[
-                                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer',
+                                    'inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer',
                                     statusFilter === filter.id
-                                        ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
-                                        : 'bg-[#F5F2EA] text-[#101F1A]/70 hover:bg-[#E8E4D9] hover:text-[#101F1A]',
+                                        ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                        : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50',
                                 ].join(' ')}
                             >
-                                <span>{filter.label}</span>
-                                <span className={[
-                                    'rounded-full px-1.5 py-0.2 text-[10px] font-black',
-                                    statusFilter === filter.id ? 'bg-[#D6FF3F] text-[#101F1A]' : 'bg-[#101F1A]/10 text-[#101F1A]',
-                                ].join(' ')}>
-                                    {filter.count}
-                                </span>
+                                {filter.label}
                             </button>
                         ))}
                     </div>

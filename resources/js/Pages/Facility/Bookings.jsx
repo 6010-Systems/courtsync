@@ -314,18 +314,13 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                                     key={key}
                                     type="button"
                                     onClick={() => setActiveFilter(key)}
-                                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
+                                    className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                                         activeFilter === key
-                                            ? 'bg-[#101F1A] text-white shadow-sm'
-                                            : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                            : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50'
                                     }`}
                                 >
                                     {label}
-                                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                                        activeFilter === key ? 'bg-white/15 text-white' : 'bg-[#101F1A]/10 text-[#101F1A]/60'
-                                    }`}>
-                                        {counts[key.toLowerCase()] ?? 0}
-                                    </span>
                                 </button>
                             ))}
                         </div>
