@@ -108,6 +108,33 @@ class FacilityCustomersTest extends TestCase
                 ->where('customers.data.0.name', 'Walk-in Juan'));
     }
 
+    public function test_type_filter_segments_registered_and_walk_in_customers(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+
+        $this->booking($facility, ['user_id' => null, 'guest_name' => 'Walk-in Juan']);
+        $this->booking($facility, ['user_id' => User::factory()->player()->create(['name' => 'Maria Santos'])->id]);
+
+        $this->actingAs($owner)
+            ->get(route('facility.customers', ['type' => 'walk_in']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.type', 'walk_in')
+                ->has('customers.data', 1)
+                ->where('customers.data.0.name', 'Walk-in Juan')
+                ->where('customers.data.0.type', 'walk_in'));
+
+        $this->actingAs($owner)
+            ->get(route('facility.customers', ['type' => 'registered']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.type', 'registered')
+                ->has('customers.data', 1)
+                ->where('customers.data.0.name', 'Maria Santos')
+                ->where('customers.data.0.type', 'registered'));
+    }
+
     public function test_staff_only_see_customers_from_their_facility(): void
     {
         $facility = Facility::factory()->create(['name' => 'Staff Facility']);
