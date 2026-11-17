@@ -62,6 +62,42 @@ export interface FacilityVerification extends Timestamps {
 }
 
 /**
+ * Per-court assignment of a rate plan (court_rate_plan pivot).
+ */
+export interface RatePlanPivot {
+    court_id: number;
+    rate_plan_id: number;
+    is_enabled: boolean;
+    day_rate_override: number | string | null;
+    night_rate_override: number | string | null;
+}
+
+/**
+ * Rate card entry: a bookable package (COURT) or hourly add-on (ADDON).
+ */
+export interface RatePlan extends Timestamps {
+    id: number;
+    facility_id: number;
+    name: string;
+    kind: 'COURT' | 'ADDON';
+    description: string | null;
+    day_rate: number | string;
+    night_rate: number | string | null;
+    day_start_time: string;
+    night_start_time: string;
+    includes_ball: boolean;
+    included_paddles: number;
+    max_quantity: number;
+    is_active: boolean;
+    sort_order: number;
+
+    // Relationships
+    pivot?: RatePlanPivot;
+    facility?: Facility;
+    courts?: Court[];
+}
+
+/**
  * Sports Facility entity representation.
  */
 export interface Facility extends Timestamps {
@@ -84,6 +120,7 @@ export interface Facility extends Timestamps {
     owner?: User;
     verification?: FacilityVerification | null;
     courts?: Court[];
+    rate_plans?: RatePlan[];
     staff?: User[];
     players?: (User & { pivot: { status: 'ACTIVE' | 'BANNED'; created_at: string } })[];
 }
@@ -108,6 +145,7 @@ export interface Court extends Timestamps {
 
     // Relationship
     facility?: Facility;
+    rate_plans?: RatePlan[];
 }
 
 /**
@@ -152,11 +190,16 @@ export interface Booking extends Timestamps {
     payment_status: PaymentStatus;
     payment_method: PaymentMethod | null;
     notes: string | null;
+    rate_plan_id?: number | null;
+    rate_plan_name?: string | null;
+    addons_total?: number | string;
+    price_breakdown?: Record<string, unknown> | null;
 
     // Relationships
     facility?: Facility;
     court?: Court;
     user?: User;
+    rate_plan?: RatePlan;
 }
 
 /**

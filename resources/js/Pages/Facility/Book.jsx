@@ -26,6 +26,9 @@ export default function Book({ facility }) {
         goNext, goPrev,
         handleBooking,
         price, durationHours, subtotal, bookingFee, totalPrice, pricingSummary,
+        addonsTotal, addonLines,
+        courtPlans, addonPlans, selectedRatePlan, ratePlanId, setRatePlanId,
+        addonQuantities, setAddonQuantity,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile
@@ -38,6 +41,7 @@ export default function Book({ facility }) {
             label: 'Select Court',
             component: <Step1Court 
                 facilityName={facility.name}
+                facility={facility}
                 selectableCourts={selectableCourts}
                 selectedCourtId={selectedCourtId}
                 setSelectedCourtId={setSelectedCourtId}
@@ -61,8 +65,17 @@ export default function Book({ facility }) {
                 setEndTime={setEndTime}
                 timeOptions={timeOptions}
                 durationHours={durationHours}
+                bookingFee={bookingFee}
                 formatDateString={formatDateString}
                 formatTimeString={formatTimeString}
+                courtPlans={courtPlans}
+                addonPlans={addonPlans}
+                selectedRatePlan={selectedRatePlan}
+                ratePlanId={ratePlanId}
+                setRatePlanId={setRatePlanId}
+                addonQuantities={addonQuantities}
+                setAddonQuantity={setAddonQuantity}
+                addonsTotal={addonsTotal}
             />
         },
         {
@@ -81,6 +94,8 @@ export default function Book({ facility }) {
                 subtotal={subtotal}
                 bookingFee={bookingFee}
                 totalPrice={totalPrice}
+                addonsTotal={addonsTotal}
+                addonLines={addonLines}
             />
         },
         {

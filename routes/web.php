@@ -12,6 +12,7 @@ use App\Http\Controllers\FacilityOwner\CourtController;
 use App\Http\Controllers\FacilityOwner\CustomerController;
 use App\Http\Controllers\FacilityOwner\FacilityController;
 use App\Http\Controllers\FacilityOwner\PlayerController;
+use App\Http\Controllers\FacilityOwner\RatePlanController;
 use App\Http\Controllers\FacilityOwner\ReportController as FacilityReportController;
 use App\Http\Controllers\FacilityOwner\StaffController;
 use App\Http\Controllers\NotificationController;
@@ -109,6 +110,12 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::post('/facility/courts', [CourtController::class, 'store'])->name('facility.courts.store');
     Route::put('/facility/courts/{court}', [CourtController::class, 'update'])->name('facility.courts.update');
     Route::delete('/facility/courts/{court}', [CourtController::class, 'destroy'])->name('facility.courts.destroy');
+
+    // Facility Rate Card (packages + hourly add-ons)
+    Route::get('/facility/rates', [RatePlanController::class, 'index'])->name('facility.rates');
+    Route::post('/facility/rates', [RatePlanController::class, 'store'])->name('facility.rates.store');
+    Route::put('/facility/rates/{ratePlan}', [RatePlanController::class, 'update'])->name('facility.rates.update');
+    Route::delete('/facility/rates/{ratePlan}', [RatePlanController::class, 'destroy'])->name('facility.rates.destroy');
 
     Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');

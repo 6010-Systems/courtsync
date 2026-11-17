@@ -24,9 +24,10 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
 
     const bookingFee = Number(booking.booking_fee ?? 0);
     const totalPrice = Number(booking.total_price ?? 0);
+    const addonsTotal = Number(booking.addons_total ?? 0);
     const courtRate = booking.subtotal != null
         ? Number(booking.subtotal)
-        : Math.max(0, totalPrice - bookingFee);
+        : Math.max(0, totalPrice - bookingFee - addonsTotal);
 
     return (
         <AnimatePresence>
@@ -128,6 +129,11 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
                                             <span className="text-[14px] font-black text-[#10221C] truncate">
                                                 {booking.court?.name || 'Unknown'}
                                             </span>
+                                            {booking.rate_plan_name && (
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-[#10221C]/50 truncate">
+                                                    {booking.rate_plan_name}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="bg-[#D6FF3F] p-2 rounded-xl shadow-md flex flex-col justify-center relative overflow-hidden group">
                                             <Banknote size={48} className="absolute -right-3 -bottom-3 text-[#10221C]/10 group-hover:scale-110 transition-transform duration-300" />
@@ -154,9 +160,16 @@ export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = '
                                             </div>
 
                                             <div className="flex items-center justify-between text-[#10221C]/70">
-                                                <span>Court rate</span>
+                                                <span>{booking.rate_plan_name || 'Court rate'}</span>
                                                 <span className="font-bold text-[#10221C]">{formatPeso(courtRate)}</span>
                                             </div>
+
+                                            {addonsTotal > 0 && (
+                                                <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
+                                                    <span>Add-ons</span>
+                                                    <span className="font-bold text-[#10221C]">{formatPeso(addonsTotal)}</span>
+                                                </div>
+                                            )}
 
                                             <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
                                                 <span>Booking fee</span>

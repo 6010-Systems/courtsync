@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Court;
 use App\Models\Facility;
+use App\Models\RatePlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -19,6 +21,24 @@ class FacilityControllerTest extends TestCase
         $response = $this->get(route('facility.show', $facility->slug));
 
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Show'));
+    }
+
+    public function test_public_facility_page_exposes_only_offered_active_rates(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->flatPricing(300)->create(['facility_id' => $facility->id]);
+
+        $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->allIn()->inactive()->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->paddleAddon()->create(['facility_id' => $facility->id]);
+        $court->ratePlans()->attach($rental->id);
+
+        $this->get(route('facility.show', $facility->slug))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Show')
+                ->has('facility.rate_plans', 1)
+                ->where('facility.rate_plans.0.name', 'Court Rental')
+                ->has('facility.courts.0.rate_plans', 1));
     }
 
     public function test_guest_is_redirected_to_the_facility_player_login_page(): void

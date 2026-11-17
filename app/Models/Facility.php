@@ -116,6 +116,14 @@ class Facility extends Model
         return $this->hasMany(Court::class);
     }
 
+    /**
+     * The facility's rate card (packages and hourly add-ons).
+     */
+    public function ratePlans()
+    {
+        return $this->hasMany(RatePlan::class);
+    }
+
     public function bookings()
     {
         return $this->hasMany(Booking::class);

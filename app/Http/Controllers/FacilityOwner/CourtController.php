@@ -5,8 +5,10 @@ namespace App\Http\Controllers\FacilityOwner;
 use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\Facility;
+use App\Models\RatePlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class CourtController extends Controller
@@ -42,7 +44,12 @@ class CourtController extends Controller
 
         $facilities = $facilityIds->isEmpty()
             ? collect()
-            : Facility::whereIn('id', $facilityIds)->with('courts')->get();
+            : Facility::whereIn('id', $facilityIds)
+                ->with([
+                    'courts.ratePlans',
+                    'ratePlans' => fn ($query) => $query->orderBy('sort_order')->orderBy('name'),
+                ])
+                ->get();
 
         return Inertia::render('FacilityOwner/Courts', [
             'facilities' => $facilities,
@@ -74,6 +81,7 @@ class CourtController extends Controller
             'night_start_time' => 'nullable|string|max:20',
             'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
+            ...$this->ratePlanRules(),
         ]);
 
         if (! $this->allowedFacilityIds($request)->contains((int) $request->facility_id)) {
@@ -83,7 +91,7 @@ class CourtController extends Controller
         $pricingMode = $request->pricing_mode === 'SPLIT' ? 'SPLIT' : 'FLAT';
         $hourlyRate = $pricingMode === 'SPLIT' ? ($request->day_rate ?? $request->hourly_rate) : $request->hourly_rate;
 
-        Court::create([
+        $court = Court::create([
             'facility_id' => $request->facility_id,
             'name' => $request->name,
             'type' => $request->type,
@@ -98,6 +106,8 @@ class CourtController extends Controller
             'night_start_time' => $pricingMode === 'SPLIT' ? ($request->night_start_time ?: '18:00:00') : '18:00:00',
             'status' => $request->status ?? 'AVAILABLE',
         ]);
+
+        $this->syncRatePlans($court, $request);
 
         return redirect()->back()->with('success', 'Court added successfully.');
     }
@@ -125,6 +135,7 @@ class CourtController extends Controller
             'night_start_time' => 'nullable|string|max:20',
             'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
+            ...$this->ratePlanRules(),
         ]);
 
         $pricingMode = $request->pricing_mode === 'SPLIT' ? 'SPLIT' : 'FLAT';
@@ -151,6 +162,8 @@ class CourtController extends Controller
             'status' => $request->status ?? $court->status,
         ]);
 
+        $this->syncRatePlans($court, $request);
+
         return redirect()->back()->with('success', 'Court updated successfully.');
     }
 
@@ -167,5 +180,70 @@ class CourtController extends Controller
         $court->delete();
 
         return redirect()->back()->with('success', 'Court removed successfully.');
+    }
+
+    /**
+     * Validation rules for the per-court rate plan assignment payload.
+     *
+     * @return array<string, string>
+     */
+    private function ratePlanRules(): array
+    {
+        return [
+            'rate_plans' => 'nullable|array',
+            'rate_plans.*.id' => 'required|integer|exists:rate_plans,id',
+            'rate_plans.*.is_enabled' => 'nullable|boolean',
+            'rate_plans.*.day_rate_override' => 'nullable|numeric|min:0',
+            'rate_plans.*.night_rate_override' => 'nullable|numeric|min:0',
+        ];
+    }
+
+    /**
+     * Persist which rate-card packages this court offers, with optional overrides.
+     */
+    private function syncRatePlans(Court $court, Request $request): void
+    {
+        $facilityPlanIds = RatePlan::query()
+            ->where('facility_id', $court->facility_id)
+            ->pluck('id');
+
+        if ($request->has('rate_plans')) {
+            $assignments = collect($request->input('rate_plans', []))
+                ->filter(fn ($row) => isset($row['id']))
+                ->mapWithKeys(function ($row) use ($facilityPlanIds) {
+                    $planId = (int) $row['id'];
+
+                    if (! $facilityPlanIds->contains($planId)) {
+                        throw ValidationException::withMessages([
+                            'rate_plans' => 'One of the selected rates belongs to another facility.',
+                        ]);
+                    }
+
+                    return [
+                        $planId => [
+                            'is_enabled' => (bool) ($row['is_enabled'] ?? true),
+                            'day_rate_override' => $row['day_rate_override'] ?? null,
+                            'night_rate_override' => $row['night_rate_override'] ?? null,
+                        ],
+                    ];
+                })
+                ->all();
+
+            $court->ratePlans()->sync($assignments);
+
+            return;
+        }
+
+        if ($court->wasRecentlyCreated) {
+            // New courts inherit the facility's whole active rate card by default.
+            $defaults = RatePlan::query()
+                ->where('facility_id', $court->facility_id)
+                ->active()
+                ->pluck('id')
+                ->mapWithKeys(fn ($planId) => [$planId => ['is_enabled' => true]])
+                ->all();
+
+            $court->ratePlans()->sync($defaults);
+        }
     }
 }

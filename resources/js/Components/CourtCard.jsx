@@ -1,3 +1,4 @@
+import CourtRatePlans from '@/Components/CourtRatePlans';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import { Clock } from 'lucide-react';
 
@@ -41,11 +42,20 @@ export default function CourtCard({
     const statusStyle = COURT_STATUS_STYLES[court.status] || COURT_STATUS_STYLES.NOT_AVAILABLE;
     const statusLabel = COURT_STATUS_LABELS[court.status] || court.status;
     const isSplitPriced = court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate;
+    const offeredPlans = (court.rate_plans || []).filter(
+        (plan) => plan.kind !== 'ADDON'
+            && plan.is_active !== false
+            && (!plan.pivot || Boolean(Number(plan.pivot.is_enabled))),
+    );
     const isBookable = court.status === 'AVAILABLE';
     const isInteractive = typeof onClick === 'function';
 
     const dayStart = isSplitPriced ? formatCourtTime(court.day_start_time || '06:00') : '';
-    const nightStart = isSplitPriced ? formatCourtTime(court.night_start_time || '18:00') : '';
+    const nightStart = isSplitPriced
+        ? formatCourtTime(court.night_start_time || '18:00')
+        : offeredPlans[0]?.night_start_time
+            ? formatCourtTime(offeredPlans[0].night_start_time)
+            : '';
 
     const handleImageError = (event) => {
         if (fallbackImage && event.currentTarget.src !== fallbackImage) {
@@ -117,7 +127,12 @@ export default function CourtCard({
                         </span>
                     </div>
 
-                    {isSplitPriced ? (
+                    {offeredPlans.length > 0 ? (
+                        <CourtRatePlans
+                            plans={offeredPlans}
+                            className="border-t border-[#10221C]/10 pt-2"
+                        />
+                    ) : isSplitPriced ? (
                         <>
                             <div className="flex items-center justify-between gap-2 border-t border-[#10221C]/10 pt-2 text-xs">
                                 <span className="inline-flex shrink-0 items-center gap-1.5 font-bold text-amber-800">

@@ -14,7 +14,9 @@ export default function Step3Confirm({
     durationHours, 
     subtotal,
     bookingFee,
-    totalPrice 
+    totalPrice,
+    addonsTotal = 0,
+    addonLines = [],
 }) {
     return (
         <div className="p-6 sm:p-10">
@@ -28,7 +30,9 @@ export default function Step3Confirm({
                     <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Court</p>
                         <p className="font-bold text-[#10221C]">{selectedCourt?.name}</p>
-                        <p className="text-xs text-gray-500">{selectedCourt?.type || 'Standard Court'}</p>
+                        <p className="text-xs text-gray-500">
+                            {pricingSummary?.ratePlanName || selectedCourt?.type || 'Standard Court'}
+                        </p>
                     </div>
                     {pricingSummary?.isSplit ? (
                         <div className="text-right">
@@ -55,7 +59,7 @@ export default function Step3Confirm({
                     </div>
                     <span className="px-2 py-0.5 bg-[#10221C]/5 text-[#10221C] rounded text-xs font-bold">{durationHours} hr{durationHours > 1 ? 's' : ''}</span>
                 </div>
-                {pricingSummary?.isSplit && pricingSummary.breakdown?.length > 0 && (
+                {pricingSummary?.breakdown?.length > 0 && (
                     <div className="px-5 py-3.5 bg-gray-50/80 space-y-1.5 text-xs">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rate Calculation</p>
                         {pricingSummary.breakdown.map((item, idx) => (
@@ -64,22 +68,37 @@ export default function Step3Confirm({
                                 <span className="font-bold text-[#10221C]">{formatPeso(item.subtotal)}</span>
                             </div>
                         ))}
+                        {addonLines.map((line, idx) => (
+                            <div key={`addon-${idx}`} className="flex justify-between text-gray-600">
+                                <span>
+                                    {line.name} ({line.quantity} × {line.hours} hr
+                                    {line.hours > 1 ? 's' : ''} × {formatPeso(line.rate)})
+                                </span>
+                                <span className="font-bold text-[#10221C]">{formatPeso(line.subtotal)}</span>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
-            {bookingFee > 0 && (
-                <div className="mt-6 space-y-1.5 text-sm">
+            <div className="mt-6 space-y-1.5 text-sm">
+                <div className="flex justify-between text-gray-600">
+                    <span>{pricingSummary?.ratePlanName || 'Court rate'}</span>
+                    <span className="font-bold text-[#10221C]">{formatPeso(subtotal)}</span>
+                </div>
+                {addonsTotal > 0 && (
                     <div className="flex justify-between text-gray-600">
-                        <span>Court rate</span>
-                        <span className="font-bold text-[#10221C]">{formatPeso(subtotal)}</span>
+                        <span>Add-ons</span>
+                        <span className="font-bold text-[#10221C]">{formatPeso(addonsTotal)}</span>
                     </div>
+                )}
+                {bookingFee > 0 && (
                     <div className="flex justify-between text-gray-600">
                         <span>Booking fee</span>
                         <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             <div className="mt-6 pt-5 border-t-2 border-dashed border-gray-200 flex justify-between items-end">
                 <span className="text-sm font-medium text-gray-500">Total Amount</span>
