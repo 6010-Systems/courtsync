@@ -1,222 +1,440 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Clock, MapPin, User, Banknote, ShieldCheck, Check, Sparkles } from 'lucide-react';
-import PrimaryButton from '@/Components/PrimaryButton';
+import {
+    X,
+    Calendar,
+    Clock,
+    MapPin,
+    User,
+    Banknote,
+    ShieldCheck,
+    Check,
+    CheckCircle2,
+    XCircle,
+    Sparkles,
+    Building2,
+    ExternalLink,
+    ZoomIn,
+    Phone,
+    Mail,
+    FileText,
+    Loader2,
+} from 'lucide-react';
 import { formatPeso } from '@/Components/MetricCard';
 import { receiptUrl } from '@/Utils/receiptUrl';
 
-export default function BookingDetailDrawer({ isOpen, onClose, booking, mode = 'view' }) {
+export default function BookingDetailDrawer({
+    isOpen,
+    onClose,
+    booking,
+    mode = 'view',
+    onVerify,
+    onReject,
+    isProcessing = false,
+}) {
+    const [isZoomed, setIsZoomed] = useState(false);
+
+    // Close on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                if (isZoomed) {
+                    setIsZoomed(false);
+                } else {
+                    onClose?.();
+                }
+            }
+        };
+
+        if (isOpen) {
+            window.addEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = '';
+        };
+    }, [isOpen, isZoomed, onClose]);
+
     if (!booking) return null;
 
     const formatDate = (dateString) => {
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
+        if (!dateString) return '—';
+        const date = new Date(`${String(dateString).slice(0, 10)}T12:00:00`);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
     };
 
     const formatTime = (timeString) => {
-        const [hour, minute] = timeString.split(':');
-        const date = new Date();
-        date.setHours(hour, minute);
-        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (!timeString) return '';
+        const [hourStr, minuteStr] = timeString.split(':');
+        const hour = parseInt(hourStr, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const formattedHour = hour % 12 || 12;
+        return `${formattedHour}:${minuteStr} ${ampm}`;
     };
 
     const isSuccess = mode === 'success';
+    const payment = booking.payment;
+    const paymentStatus = (payment?.status || booking.status || '').toLowerCase();
+    const isPending = paymentStatus === 'pending';
+    const isVerified = paymentStatus === 'verified' || paymentStatus === 'confirmed';
+    const isRejected = paymentStatus === 'rejected' || paymentStatus === 'cancelled';
 
     const bookingFee = Number(booking.booking_fee ?? 0);
-    const totalPrice = Number(booking.total_price ?? 0);
+    const totalPrice = Number(payment?.amount ?? booking.total_price ?? 0);
     const courtRate = booking.subtotal != null
         ? Number(booking.subtotal)
         : Math.max(0, totalPrice - bookingFee);
+
+    const playerName = booking.user?.name || booking.guest_name || 'Walk-in Player';
+    const playerEmail = booking.user?.email || booking.guest_email || null;
+    const playerPhone = booking.user?.phone || booking.guest_phone || null;
+    const isRegistered = Boolean(booking.user?.email);
+
+    const facilityName = booking.facility?.name || booking.court?.facility?.name || 'Facility';
+    const courtName = booking.court?.name || 'Court';
+    const proofUrl = receiptUrl(payment?.proof_path);
+
+    const getInitials = (name) => {
+        return String(name || '?')
+            .split(' ')
+            .filter(Boolean)
+            .map((part) => part[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+    };
 
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-[#10221C]/40 backdrop-blur-sm z-40"
+                        className="fixed inset-0 bg-[#101F1A]/60 backdrop-blur-xs z-50 transition-opacity"
                     />
 
+                    {/* Modal Dialog */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="booking-detail-title"
+                        initial={{ opacity: 0, scale: 0.96, y: 12 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+                        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pointer-events-none"
                     >
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden pointer-events-auto flex flex-col relative">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden pointer-events-auto flex flex-col relative max-h-[92vh] border border-[#101F1A]/10">
                             
-                            {/* Top Section */}
-                            <div className="bg-[#101F1A] px-5 py-6 flex flex-col items-center text-center relative">
+                            {/* ── Dialog Header ── */}
+                            <div className="bg-[#101F1A] px-6 py-5 text-left relative shrink-0">
+                                {/* Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#D6FF3F]"
+                                    aria-label="Close booking details dialog"
+                                >
+                                    <X size={16} />
+                                </button>
 
-                                <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center mb-3 text-[#D6FF3F] shadow-inner">
-                                    {isSuccess ? (
-                                        <Check size={28} strokeWidth={3} />
-                                    ) : (
-                                        <ShieldCheck size={28} strokeWidth={2.5} />
-                                    )}
+                                <div className="flex items-center gap-3 pr-8">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[#D6FF3F] shadow-inner shrink-0">
+                                        {isSuccess ? (
+                                            <Check size={22} strokeWidth={3} />
+                                        ) : (
+                                            <ShieldCheck size={22} strokeWidth={2.5} />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h2 id="booking-detail-title" className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                                            {isSuccess ? 'Booking Created' : 'Booking & Payment Details'}
+                                        </h2>
+                                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                            <span className="text-xs text-white/60 truncate">
+                                                ID: #{booking.id} · {facilityName}
+                                            </span>
+                                            {/* Status Badge */}
+                                            {isPending && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                                    Pending Verification
+                                                </span>
+                                            )}
+                                            {isVerified && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-[#D6FF3F] px-2 py-0.5 text-[10px] font-black text-[#101F1A]">
+                                                    <Check size={10} strokeWidth={3} />
+                                                    Verified & Secured
+                                                </span>
+                                            )}
+                                            {isRejected && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
+                                                    <X size={10} />
+                                                    Cancelled / Rejected
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                
-                                <h2 className="text-xl font-bold text-white mb-2 tracking-tight">
-                                    {isSuccess ? 'Booking Added Successfully!' : 'Booking Details'}
-                                </h2>
-                                
-                                {isSuccess ? (
-                                    <p className="text-white/70 text-sm leading-tight">
-                                        {booking.user?.name || booking.guest_name || 'Walk-in player'} has been registered in the system.
-                                    </p>
-                                ) : (
-                                    <span className="px-3 py-1 bg-[#D6FF3F] text-[#101F1A] text-[10px] font-black rounded-full uppercase tracking-widest shadow-sm">
-                                        {booking.status}
-                                    </span>
-                                )}
                             </div>
 
-                            {/* Bottom Section (Details) */}
-                            <div className="max-h-[72vh] overflow-y-auto bg-[#F8F9FA] p-4">
-                                <div className="space-y-2 mb-4">
+                            {/* ── Scrollable Dialog Body ── */}
+                            <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#FAF9F5]">
+                                
+                                {/* 1. Player Info Card */}
+                                <div className="bg-white p-3.5 rounded-2xl border border-[#101F1A]/10 shadow-card">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                            <User size={12} /> Player Information
+                                        </span>
+                                        {isRegistered ? (
+                                            <span className="text-[10px] bg-[#D6FF3F] text-[#101F1A] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                                Registered Member
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] bg-[#101F1A]/5 text-[#101F1A]/70 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
+                                                Guest Walk-in
+                                            </span>
+                                        )}
+                                    </div>
                                     
-                                    {/* Main Info Card */}
-                                    <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex justify-between items-center mb-0.5">
-                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide">
-                                                <User size={12} /> Player Info
-                                            </span>
-                                            {booking.user?.email && (
-                                                <span className="text-[9px] bg-[#D6FF3F]/20 text-[#10221C] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Registered</span>
-                                            )}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-xs font-bold text-[#D6FF3F] shadow-2xs">
+                                            {getInitials(playerName)}
                                         </div>
-                                        <div className="text-[15px] font-black text-[#10221C] truncate">
-                                            {booking.user?.name || booking.guest_name || 'Walk-in'}
-                                            {booking.user?.email && (
-                                                <span className="text-gray-400 font-medium text-[12px] ml-1.5">
-                                                    • {booking.user.email}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* 2-Column Details: Date & Time */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
-                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
-                                                <Calendar size={12} /> Date
-                                            </span>
-                                            <span className="text-[14px] font-bold text-[#10221C] truncate">
-                                                {formatDate(booking.date)}
-                                            </span>
-                                        </div>
-                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
-                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
-                                                <Clock size={12} /> Time
-                                            </span>
-                                            <span className="text-[13px] font-bold text-[#10221C] truncate">
-                                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Court and Price */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
-                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
-                                                <MapPin size={12} /> Court
-                                            </span>
-                                            <span className="text-[14px] font-black text-[#10221C] truncate">
-                                                {booking.court?.name || 'Unknown'}
-                                            </span>
-                                        </div>
-                                        <div className="bg-[#D6FF3F] p-2 rounded-xl shadow-md flex flex-col justify-center relative overflow-hidden group">
-                                            <Banknote size={48} className="absolute -right-3 -bottom-3 text-[#10221C]/10 group-hover:scale-110 transition-transform duration-300" />
-                                            <span className="flex items-center gap-1.5 text-[11px] text-[#10221C]/60 font-bold uppercase tracking-wide mb-0.5 relative z-10">
-                                                Total Price
-                                            </span>
-                                            <span className="text-lg font-black text-[#10221C] leading-tight truncate relative z-10">
-                                                {formatPeso(totalPrice)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {!isSuccess && (
-                                        <div className="rounded-xl border border-[#10221C]/10 bg-[#FAFAF8] p-3 text-xs">
-                                            <div className="mb-1.5 flex items-center justify-between">
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
-                                                    Payment breakdown
-                                                </span>
-                                                {booking.payment?.status && (
-                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#10221C]/60">
-                                                        {booking.payment.status}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-bold text-sm text-[#101F1A] truncate">
+                                                {playerName}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[#101F1A]/60 mt-0.5">
+                                                {playerEmail && (
+                                                    <span className="inline-flex items-center gap-1 truncate">
+                                                        <Mail size={11} className="text-[#101F1A]/40" />
+                                                        {playerEmail}
+                                                    </span>
+                                                )}
+                                                {playerPhone && (
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <Phone size={11} className="text-[#101F1A]/40" />
+                                                        {playerPhone}
                                                     </span>
                                                 )}
                                             </div>
-
-                                            <div className="flex items-center justify-between text-[#10221C]/70">
-                                                <span>Court rate</span>
-                                                <span className="font-bold text-[#10221C]">{formatPeso(courtRate)}</span>
-                                            </div>
-
-                                            <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
-                                                <span>Booking fee</span>
-                                                <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
-                                            </div>
-
-                                            <div className="mt-1.5 flex items-center justify-between border-t border-dashed border-[#10221C]/15 pt-1.5">
-                                                <span className="font-black uppercase tracking-wide text-[#10221C]/60">Total</span>
-                                                <span className="font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
-                                            </div>
                                         </div>
-                                    )}
-
-                                    {!isSuccess && booking.payment?.proof_path && (
-                                        <div className="overflow-hidden rounded-xl border border-[#10221C]/10 bg-white">
-                                            <div className="flex items-center justify-between border-b border-[#10221C]/10 px-3 py-1.5">
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
-                                                    Payment receipt
-                                                </span>
-                                                <a
-                                                    href={receiptUrl(booking.payment.proof_path)}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-[10px] font-bold text-blue-600 underline"
-                                                >
-                                                    Open in new tab
-                                                </a>
-                                            </div>
-                                            <a
-                                                href={receiptUrl(booking.payment.proof_path)}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="block bg-gray-50"
-                                            >
-                                                <img
-                                                    src={receiptUrl(booking.payment.proof_path)}
-                                                    alt="Payment receipt"
-                                                    className="max-h-60 w-full object-contain"
-                                                />
-                                            </a>
-                                        </div>
-                                    )}
-
-                                    {!isSuccess && booking.payment && !booking.payment.proof_path && (
-                                        <p className="rounded-xl border border-dashed border-[#10221C]/15 bg-white/60 px-3 py-2 text-center text-[11px] text-[#10221C]/50">
-                                            No payment receipt uploaded for this booking.
-                                        </p>
-                                    )}
+                                    </div>
                                 </div>
 
-                                {/* Footer / Actions */}
+                                {/* 2. Venue & Schedule Matrix */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    {/* Court & Venue */}
+                                    <div className="bg-white p-3 rounded-2xl border border-[#101F1A]/10 shadow-2xs">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1">
+                                            <Building2 size={12} /> Venue & Court
+                                        </span>
+                                        <div className="font-bold text-sm text-[#101F1A] truncate">
+                                            {courtName}
+                                        </div>
+                                        <div className="text-xs text-[#101F1A]/60 truncate mt-0.5">
+                                            {facilityName}
+                                        </div>
+                                    </div>
+
+                                    {/* Schedule */}
+                                    <div className="bg-white p-3 rounded-2xl border border-[#101F1A]/10 shadow-2xs">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1">
+                                            <Clock size={12} /> Reserved Time
+                                        </span>
+                                        <div className="font-bold text-sm text-[#101F1A] truncate">
+                                            {formatDate(booking.date)}
+                                        </div>
+                                        <div className="text-xs text-[#101F1A]/60 truncate mt-0.5">
+                                            {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3. Financial Breakdown Card */}
+                                {!isSuccess && (
+                                    <div className="rounded-2xl border border-[#101F1A]/10 bg-white p-3.5 shadow-2xs">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                                <Banknote size={12} /> Payment Summary
+                                            </span>
+                                            <span className="rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#101F1A]">
+                                                {payment?.payment_method || 'Manual'}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-1.5 text-xs text-[#101F1A]/70">
+                                            <div className="flex items-center justify-between">
+                                                <span>Court rental subtotal</span>
+                                                <span className="font-bold text-[#101F1A]">{formatPeso(courtRate)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span>Facility booking fee</span>
+                                                <span className="font-bold text-[#101F1A]">
+                                                    {bookingFee > 0 ? formatPeso(bookingFee) : '₱0.00 (Free)'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between border-t border-dashed border-[#101F1A]/15 pt-2 mt-2">
+                                                <span className="text-xs font-bold uppercase tracking-wide text-[#101F1A]/70">
+                                                    Total Charged
+                                                </span>
+                                                <span className="text-base font-black text-[#101F1A]">
+                                                    {formatPeso(totalPrice)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 4. Payment Receipt Section */}
+                                {!isSuccess && proofUrl && (
+                                    <div className="overflow-hidden rounded-2xl border border-[#101F1A]/10 bg-white shadow-card">
+                                        <div className="flex items-center justify-between border-b border-[#101F1A]/10 bg-[#F5F2EA]/40 px-3.5 py-2">
+                                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                                                <FileText size={12} /> Uploaded Proof Receipt
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsZoomed(true)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#101F1A] hover:text-[#101F1A]/70 cursor-pointer transition-colors"
+                                                >
+                                                    <ZoomIn size={12} />
+                                                    <span>Enlarge</span>
+                                                </button>
+                                                <span className="text-[#101F1A]/30">·</span>
+                                                <a
+                                                    href={proofUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#101F1A] hover:underline"
+                                                >
+                                                    <ExternalLink size={12} />
+                                                    <span>New Tab</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div
+                                            onClick={() => setIsZoomed(true)}
+                                            className="relative block bg-[#101F1A]/5 p-2 cursor-zoom-in group"
+                                            title="Click to zoom receipt"
+                                        >
+                                            <img
+                                                src={proofUrl}
+                                                alt="Payment receipt proof"
+                                                className="max-h-56 sm:max-h-64 w-full rounded-xl object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+                                            />
+                                            <div className="absolute inset-0 bg-[#101F1A]/0 group-hover:bg-[#101F1A]/10 transition-colors flex items-center justify-center">
+                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#101F1A]/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+                                                    <ZoomIn size={12} /> Click to enlarge
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!isSuccess && !proofUrl && (
+                                    <div className="rounded-2xl border border-dashed border-[#101F1A]/15 bg-white/60 p-4 text-center">
+                                        <FileText size={24} className="mx-auto text-[#101F1A]/30 mb-1" />
+                                        <p className="text-xs font-semibold text-[#101F1A]/70">No payment receipt attached</p>
+                                        <p className="text-[10px] text-[#101F1A]/40 mt-0.5">
+                                            This reservation was recorded without an uploaded receipt proof.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Success Mode Message */}
                                 {isSuccess && (
-                                    <div className="pt-3 border-t border-[#10221C]/10 flex items-center gap-2 text-sm text-green-700 font-medium bg-green-50/50 -mx-4 -mb-4 p-4">
-                                        <Sparkles size={16} className="text-green-600" />
-                                        <span>Booking successfully confirmed and logged.</span>
+                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-center gap-3">
+                                        <Sparkles size={18} className="text-emerald-600 shrink-0" />
+                                        <span className="text-xs font-semibold text-emerald-800">
+                                            Reservation successfully confirmed and logged into the facility calendar.
+                                        </span>
                                     </div>
                                 )}
                             </div>
+
+                            {/* ── Dialog Action Footer ── */}
+                            <div className="border-t border-[#101F1A]/10 bg-white px-5 py-3.5 flex flex-wrap items-center justify-end gap-2 shrink-0">
+                                {isPending && onVerify && (
+                                    <>
+                                        {onReject && (
+                                            <button
+                                                type="button"
+                                                disabled={isProcessing}
+                                                onClick={() => onReject(payment)}
+                                                className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 min-h-[40px]"
+                                            >
+                                                <X size={14} />
+                                                <span>Reject</span>
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            disabled={isProcessing}
+                                            onClick={() => onVerify(payment)}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#D6FF3F] hover:bg-[#c8f526] px-4 py-2.5 text-xs font-bold text-[#101F1A] shadow-2xs hover:shadow-card transition-all cursor-pointer disabled:opacity-50 min-h-[40px]"
+                                        >
+                                            {isProcessing ? (
+                                                <Loader2 size={14} className="animate-spin text-[#101F1A]" />
+                                            ) : (
+                                                <Check size={14} className="text-[#101F1A] stroke-[2.5]" />
+                                            )}
+                                            <span>Verify Payment</span>
+                                        </button>
+                                    </>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="rounded-xl border border-[#101F1A]/15 bg-white px-4 py-2.5 text-xs font-bold text-[#101F1A] shadow-2xs hover:bg-[#F5F2EA] transition-all cursor-pointer min-h-[40px]"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
+
+                    {/* ── High-Res Receipt Lightbox Modal ── */}
+                    {isZoomed && proofUrl && (
+                        <div
+                            onClick={() => setIsZoomed(false)}
+                            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#101F1A]/90 backdrop-blur-md cursor-zoom-out"
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="relative max-h-[90vh] max-w-3xl overflow-auto rounded-2xl bg-white p-2 shadow-2xl"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => setIsZoomed(false)}
+                                    className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#101F1A]/80 text-white hover:bg-[#101F1A] transition-colors cursor-pointer"
+                                    aria-label="Close enlarged receipt"
+                                >
+                                    <X size={16} />
+                                </button>
+                                <img
+                                    src={proofUrl}
+                                    alt="Enlarged payment receipt proof"
+                                    className="max-h-[85vh] w-auto mx-auto object-contain rounded-xl"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </>
             )}
         </AnimatePresence>

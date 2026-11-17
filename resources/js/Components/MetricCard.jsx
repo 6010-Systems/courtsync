@@ -29,6 +29,8 @@ const accents = {
     forest: 'bg-[#101F1A] text-[#D6FF3F]',
     coral: 'bg-[#FF5A36]/15 text-[#FF5A36]',
     amber: 'bg-amber-100 text-amber-800',
+    red: 'bg-red-100 text-red-700',
+    rose: 'bg-rose-100 text-rose-700',
     muted: 'bg-[#101F1A]/5 text-[#101F1A]/40',
 };
 
