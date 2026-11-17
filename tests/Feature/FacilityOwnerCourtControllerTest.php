@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Court;
 use App\Models\Facility;
+use App\Models\RatePlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -144,6 +145,68 @@ class FacilityOwnerCourtControllerTest extends TestCase
                 ->where('facilities.0.courts.0.time_range', '8:00 AM - 9:00 PM')
                 ->where('facilities.0.courts.0.pricing_mode', 'SPLIT')
                 ->where('facilities.0.courts.0.day_rate', fn ($rate) => (float) $rate === 300.0));
+    }
+
+    public function test_owner_assigns_rate_plans_to_a_court_with_overrides(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $court = Court::factory()->flatPricing(300)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 10:00 PM',
+        ]);
+
+        $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        $allIn = RatePlan::factory()->allIn()->create(['facility_id' => $facility->id]);
+        $paddle = RatePlan::factory()->paddleAddon()->create(['facility_id' => $facility->id]);
+
+        $this->actingAs($owner)->put(route('facility.courts.update', $court), [
+            'name' => $court->name,
+            'type' => $court->type,
+            'time_range' => $court->time_range,
+            'pricing_mode' => 'FLAT',
+            'hourly_rate' => 300,
+            'status' => 'AVAILABLE',
+            'rate_plans' => [
+                ['id' => $rental->id, 'is_enabled' => true],
+                ['id' => $allIn->id, 'is_enabled' => true, 'day_rate_override' => 275, 'night_rate_override' => 375],
+                ['id' => $paddle->id, 'is_enabled' => false],
+            ],
+        ])->assertRedirect();
+
+        $assignments = $court->ratePlans()->get()->keyBy('id');
+
+        $this->assertCount(3, $assignments);
+        $this->assertTrue((bool) $assignments[$rental->id]->pivot->is_enabled);
+        $this->assertEquals(275.0, (float) $assignments[$allIn->id]->pivot->day_rate_override);
+        $this->assertEquals(375.0, (float) $assignments[$allIn->id]->pivot->night_rate_override);
+        $this->assertFalse((bool) $assignments[$paddle->id]->pivot->is_enabled);
+    }
+
+    public function test_a_new_court_inherits_the_active_rate_card(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        $paddle = RatePlan::factory()->paddleAddon()->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->allIn()->inactive()->create(['facility_id' => $facility->id]);
+
+        $this->actingAs($owner)->post(route('facility.courts.store'), [
+            'facility_id' => $facility->id,
+            'name' => 'Court With Card',
+            'type' => 'Pickleball',
+            'time_range' => '6:00 AM - 10:00 PM',
+            'pricing_mode' => 'FLAT',
+            'hourly_rate' => 300,
+            'status' => 'AVAILABLE',
+        ])->assertRedirect();
+
+        $court = Court::where('name', 'Court With Card')->firstOrFail();
+
+        $this->assertEqualsCanonicalizing(
+            [$rental->id, $paddle->id],
+            $court->ratePlans()->pluck('rate_plans.id')->all(),
+        );
     }
 
     public function test_owner_cannot_update_a_court_inside_another_owners_facility(): void

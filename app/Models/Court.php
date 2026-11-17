@@ -6,6 +6,7 @@ use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 
 #[Fillable([
@@ -204,5 +205,23 @@ class Court extends Model
     public function facility()
     {
         return $this->belongsTo(Facility::class);
+    }
+
+    /**
+     * Rate card packages assigned to this court (see the court_rate_plan pivot).
+     */
+    public function ratePlans(): BelongsToMany
+    {
+        return $this->belongsToMany(RatePlan::class, 'court_rate_plan')
+            ->withPivot('is_enabled', 'day_rate_override', 'night_rate_override')
+            ->withTimestamps();
+    }
+
+    /**
+     * Only the packages this court currently offers to players.
+     */
+    public function enabledRatePlans(): BelongsToMany
+    {
+        return $this->ratePlans()->wherePivot('is_enabled', true);
     }
 }

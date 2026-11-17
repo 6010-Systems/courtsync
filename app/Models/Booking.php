@@ -31,7 +31,8 @@ class Booking extends Model
     }
 
     protected $fillable = [
-        'facility_id', 'user_id', 'guest_name', 'court_id', 'date', 'start_time', 'end_time', 'subtotal', 'booking_fee', 'total_price', 'status',
+        'facility_id', 'user_id', 'guest_name', 'court_id', 'rate_plan_id', 'rate_plan_name', 'date', 'start_time', 'end_time',
+        'subtotal', 'addons_total', 'booking_fee', 'total_price', 'price_breakdown', 'status',
     ];
 
     /**
@@ -41,8 +42,10 @@ class Booking extends Model
     {
         return [
             'subtotal' => 'decimal:2',
+            'addons_total' => 'decimal:2',
             'booking_fee' => 'decimal:2',
             'total_price' => 'decimal:2',
+            'price_breakdown' => 'array',
         ];
     }
 
@@ -59,6 +62,11 @@ class Booking extends Model
     public function court()
     {
         return $this->belongsTo(Court::class);
+    }
+
+    public function ratePlan()
+    {
+        return $this->belongsTo(RatePlan::class);
     }
 
     public function payment()

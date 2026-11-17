@@ -1,9 +1,11 @@
 import React from 'react';
 
+import CourtRatePlans from '@/Components/CourtRatePlans';
 import { formatCourtTime } from '@/Components/CourtCard';
 import { formatPeso } from '@/Components/MetricCard';
+import { offeredCourtPlans } from '@/Utils/rateQuote';
 
-export default function Step1Court({ facilityName, selectableCourts, selectedCourtId, setSelectedCourtId }) {
+export default function Step1Court({ facilityName, facility = null, selectableCourts, selectedCourtId, setSelectedCourtId }) {
     return (
         <div className="p-6 sm:p-8">
             <div className="mb-6">
@@ -38,32 +40,45 @@ export default function Step1Court({ facilityName, selectableCourts, selectedCou
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                            {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
-                                <div>
-                                    <div className={`font-black text-sm sm:text-base flex items-center gap-1.5 ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
-                                        <span>☀️ {formatPeso(court.day_rate)}</span>
-                                        <span className="opacity-50">/</span>
-                                        <span>🌙 {formatPeso(court.night_rate)}</span>
-                                        <span className="text-[10px] font-normal opacity-70">/hr</span>
-                                    </div>
-                                    <span className={`text-[10px] block font-medium ${selectedCourtId == court.id ? 'text-gray-300' : 'text-gray-500'}`}>
-                                        Night starts {formatCourtTime(court.night_start_time || '18:00')}
+                        <div className="space-y-2">
+                            {court.time_range && (
+                                <div className="flex justify-end">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                        selectedCourtId == court.id
+                                            ? 'bg-white/15 text-gray-200'
+                                            : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        {court.time_range}
                                     </span>
                                 </div>
-                            ) : (
-                                <span className={`font-black text-lg ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
-                                    {formatPeso(court.hourly_rate)}
-                                    <span className={`text-xs font-medium ${selectedCourtId == court.id ? 'text-gray-400' : 'text-gray-400'}`}>/hr</span>
-                                </span>
                             )}
-                            {court.time_range && (
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    selectedCourtId == court.id 
-                                        ? 'bg-white/15 text-gray-200' 
-                                        : 'bg-gray-100 text-gray-500'
-                                }`}>{court.time_range}</span>
-                            )}
+
+                            {(() => {
+                                const plans = offeredCourtPlans(court, facility);
+
+                                if (plans.length > 0) {
+                                    return <CourtRatePlans plans={plans} />;
+                                }
+
+                                return court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
+                                    <div>
+                                        <div className={`font-black text-sm sm:text-base flex items-center gap-1.5 ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
+                                            <span>☀️ {formatPeso(court.day_rate)}</span>
+                                            <span className="opacity-50">/</span>
+                                            <span>🌙 {formatPeso(court.night_rate)}</span>
+                                            <span className="text-[10px] font-normal opacity-70">/hr</span>
+                                        </div>
+                                        <span className={`text-[10px] block font-medium ${selectedCourtId == court.id ? 'text-gray-300' : 'text-gray-500'}`}>
+                                            Night starts {formatCourtTime(court.night_start_time || '18:00')}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className={`font-black text-lg ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
+                                        {formatPeso(court.hourly_rate)}
+                                        <span className="text-xs font-medium text-gray-400">/hr</span>
+                                    </span>
+                                );
+                            })()}
                         </div>
                     </div>
                 ))}

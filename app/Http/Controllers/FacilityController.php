@@ -327,7 +327,7 @@ class FacilityController extends Controller
     public function show(Facility $facility)
     {
         $facility->load('verification:id,facility_id,facility_photos');
-        $facility->load('courts');
+        $this->loadRateCard($facility);
         $facility->load(['bookings' => function ($q) {
             $q->whereIn('status', ['pending', 'confirmed'])
                 ->whereDate('date', '>=', now()->toDateString());
@@ -348,7 +348,7 @@ class FacilityController extends Controller
     public function book(Facility $facility)
     {
         $facility->load('verification:id,facility_id,facility_photos');
-        $facility->load('courts');
+        $this->loadRateCard($facility);
         $facility->load(['bookings' => function ($q) {
             $q->whereIn('status', ['pending', 'confirmed'])
                 ->whereDate('date', '>=', now()->toDateString());
@@ -357,6 +357,40 @@ class FacilityController extends Controller
         return Inertia::render('Facility/Book', [
             'facility' => $facility,
         ]);
+    }
+
+    /**
+     * Load the facility rate card and the packages each court offers.
+     */
+    private function loadRateCard(Facility $facility): void
+    {
+        $facility->load([
+            'courts',
+            'ratePlans' => fn ($query) => $query->active()->orderBy('sort_order')->orderBy('name'),
+            'courts.ratePlans' => fn ($query) => $query->wherePivot('is_enabled', true),
+        ]);
+
+        // Only expose rates that at least one court actually offers.
+        $offeredPlanIds = $facility->courts
+            ->flatMap(fn ($court) => $court->ratePlans->pluck('id'))
+            ->unique();
+
+        // A card that has not been assigned to any court yet applies to all of them.
+        if ($offeredPlanIds->isEmpty()) {
+            $offeredPlanIds = $facility->ratePlans->pluck('id');
+        }
+
+        $facility->setRelation(
+            'ratePlans',
+            $facility->ratePlans->whereIn('id', $offeredPlanIds)->values(),
+        );
+
+        // Courts without their own assignment follow the facility rate card.
+        $facility->courts->each(function ($court) use ($facility) {
+            if ($court->ratePlans->isEmpty()) {
+                $court->setRelation('ratePlans', $facility->ratePlans->values());
+            }
+        });
     }
 
     public function paymentSettings(Request $request)

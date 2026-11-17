@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
+import { offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
 
 export function useBookingLogic(facility) {
     const courts = facility.courts || [];
@@ -15,6 +16,8 @@ export function useBookingLogic(facility) {
         sessionStorage.removeItem('book_start');
         sessionStorage.removeItem('book_end');
         sessionStorage.removeItem('book_step');
+        sessionStorage.removeItem('book_rate_plan');
+        sessionStorage.removeItem('book_addons');
     }
 
    const [selectedCourtId, setSelectedCourtId] = useState(() => sessionStorage.getItem('book_court') || null);
@@ -37,9 +40,13 @@ export function useBookingLogic(facility) {
        setStartTime('');
        setEndTime('');
        setSelectedDate(null);
+       setRatePlanId(null);
+       setAddonQuantities({});
        sessionStorage.removeItem('book_date');
        sessionStorage.removeItem('book_start');
        sessionStorage.removeItem('book_end');
+       sessionStorage.removeItem('book_rate_plan');
+       sessionStorage.removeItem('book_addons');
    };
 
   const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem('book_date') || null);
@@ -47,6 +54,18 @@ export function useBookingLogic(facility) {
     const [endTime, setEndTime] = useState(() => sessionStorage.getItem('book_end') || '');
     const [paymentMethod, setPaymentMethod] = useState('pay_at_facility');
   const [step, setStep] = useState(() => parseInt(sessionStorage.getItem('book_step')) || 1);
+    const [ratePlanId, setRatePlanId] = useState(() => {
+        const stored = sessionStorage.getItem('book_rate_plan');
+
+        return stored ? Number(stored) : null;
+    });
+    const [addonQuantities, setAddonQuantities] = useState(() => {
+        try {
+            return JSON.parse(sessionStorage.getItem('book_addons') || '{}');
+        } catch {
+            return {};
+        }
+    });
     const [idempotencyKey, setIdempotencyKey] = useState(() => {
         let key = sessionStorage.getItem('book_idempotency_key');
         if (!key) {
@@ -101,6 +120,43 @@ export function useBookingLogic(facility) {
     const closeModal = () => setModal({ isOpen: false, type: '', message: '', title: '' });
     
     const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
+
+    const courtPlans = useMemo(() => offeredCourtPlans(selectedCourt, facility), [selectedCourt, facility]);
+    const addonPlans = useMemo(() => offeredAddons(selectedCourt, facility), [selectedCourt, facility]);
+    const selectedRatePlan = courtPlans.find((plan) => plan.id == ratePlanId) || null;
+
+    // Default to the first package the court offers (Court Rental on the demo card).
+    useEffect(() => {
+        if (!selectedCourt) {
+            return;
+        }
+
+        const stillOffered = courtPlans.some((plan) => plan.id == ratePlanId);
+
+        if (!stillOffered) {
+            setRatePlanId(courtPlans.length > 0 ? courtPlans[0].id : null);
+            setAddonQuantities({});
+        }
+    }, [selectedCourt, courtPlans]);
+
+    useEffect(() => {
+        if (ratePlanId) {
+            sessionStorage.setItem('book_rate_plan', ratePlanId);
+        } else {
+            sessionStorage.removeItem('book_rate_plan');
+        }
+    }, [ratePlanId]);
+
+    useEffect(() => {
+        sessionStorage.setItem('book_addons', JSON.stringify(addonQuantities));
+    }, [addonQuantities]);
+
+    const setAddonQuantity = (plan, quantity) => {
+        const max = Math.max(1, Number(plan.max_quantity || 1));
+        const next = Math.min(Math.max(0, Number(quantity) || 0), max);
+
+        setAddonQuantities((current) => ({ ...current, [plan.id]: next }));
+    };
 
     useEffect(() => {
         if (!selectedCourtId || !selectedDate) {
@@ -173,7 +229,16 @@ export function useBookingLogic(facility) {
             const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
 
             let rateTag = '';
-            if (selectedCourt?.pricing_mode === 'SPLIT' && selectedCourt.day_rate && selectedCourt.night_rate) {
+            const slotPlan = selectedRatePlan;
+            const planRateSet = slotPlan ? planRates(slotPlan) : null;
+
+            if (slotPlan && planRateSet) {
+                const dayStartH = slotPlan.day_start_time ? parseInt(String(slotPlan.day_start_time).split(':')[0], 10) : 5;
+                const nightStartH = slotPlan.night_start_time ? parseInt(String(slotPlan.night_start_time).split(':')[0], 10) : 17;
+                const isNight = planRateSet.night !== null && (i >= nightStartH || i < dayStartH);
+                const rate = isNight ? planRateSet.night : planRateSet.day;
+                rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
+            } else if (selectedCourt?.pricing_mode === 'SPLIT' && selectedCourt.day_rate && selectedCourt.night_rate) {
                 const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
                 const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
                 const isNight = i >= nightStartH || i < dayStartH;
@@ -195,7 +260,7 @@ export function useBookingLogic(facility) {
     const timeOptions = useMemo(() => {
         if (!selectedCourt || !selectedDate) return [];
         return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || [], lockedSlots);
-    }, [selectedCourt, selectedDate, facility.bookings, lockedSlots]);
+    }, [selectedCourt, selectedDate, facility.bookings, lockedSlots, selectedRatePlan]);
 
     // Generate next 14 days
     const dates = useMemo(() => {
@@ -312,111 +377,45 @@ export function useBookingLogic(facility) {
         setStep(s => Math.max(s - 1, 1));
     };
 
+    const addonSelection = useMemo(
+        () => addonPlans
+            .map((plan) => ({ plan, quantity: Number(addonQuantities[plan.id] || 0) }))
+            .filter((row) => row.quantity > 0),
+        [addonPlans, addonQuantities],
+    );
+
     const pricingSummary = useMemo(() => {
-        if (!selectedCourt || !startTime || !endTime) {
-            return {
-                isSplit: false,
-                durationHours: 0,
-                totalPrice: 0,
-                dayHours: 0,
-                nightHours: 0,
-                dayRate: 0,
-                nightRate: 0,
-                daySubtotal: 0,
-                nightSubtotal: 0,
-                breakdown: [],
-            };
-        }
-
-        const [sH] = startTime.split(':').map(Number);
-        const [eH] = endTime.split(':').map(Number);
-        const diff = Math.max(0, eH - sH);
-
-        const isSplit = selectedCourt.pricing_mode === 'SPLIT' &&
-            Boolean(selectedCourt.day_rate && selectedCourt.night_rate);
-
-        if (!isSplit) {
-            const rate = Number(selectedCourt.hourly_rate || 0);
-            const total = diff * rate;
-            return {
-                isSplit: false,
-                durationHours: diff,
-                totalPrice: total,
-                rate,
-                breakdown: [
-                    { label: 'Standard Rate', hours: diff, rate, subtotal: total },
-                ],
-            };
-        }
-
-        const dayRate = Number(selectedCourt.day_rate);
-        const nightRate = Number(selectedCourt.night_rate);
-        const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
-        const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
-
-        let dayHours = 0;
-        let nightHours = 0;
-
-        for (let h = sH; h < eH; h++) {
-            if (h >= nightStartH || h < dayStartH) {
-                nightHours++;
-            } else {
-                dayHours++;
-            }
-        }
-
-        const daySubtotal = dayHours * dayRate;
-        const nightSubtotal = nightHours * nightRate;
-        const total = daySubtotal + nightSubtotal;
-
-        const breakdown = [];
-        if (dayHours > 0) {
-            breakdown.push({
-                label: 'Day Rate',
-                hours: dayHours,
-                rate: dayRate,
-                subtotal: daySubtotal,
-            });
-        }
-        if (nightHours > 0) {
-            breakdown.push({
-                label: 'Night Rate',
-                hours: nightHours,
-                rate: nightRate,
-                subtotal: nightSubtotal,
-            });
-        }
+        const quote = quoteBooking({
+            court: selectedCourt,
+            ratePlan: selectedRatePlan,
+            addons: addonSelection,
+            startTime,
+            endTime,
+        });
 
         return {
-            isSplit: true,
-            durationHours: diff,
-            totalPrice: total,
-            dayHours,
-            nightHours,
-            dayRate,
-            nightRate,
-            daySubtotal,
-            nightSubtotal,
-            breakdown,
+            ...quote,
+            totalPrice: quote.total,
         };
-    }, [selectedCourt, startTime, endTime]);
+    }, [selectedCourt, selectedRatePlan, addonSelection, startTime, endTime]);
 
     const durationHours = pricingSummary.durationHours;
-    const subtotal = pricingSummary.totalPrice;
+    const subtotal = pricingSummary.subtotal;
+    const addonsTotal = pricingSummary.addonsTotal;
+    const addonLines = pricingSummary.addonLines;
     const bookingFee = useMemo(() => {
         const value = Number(facility.booking_fee_value || 0);
+        const base = subtotal + addonsTotal;
         if (value <= 0) {
             return 0;
         }
         if (facility.booking_fee_type === 'PERCENT') {
-            return Math.round(subtotal * Math.min(value, 100)) / 100;
+            return Math.round(base * Math.min(value, 100)) / 100;
         }
         return value;
-    }, [facility.booking_fee_type, facility.booking_fee_value, subtotal]);
-    const totalPrice = Math.round((subtotal + bookingFee) * 100) / 100;
-    const price = pricingSummary.isSplit
-        ? (pricingSummary.dayRate || 0)
-        : (selectedCourt?.hourly_rate ? Number(selectedCourt.hourly_rate) : 0);
+    }, [facility.booking_fee_type, facility.booking_fee_value, subtotal, addonsTotal]);
+    const totalPrice = Math.round((subtotal + addonsTotal + bookingFee) * 100) / 100;
+    const price = pricingSummary.dayRate || Number(selectedCourt?.hourly_rate || 0);
 
     const [proofFile, setProofFile] = useState(null);
 
@@ -437,8 +436,13 @@ export function useBookingLogic(facility) {
             date: selectedDate,
             start_time: startTime,
             end_time: endTime,
-            // Court subtotal only: the server adds the facility booking fee itself.
-            total_price: subtotal,
+            // Preview only: the server recalculates the package, add-ons and fee.
+            total_price: subtotal + addonsTotal,
+            rate_plan_id: selectedRatePlan ? selectedRatePlan.id : '',
+            addons: addonSelection.map(({ plan, quantity }) => ({
+                rate_plan_id: plan.id,
+                quantity,
+            })),
             payment_method: paymentMethod,
             proof_file: proofFile
         }, {
@@ -461,19 +465,23 @@ export function useBookingLogic(facility) {
                 sessionStorage.removeItem('book_start');
                 sessionStorage.removeItem('book_end');
                 sessionStorage.removeItem('book_step');
+                sessionStorage.removeItem('book_rate_plan');
+                sessionStorage.removeItem('book_addons');
                 sessionStorage.removeItem('lock_expires_at');
                 
                 setStartTime('');
                 setEndTime('');
                 setSelectedCourtId(null);
                 setSelectedDate(null);
+                setRatePlanId(null);
+                setAddonQuantities({});
                 setStep(1); // Send them back to step 1
                 setProofFile(null);
                 setIdempotencyKey(crypto.randomUUID());
             },
             onError: (errors) => {
                 console.error(errors);
-                const errorMsg = errors.idempotency || errors.conflict || 'Failed to process booking. Please try again.';
+                const errorMsg = errors.idempotency || errors.conflict || errors.rate_plan_id || 'Failed to process booking. Please try again.';
                 showModal('error', errorMsg);
                 setIdempotencyKey(crypto.randomUUID());
             }
@@ -520,6 +528,9 @@ export function useBookingLogic(facility) {
         goNext, goPrev,
         handleBooking,
         price, durationHours, subtotal, bookingFee, totalPrice, pricingSummary,
+        addonsTotal, addonLines,
+        courtPlans, addonPlans, selectedRatePlan, ratePlanId, setRatePlanId,
+        addonQuantities, setAddonQuantity,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile

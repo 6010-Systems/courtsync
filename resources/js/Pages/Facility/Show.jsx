@@ -5,6 +5,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import CourtCard from '@/Components/CourtCard';
+import RateCard from '@/Components/RateCard';
 import { Camera, Image as ImageIcon, Sparkles, Check, Upload, Link2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -421,6 +422,9 @@ export default function Show({ facility }) {
                                 </div>
                             )}
                         </section>
+
+                        {/* Rate card (poster-style packages + add-ons) */}
+                        <RateCard plans={facility.rate_plans || []} courts={facility.courts || []} />
 
                         {/* Premium Facility Gallery */}
                         <section>
