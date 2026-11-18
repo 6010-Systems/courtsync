@@ -13,6 +13,12 @@ import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
 import { formatPeso } from '@/Components/MetricCard';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { receiptUrl } from '@/Utils/receiptUrl';
+import {
+    facilityAvailabilityBanner,
+    facilityIsAcceptingBookings,
+    facilityIsOpenOnDate,
+    formatOperatingDaysLabel,
+} from '@/Utils/facilityAvailability';
 
 const FILTERS = [
     { key: 'All', label: 'All' },
@@ -260,7 +266,10 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
     };
 
     const selectedFacility = facilities.find(f => f.id == data.facility_id);
-    const availableCourts = selectedFacility?.courts || [];
+    const selectedFacilityAccepting = facilityIsAcceptingBookings(selectedFacility);
+    const selectedFacilityBanner = facilityAvailabilityBanner(selectedFacility);
+    const selectedDateClosed = Boolean(data.date && selectedFacility && !facilityIsOpenOnDate(selectedFacility, data.date));
+    const availableCourts = (selectedFacility?.courts || []).filter((court) => court.status === 'AVAILABLE');
     const selectedCourt = availableCourts.find(c => c.id == data.court_id);
     const timeOptions = useMemo(() => {
         return generateTimeOptions(selectedCourt?.time_range, data.date, selectedCourt?.id, bookings || []);
@@ -410,6 +419,21 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                     </div>
 
                     <form onSubmit={handleAdd} className="flex flex-col gap-6">
+                        {selectedFacilityBanner && (
+                            <div className={`rounded-xl border px-3 py-2.5 text-xs ${
+                                selectedFacilityBanner.tone === 'rose'
+                                    ? 'border-rose-200 bg-rose-50 text-rose-900'
+                                    : 'border-amber-200 bg-amber-50 text-amber-950'
+                            }`}>
+                                <p className="font-black">{selectedFacilityBanner.title}</p>
+                                <p className="mt-0.5 opacity-80">{selectedFacilityBanner.body}</p>
+                            </div>
+                        )}
+                        {selectedFacility && (
+                            <p className="text-xs text-gray-500">
+                                Open days: <span className="font-bold text-[#10221C]">{selectedFacility.operating_days_label || formatOperatingDaysLabel(selectedFacility.operating_days)}</span>
+                            </p>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <InputLabel htmlFor="facility_id" value="Facility" />
@@ -430,7 +454,12 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                                 >
                                     <option value="">Select a facility</option>
                                     {facilities.map((f) => (
-                                        <option key={f.id} value={f.id}>{f.name}</option>
+                                        <option key={f.id} value={f.id}>
+                                            {f.name}
+                                            {(f.operational_status && f.operational_status !== 'OPEN')
+                                                ? ` (${f.operational_status === 'MAINTENANCE' ? 'Maintenance' : 'Unserviceable'})`
+                                                : ''}
+                                        </option>
                                     ))}
                                 </select>
                                 <InputError message={errors.facility_id} className="mt-2" />
@@ -464,7 +493,17 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
 
                             <div>
                                 <InputLabel htmlFor="date" value="Date" />
-                                <TextInput id="date" type="date" value={data.date} onChange={(e) => setData('date', e.target.value)} className="mt-1 block w-full" />
+                                <TextInput
+                                    id="date"
+                                    type="date"
+                                    value={data.date}
+                                    onChange={(e) => setData('date', e.target.value)}
+                                    className="mt-1 block w-full"
+                                    disabled={!selectedFacilityAccepting}
+                                />
+                                {selectedDateClosed && (
+                                    <p className="mt-2 text-xs font-semibold text-rose-600">Facility closed this day.</p>
+                                )}
                                 <InputError message={errors.date} className="mt-2" />
                             </div>
 
@@ -551,7 +590,10 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                             >
                                 Cancel
                             </button>
-                            <PrimaryButton disabled={processing} className="!bg-[#10221C] hover:!bg-[#1a382d]">
+                            <PrimaryButton
+                                disabled={processing || !selectedFacilityAccepting || selectedDateClosed}
+                                className="!bg-[#10221C] hover:!bg-[#1a382d]"
+                            >
                                 Confirm Manual Booking
                             </PrimaryButton>
                         </div>

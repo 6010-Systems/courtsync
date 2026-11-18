@@ -1,12 +1,22 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
+import {
+    facilityAvailabilityBanner,
+    facilityIsAcceptingBookings,
+    facilityIsOpenOnDate,
+    formatOperatingDaysLabel,
+} from '@/Utils/facilityAvailability';
 import { offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
 
 export function useBookingLogic(facility, preselectedCourtId = null) {
     const courts = facility.courts || [];
-    const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
-    const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
+    const facilityAcceptingBookings = facilityIsAcceptingBookings(facility);
+    const availabilityBanner = facilityAvailabilityBanner(facility);
+    const bookableCourts = facilityAcceptingBookings
+        ? courts.filter((c) => courtIsBookable(c.status))
+        : [];
+    const selectableCourts = bookableCourts;
 
     // "Book court" on a venue court card deep-links here with ?court={id}.
     // When that court belongs to this facility, start with it already chosen.
@@ -323,15 +333,30 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             const d = new Date();
             d.setDate(d.getDate() + i);
             const localDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            const isClosed = !facilityIsOpenOnDate(facility, localDate);
             generatedDates.push({
                 date: localDate,
                 dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
                 dayNumber: d.getDate(),
                 monthName: d.toLocaleDateString('en-US', { month: 'short' }),
+                isClosed,
+                closedReason: isClosed ? 'Facility closed this day' : null,
             });
         }
         return generatedDates;
-    }, []);
+    }, [facility]);
+
+    useEffect(() => {
+        if (!selectedDate) {
+            return;
+        }
+
+        if (!facilityIsOpenOnDate(facility, selectedDate)) {
+            setSelectedDate(null);
+            setStartTime('');
+            setEndTime('');
+        }
+    }, [facility, selectedDate]);
 
     // Auto-save to browser memory whenever these variables change
     useEffect(() => {
@@ -556,7 +581,14 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             },
             onError: (errors) => {
                 console.error(errors);
-                const errorMsg = errors.idempotency || errors.conflict || errors.rate_plan_id || 'Failed to process booking. Please try again.';
+                const errorMsg = errors.idempotency
+                    || errors.conflict
+                    || errors.facility_id
+                    || errors.court_id
+                    || errors.date
+                    || errors.start_time
+                    || errors.rate_plan_id
+                    || 'Failed to process booking. Please try again.';
                 showModal('error', errorMsg);
                 setIdempotencyKey(crypto.randomUUID());
             }
@@ -589,6 +621,9 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
 
     return {
         selectableCourts,
+        facilityAcceptingBookings,
+        availabilityBanner,
+        operatingDaysLabel: facility.operating_days_label || formatOperatingDaysLabel(facility.operating_days),
         selectedCourtId, setSelectedCourtId: handleCourtChange,
         selectedDate, setSelectedDate,
         startTime, setStartTime,

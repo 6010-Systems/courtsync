@@ -1136,6 +1136,9 @@ export default function Courts({ facilities = [], can = {} }) {
                                     <Clock size={12} strokeWidth={2.4} />
                                 </span>
                                 <InputLabel htmlFor="time_range" value="Operating Schedule *" className="!block !text-xs !font-bold !text-[#101F1A]" />
+                                <p className="mt-1 text-[11px] text-[#101F1A]/50">
+                                    Hours for this court. Venue open days are set on the facility.
+                                </p>
                             </div>
                             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${hasOperatingSchedule ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                                 {hasOperatingSchedule ? '✓ Hours set' : 'Required'}
