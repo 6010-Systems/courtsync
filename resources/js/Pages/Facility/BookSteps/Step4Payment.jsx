@@ -85,34 +85,12 @@ export default function Step4Payment({ totalPrice, subtotal, bookingFee, payment
                         <div className="p-8 flex flex-col items-center bg-gradient-to-b from-white to-[#F8FAFC] h-full">
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-5">Scan to Pay</p>
                             
-                            <div className={`bg-white p-3 rounded-3xl shadow-[0_0_20px_rgba(0,0,0,0.05)] mb-8 ring-1 flex items-center justify-center ${paymentMethod === 'gcash' ? 'shadow-[0_0_20px_rgba(0,92,238,0.1)] ring-blue-50' : 'shadow-[0_0_20px_rgba(1,201,111,0.1)] ring-green-50'}`} style={{ width: '250px', height: '250px' }}>
-                                <div className="rounded-2xl overflow-hidden relative" style={{ width: '180px', height: '180px', transform: 'scale(1.25)', transformOrigin: 'center' }}>
-                                    {paymentMethod === 'gcash' ? (
-                                        <img 
-                                            src={gcashQrUrl} 
-                                            alt="GCash QR Code" 
-                                            className="max-w-none absolute"
-                                            style={{
-                                                width: '235%',
-                                                maxWidth: 'none',
-                                                top: '-231px',
-                                                left: '-120px'
-                                            }}
-                                        />
-                                    ) : (
-                                        <img 
-                                            src={mayaQrUrl} 
-                                            alt="Maya QR Code" 
-                                            className="max-w-none absolute"
-                                            style={{
-                                                width: '173%',
-                                                maxWidth: 'none',
-                                                top: '-105px',
-                                                left: '-68px'
-                                            }}
-                                        />
-                                    )}
-                                </div>
+                            <div className={`bg-white p-3 rounded-3xl shadow-[0_0_20px_rgba(0,0,0,0.05)] mb-8 ring-1 flex items-center justify-center w-[250px] h-[250px] ${paymentMethod === 'gcash' ? 'shadow-[0_0_20px_rgba(0,92,238,0.1)] ring-blue-50' : 'shadow-[0_0_20px_rgba(1,201,111,0.1)] ring-green-50'}`}>
+                                <img
+                                    src={paymentMethod === 'gcash' ? gcashQrUrl : mayaQrUrl}
+                                    alt={paymentMethod === 'gcash' ? 'GCash QR Code' : 'Maya QR Code'}
+                                    className="h-full w-full rounded-2xl object-contain"
+                                />
                             </div>
                             
                             {/* Account Details */}

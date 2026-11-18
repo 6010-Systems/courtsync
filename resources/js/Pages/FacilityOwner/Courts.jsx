@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
@@ -271,6 +271,7 @@ export default function Courts({ facilities = [], can = {} }) {
         day_start_time: '06:00',
         night_start_time: '18:00',
         status: 'AVAILABLE',
+        rate_plans: [],
     });
 
     const hasOperatingSchedule = useMemo(() => Boolean((data.time_range || '').trim()), [data.time_range]);
@@ -278,6 +279,46 @@ export default function Courts({ facilities = [], can = {} }) {
     const startTimeOptions = useMemo(() => buildStartTimeOptions(scheduleBounds), [scheduleBounds]);
     const dayStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.day_start_time), [startTimeOptions, data.day_start_time]);
     const nightStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.night_start_time), [startTimeOptions, data.night_start_time]);
+
+    /**
+     * Rate-card packages available at the selected facility (owner can assign them to this court).
+     */
+    const facilityRatePlans = useMemo(() => {
+        const facility = facilities.find((item) => item.id == data.facility_id);
+
+        return (facility?.rate_plans || []).filter((plan) => plan.is_active);
+    }, [facilities, data.facility_id]);
+
+    const assignedRatePlan = (planId) => (data.rate_plans || []).find(
+        (row) => Number(row.id) === Number(planId),
+    );
+
+    const assignedPlans = (data.rate_plans || [])
+        .map((row) => facilityRatePlans.find((plan) => Number(plan.id) === Number(row.id)))
+        .filter(Boolean);
+    const assignedPlanCount = assignedPlans.length;
+    const assignedPlanNames = assignedPlans.map((plan) => plan.name).join(' · ');
+
+    const toggleRatePlan = (plan) => {
+        const current = data.rate_plans || [];
+
+        if (assignedRatePlan(plan.id)) {
+            setData('rate_plans', current.filter((row) => Number(row.id) !== Number(plan.id)));
+
+            return;
+        }
+
+        setData('rate_plans', [
+            ...current,
+            { id: plan.id, is_enabled: true, day_rate_override: '', night_rate_override: '' },
+        ]);
+    };
+
+    const setRatePlanOverride = (planId, field, value) => {
+        setData('rate_plans', (data.rate_plans || []).map((row) => (
+            Number(row.id) === Number(planId) ? { ...row, [field]: value } : row
+        )));
+    };
 
     /**
      * Update the schedule and re-clamp the day/night start times to the new range.
@@ -352,11 +393,11 @@ export default function Courts({ facilities = [], can = {} }) {
         }
         if (!hasOperatingSchedule) {
             errs.time_range = 'Set the operating schedule before choosing a pricing mode.';
-        } else if (data.pricing_mode === 'FLAT') {
+        } else if (assignedPlanCount === 0 && data.pricing_mode === 'FLAT') {
             if (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0)) {
                 errs.hourly_rate = 'Hourly rate must be a positive number.';
             }
-        } else {
+        } else if (assignedPlanCount === 0) {
             if (data.day_rate === '' || data.day_rate === null || isNaN(Number(data.day_rate)) || Number(data.day_rate) < 0) {
                 errs.day_rate = 'Day rate must be a valid positive number.';
             }
@@ -433,6 +474,16 @@ export default function Courts({ facilities = [], can = {} }) {
             day_start_time: '06:00',
             night_start_time: '18:00',
             status: 'AVAILABLE',
+            rate_plans: (
+                facilities.find((facility) => facility.id == (defaultFacilityId || facilities[0]?.id))?.rate_plans || []
+            )
+                .filter((plan) => plan.is_active)
+                .map((plan) => ({
+                    id: plan.id,
+                    is_enabled: true,
+                    day_rate_override: '',
+                    night_rate_override: '',
+                })),
         });
         setEditingCourt(null);
         setStep(1);
@@ -458,6 +509,25 @@ export default function Courts({ facilities = [], can = {} }) {
             day_start_time: court.day_start_time ? String(court.day_start_time).substring(0, 5) : '06:00',
             night_start_time: court.night_start_time ? String(court.night_start_time).substring(0, 5) : '18:00',
             status: court.status || 'AVAILABLE',
+            rate_plans: (() => {
+                const assigned = (court.rate_plans || [])
+                    .filter((plan) => (plan.pivot ? Number(plan.pivot.is_enabled) === 1 : true));
+
+                // Unassigned courts inherit the facility rate card, unless this court
+                // was explicitly switched back to its own pricing.
+                const source = assigned.length > 0
+                    ? assigned
+                    : (court.uses_rate_card === false || court.uses_rate_card === 0
+                        ? []
+                        : (facility.rate_plans || []).filter((plan) => plan.is_active !== false));
+
+                return source.map((plan) => ({
+                    id: plan.id,
+                    is_enabled: true,
+                    day_rate_override: plan.pivot?.day_rate_override ?? '',
+                    night_rate_override: plan.pivot?.night_rate_override ?? '',
+                }));
+            })(),
         });
         setStep(1);
         setIsModalOpen(true);
@@ -963,7 +1033,20 @@ export default function Courts({ facilities = [], can = {} }) {
                                     id="facility_id"
                                     value={data.facility_id}
                                     onChange={(e) => {
-                                        setData('facility_id', e.target.value);
+                                        const nextFacility = facilities.find((item) => item.id == e.target.value);
+
+                                        setData({
+                                            ...data,
+                                            facility_id: e.target.value,
+                                            rate_plans: (nextFacility?.rate_plans || [])
+                                                .filter((plan) => plan.is_active)
+                                                .map((plan) => ({
+                                                    id: plan.id,
+                                                    is_enabled: true,
+                                                    day_rate_override: '',
+                                                    night_rate_override: '',
+                                                })),
+                                        });
                                         if (clientErrors.facility_id) setClientErrors(prev => ({ ...prev, facility_id: undefined }));
                                     }}
                                     disabled={!!editingCourt}
@@ -1120,8 +1203,19 @@ export default function Courts({ facilities = [], can = {} }) {
                             </button>
                         </div>
 
+                        {assignedPlanCount > 0 ? (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+                                <p className="text-[11px] font-bold text-emerald-900">
+                                    This court sells: {assignedPlanNames}
+                                </p>
+                                <p className="mt-0.5 text-[10px] font-medium text-emerald-800/80">
+                                    Players pick a package at checkout. Untick every plan below to charge this court's own hourly rates instead.
+                                </p>
+                            </div>
+                        ) : (
+                        <>
                         <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#101F1A]">Pricing Structure *</span>
+                            <span className="text-xs font-bold text-[#101F1A]">Pricing Structure (fallback) *</span>
                             <div className="flex bg-[#F5F2EA] p-0.5 rounded-xl border border-[#101F1A]/10 text-xs font-bold">
                                 <button
                                     type="button"
@@ -1262,7 +1356,116 @@ export default function Courts({ facilities = [], can = {} }) {
                             </div>
                         )}
                         </div>
+                        </>
+                        )}
                     </div>
+
+                    {/* Rate plan assignment (facility rate card → this court) */}
+                    {(
+                        <div className="space-y-2 border-t border-[#101F1A]/5 pt-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold text-[#101F1A]">Rate plans this court offers</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-medium text-[#101F1A]/50">
+                                        {facilityRatePlans.length} available
+                                    </span>
+                                    <Link
+                                        href={route('facility.rates')}
+                                        className="text-[10px] font-bold text-[#101F1A]/70 underline underline-offset-2 hover:text-[#101F1A]"
+                                    >
+                                        Manage
+                                    </Link>
+                                </div>
+                            </div>
+                            <p className="text-[10px] font-medium text-[#101F1A]/50">
+                                Tick the packages players can book here. Leave all unticked to keep this court's own rates.
+                            </p>
+
+                            {facilityRatePlans.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-[#101F1A]/20 bg-[#F5F2EA]/60 px-3 py-3 text-center">
+                                    <p className="text-[11px] font-bold text-[#101F1A]">No prices in the rate card yet</p>
+                                    <p className="mt-0.5 text-[10px] font-medium text-[#101F1A]/60">
+                                        Add Court Rental, All-In and Paddle prices once, then tick them here.
+                                    </p>
+                                    <Link
+                                        href={route('facility.rates')}
+                                        className="mt-2 inline-flex items-center gap-1 rounded-lg bg-[#101F1A] px-3 py-1.5 text-[10px] font-bold text-[#D6FF3F] hover:bg-[#162923]"
+                                    >
+                                        Add rate card prices
+                                    </Link>
+                                </div>
+                            ) : (
+                            <div className="space-y-1.5">
+                                {facilityRatePlans.map((plan) => {
+                                    const assignment = assignedRatePlan(plan.id);
+                                    const isCourtPlan = plan.kind !== 'ADDON';
+
+                                    return (
+                                        <div
+                                            key={plan.id}
+                                            className={`rounded-xl border px-3 py-2 transition ${
+                                                assignment ? 'border-[#101F1A]/30 bg-[#F5F2EA]/70' : 'border-[#101F1A]/10 bg-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <label className="flex min-w-0 items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={Boolean(assignment)}
+                                                        onChange={() => toggleRatePlan(plan)}
+                                                        className="rounded border-[#101F1A]/30 text-[#101F1A] focus:ring-[#101F1A]"
+                                                    />
+                                                    <span className="truncate text-xs font-bold text-[#101F1A]">{plan.name}</span>
+                                                    <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#101F1A]/50">
+                                                        {isCourtPlan ? 'Package' : 'Add-on'}
+                                                    </span>
+                                                </label>
+                                                <span className="shrink-0 text-[11px] font-bold text-[#101F1A]/70">
+                                                    ₱{Number(plan.day_rate).toFixed(0)}
+                                                    {isCourtPlan && plan.night_rate !== null
+                                                        ? ` / ₱${Number(plan.night_rate).toFixed(0)}`
+                                                        : '/hr'}
+                                                </span>
+                                            </div>
+                                            {assignment && isCourtPlan && (
+                                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="block text-[9px] font-bold uppercase text-[#101F1A]/50 mb-0.5">
+                                                            Day override
+                                                        </label>
+                                                        <TextInput
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={assignment.day_rate_override ?? ''}
+                                                            onChange={(event) => setRatePlanOverride(plan.id, 'day_rate_override', event.target.value)}
+                                                            className="block w-full text-xs font-bold"
+                                                            placeholder={Number(plan.day_rate).toFixed(2)}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[9px] font-bold uppercase text-[#101F1A]/50 mb-0.5">
+                                                            Night override
+                                                        </label>
+                                                        <TextInput
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={assignment.night_rate_override ?? ''}
+                                                            onChange={(event) => setRatePlanOverride(plan.id, 'night_rate_override', event.target.value)}
+                                                            className="block w-full text-xs font-bold"
+                                                            placeholder={plan.night_rate !== null ? Number(plan.night_rate).toFixed(2) : '—'}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Operational Status Segmented Grid */}
                     <div className="pt-1.5 border-t border-[#101F1A]/5">
