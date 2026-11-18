@@ -40,6 +40,10 @@ export default function Rates({ facilities = [], can = {} }) {
     const plans = facility?.rate_plans || [];
     const canEdit = Boolean(can.edit);
 
+    const editingPlan = draft.id ? plans.find((plan) => plan.id === draft.id) || null : null;
+    const assignedCourts = editingPlan?.courts || [];
+    const totalCourts = facility?.courts?.length || 0;
+
     const setField = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
 
     const resetDraft = () => {
@@ -50,7 +54,9 @@ export default function Rates({ facilities = [], can = {} }) {
 
     const startEdit = (plan) => {
         setErrors({});
-        setAssignAll(false);
+        const planCourts = plan.courts?.length ?? 0;
+        const facilityCourts = facility?.courts?.length ?? 0;
+        setAssignAll(facilityCourts > 0 && planCourts >= facilityCourts);
         setDraft({
             ...blankPlan,
             ...plan,
@@ -75,8 +81,15 @@ export default function Rates({ facilities = [], can = {} }) {
             ...draft,
             facility_id: facility.id,
             night_rate: draft.kind === 'COURT' && draft.night_rate !== '' ? draft.night_rate : null,
-            assign_to_all_courts: assignAll,
         };
+
+        // New rates honour the choice; on edit only send it when applying to every court,
+        // so saving prices never wipes the existing per-court assignment.
+        if (! draft.id) {
+            payload.assign_to_all_courts = assignAll;
+        } else if (assignAll) {
+            payload.assign_to_all_courts = true;
+        }
 
         const options = {
             preserveScroll: true,
@@ -312,7 +325,7 @@ export default function Rates({ facilities = [], can = {} }) {
                         </label>
                     </div>
 
-                    {!draft.id && (
+                    <div className="space-y-1">
                         <label className="flex items-center gap-2 rounded-lg border border-[#101F1A]/10 px-3 py-2 text-xs font-bold text-[#101F1A]">
                             <input
                                 type="checkbox"
@@ -322,7 +335,22 @@ export default function Rates({ facilities = [], can = {} }) {
                             />
                             Offer on every court
                         </label>
-                    )}
+                        {draft.id ? (
+                            <p className="px-1 text-[10px] font-medium text-[#101F1A]/55">
+                                {totalCourts === 0
+                                    ? 'This facility has no courts yet.'
+                                    : `Currently offered on ${assignedCourts.length} of ${totalCourts} court${totalCourts === 1 ? '' : 's'}${
+                                        assignedCourts.length > 0 && assignedCourts.length < totalCourts
+                                            ? ` (${assignedCourts.map((court) => court.name).join(', ')})`
+                                            : ''
+                                    }. Tick to apply to all; leave unticked to keep the current assignment.`}
+                            </p>
+                        ) : (
+                            <p className="px-1 text-[10px] font-medium text-[#101F1A]/55">
+                                Tick to put this rate on all courts now, or assign it per court later in Courts → Edit court.
+                            </p>
+                        )}
+                    </div>
 
                     <button
                         type="submit"

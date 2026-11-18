@@ -112,6 +112,44 @@ class FacilityOwnerRatePlanControllerTest extends TestCase
         $this->assertSame([$first->id], $plan->courts()->pluck('courts.id')->all());
     }
 
+    public function test_owner_can_apply_a_rate_to_every_court_while_editing(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $courts = Court::factory()->count(3)->create(['facility_id' => $facility->id]);
+        $plan = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        $plan->courts()->attach($courts->first()->id);
+
+        $this->actingAs($owner)
+            ->put(route('facility.rates.update', $plan), $this->payload($facility, [
+                'assign_to_all_courts' => true,
+            ]))
+            ->assertRedirect();
+
+        $this->assertEqualsCanonicalizing(
+            $courts->pluck('id')->all(),
+            $plan->courts()->pluck('courts.id')->all(),
+        );
+    }
+
+    public function test_editing_prices_without_the_flag_keeps_the_existing_court_assignment(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $courts = Court::factory()->count(2)->create(['facility_id' => $facility->id]);
+        $plan = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        $plan->courts()->attach($courts->first()->id);
+
+        $this->actingAs($owner)
+            ->put(route('facility.rates.update', $plan), $this->payload($facility, [
+                'day_rate' => 175,
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame(175.0, (float) $plan->fresh()->day_rate);
+        $this->assertSame([$courts->first()->id], $plan->courts()->pluck('courts.id')->all());
+    }
+
     public function test_owner_can_delete_a_rate(): void
     {
         $owner = User::factory()->facilityOwner()->create();

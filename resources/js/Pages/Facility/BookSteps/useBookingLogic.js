@@ -3,10 +3,18 @@ import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
 import { offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
 
-export function useBookingLogic(facility) {
+export function useBookingLogic(facility, preselectedCourtId = null) {
     const courts = facility.courts || [];
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
+
+    // "Book court" on a venue court card deep-links here with ?court={id}.
+    // When that court belongs to this facility, start with it already chosen.
+    const preselectedCourt = useMemo(
+        () => selectableCourts.find((court) => String(court.id) === String(preselectedCourtId)) || null,
+        [facility, preselectedCourtId],
+    );
+    const preselectedCourtKey = preselectedCourt ? preselectedCourt.id : null;
 
     // SECURITY: If they switch to a different facility, wipe the old memory immediately!
     if (sessionStorage.getItem('book_facility') && sessionStorage.getItem('book_facility') !== facility.id.toString()) {
@@ -20,52 +28,98 @@ export function useBookingLogic(facility) {
         sessionStorage.removeItem('book_addons');
     }
 
-   const [selectedCourtId, setSelectedCourtId] = useState(() => sessionStorage.getItem('book_court') || null);
-   
-   const handleCourtChange = async (courtId) => {
-       // If they had a court locked, explicitly unlock it immediately!
-       if (selectedCourtId && selectedDate && startTime && endTime) {
-           try {
-               await window.axios.post('/bookings/unlock', {
-                   court_id: selectedCourtId,
-                   date: selectedDate,
-                   start_time: startTime,
-                   end_time: endTime,
-                   idempotency_key: idempotencyKey
-               });
-           } catch (e) {} // fail silently
-       }
+    const storedCourtId = sessionStorage.getItem('book_court');
+    // Only restore a saved date/time draft when it belongs to the court we are about to use.
+    const canRestoreDraft = !preselectedCourt || String(preselectedCourt.id) === storedCourtId;
 
-       setSelectedCourtId(courtId);
-       setStartTime('');
-       setEndTime('');
-       setSelectedDate(null);
-       setRatePlanId(null);
-       setAddonQuantities({});
-       sessionStorage.removeItem('book_date');
-       sessionStorage.removeItem('book_start');
-       sessionStorage.removeItem('book_end');
-       sessionStorage.removeItem('book_rate_plan');
-       sessionStorage.removeItem('book_addons');
-   };
+    const [selectedCourtId, setSelectedCourtId] = useState(() => {
+        if (preselectedCourt) {
+            return preselectedCourt.id;
+        }
 
-  const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem('book_date') || null);
-   const [startTime, setStartTime] = useState(() => sessionStorage.getItem('book_start') || '');
-    const [endTime, setEndTime] = useState(() => sessionStorage.getItem('book_end') || '');
+        return selectableCourts.some((court) => String(court.id) === storedCourtId)
+            ? storedCourtId
+            : null;
+    });
+
+    const resetDateTimeSelection = () => {
+        setStartTime('');
+        setEndTime('');
+        setSelectedDate(null);
+        setRatePlanId(null);
+        setAddonQuantities({});
+        sessionStorage.removeItem('book_date');
+        sessionStorage.removeItem('book_start');
+        sessionStorage.removeItem('book_end');
+        sessionStorage.removeItem('book_rate_plan');
+        sessionStorage.removeItem('book_addons');
+    };
+
+    const handleCourtChange = async (courtId) => {
+        // If they had a court locked, explicitly unlock it immediately!
+        if (selectedCourtId && selectedDate && startTime && endTime) {
+            try {
+                await window.axios.post('/bookings/unlock', {
+                    court_id: selectedCourtId,
+                    date: selectedDate,
+                    start_time: startTime,
+                    end_time: endTime,
+                    idempotency_key: idempotencyKey
+                });
+            } catch (e) {} // fail silently
+        }
+
+        setSelectedCourtId(courtId);
+        resetDateTimeSelection();
+    };
+
+    const [selectedDate, setSelectedDate] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_date') || null : null));
+    const [startTime, setStartTime] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_start') || '' : ''));
+    const [endTime, setEndTime] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_end') || '' : ''));
     const [paymentMethod, setPaymentMethod] = useState('pay_at_facility');
-  const [step, setStep] = useState(() => parseInt(sessionStorage.getItem('book_step')) || 1);
+    const [step, setStep] = useState(() => {
+        const storedStep = parseInt(sessionStorage.getItem('book_step')) || 1;
+
+        // Landing here from a court card means step 1 is already answered.
+        return preselectedCourt ? Math.max(storedStep, 2) : storedStep;
+    });
     const [ratePlanId, setRatePlanId] = useState(() => {
-        const stored = sessionStorage.getItem('book_rate_plan');
+        const stored = canRestoreDraft ? sessionStorage.getItem('book_rate_plan') : null;
 
         return stored ? Number(stored) : null;
     });
     const [addonQuantities, setAddonQuantities] = useState(() => {
+        if (!canRestoreDraft) {
+            return {};
+        }
+
         try {
             return JSON.parse(sessionStorage.getItem('book_addons') || '{}');
         } catch {
             return {};
         }
     });
+
+    // Inertia keeps this component mounted between two court cards, so re-apply the
+    // newly requested court when the visitor picks a different one on the venue page.
+    const lastPreselectedCourtKeyRef = useRef(preselectedCourtKey);
+
+    useEffect(() => {
+        if (preselectedCourtKey === lastPreselectedCourtKeyRef.current) {
+            return;
+        }
+
+        lastPreselectedCourtKeyRef.current = preselectedCourtKey;
+
+        if (preselectedCourtKey === null) {
+            return;
+        }
+
+        setSelectedCourtId(preselectedCourtKey);
+        resetDateTimeSelection();
+        setStep(2);
+    }, [preselectedCourtKey]);
+
     const [idempotencyKey, setIdempotencyKey] = useState(() => {
         let key = sessionStorage.getItem('book_idempotency_key');
         if (!key) {
@@ -282,10 +336,31 @@ export function useBookingLogic(facility) {
     // Auto-save to browser memory whenever these variables change
     useEffect(() => {
         sessionStorage.setItem('book_facility', facility.id);
-        if (selectedCourtId) sessionStorage.setItem('book_court', selectedCourtId);
-        if (selectedDate) sessionStorage.setItem('book_date', selectedDate);
-        if (startTime) sessionStorage.setItem('book_start', startTime);
-        if (endTime) sessionStorage.setItem('book_end', endTime);
+
+        if (selectedCourtId) {
+            sessionStorage.setItem('book_court', selectedCourtId);
+        } else {
+            sessionStorage.removeItem('book_court');
+        }
+
+        if (selectedDate) {
+            sessionStorage.setItem('book_date', selectedDate);
+        } else {
+            sessionStorage.removeItem('book_date');
+        }
+
+        if (startTime) {
+            sessionStorage.setItem('book_start', startTime);
+        } else {
+            sessionStorage.removeItem('book_start');
+        }
+
+        if (endTime) {
+            sessionStorage.setItem('book_end', endTime);
+        } else {
+            sessionStorage.removeItem('book_end');
+        }
+
         sessionStorage.setItem('book_step', step);
     }, [selectedCourtId, selectedDate, startTime, endTime, step]);
 

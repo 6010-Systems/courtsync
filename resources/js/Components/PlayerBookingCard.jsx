@@ -60,7 +60,7 @@ export default function PlayerBookingCard({ booking }) {
                 {booking.facility?.slug && (
                     <div className="flex gap-4 text-sm font-bold text-[#101F1A]">
                         <Link href={route('facility.show', booking.facility.slug)} className="underline underline-offset-4 hover:text-green-700">View Facility</Link>
-                        <Link href={route('facility.book', booking.facility.slug)} className="underline underline-offset-4 hover:text-green-700">Book Again</Link>
+                        <Link href={route('facility.book', { facility: booking.facility.slug, court: booking.court_id })} className="underline underline-offset-4 hover:text-green-700">Book Again</Link>
                     </div>
                 )}
             </div>

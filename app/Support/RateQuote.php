@@ -95,10 +95,10 @@ class RateQuote
             throw new InvalidArgumentException('This court does not offer the selected rate.');
         }
 
-        $dayRate = $this->effectiveRate($assignment?->pivot->day_rate_override, $plan->day_rate);
+        $dayRate = $this->effectiveRate($assignment?->pivot?->day_rate_override, $plan->day_rate);
         $nightRate = $plan->night_rate === null
             ? null
-            : $this->effectiveRate($assignment?->pivot->night_rate_override, $plan->night_rate);
+            : $this->effectiveRate($assignment?->pivot?->night_rate_override, $plan->night_rate);
 
         if ($durationHours === 0) {
             return $this->emptyQuote($plan, $dayRate, $nightRate);
@@ -190,7 +190,7 @@ class RateQuote
             return null;
         }
 
-        $rate = $this->effectiveRate($assignment?->pivot->day_rate_override, $plan->day_rate);
+        $rate = $this->effectiveRate($assignment?->pivot?->day_rate_override, $plan->day_rate);
         $subtotal = round($quantity * $durationHours * $rate, 2);
 
         return [
@@ -298,6 +298,7 @@ class RateQuote
             ->exists();
 
         return ! $hasAssignments
+            && (bool) $court->uses_rate_card
             && (int) $plan->facility_id === (int) $court->facility_id
             && (bool) $plan->is_active;
     }

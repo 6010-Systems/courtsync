@@ -209,6 +209,73 @@ class FacilityOwnerCourtControllerTest extends TestCase
         );
     }
 
+    public function test_rate_plans_are_listed_in_rate_card_order(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $court = Court::factory()->flatPricing(300)->create(['facility_id' => $facility->id]);
+
+        $allIn = RatePlan::factory()->allIn()->create(['facility_id' => $facility->id, 'sort_order' => 2]);
+        $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id, 'sort_order' => 1]);
+
+        // Attach out of order on purpose.
+        $court->ratePlans()->attach([$allIn->id, $rental->id]);
+
+        $this->actingAs($owner)->get(route('facility.courts'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('facilities.0.courts.0.rate_plans.0.name', 'Court Rental')
+                ->where('facilities.0.courts.0.rate_plans.1.name', 'All-In'));
+    }
+
+    public function test_court_list_shows_the_rate_card_on_unassigned_courts(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        Court::factory()->flatPricing(1000)->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id, 'sort_order' => 1]);
+
+        $this->actingAs($owner)->get(route('facility.courts'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('facilities.0.courts.0.rate_plans.0.name', 'Court Rental'));
+    }
+
+    public function test_unticking_every_rate_plan_switches_the_court_to_its_own_rates(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+        $plan = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        $court = Court::factory()->flatPricing(300)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 10:00 PM',
+        ]);
+        $court->ratePlans()->attach($plan->id);
+
+        $this->actingAs($owner)->put(route('facility.courts.update', $court), [
+            'name' => $court->name,
+            'type' => $court->type,
+            'time_range' => $court->time_range,
+            'pricing_mode' => 'SPLIT',
+            'day_rate' => 300,
+            'night_rate' => 450,
+            'day_start_time' => '06:00',
+            'night_start_time' => '18:00',
+            'status' => 'AVAILABLE',
+            'rate_plans' => [],
+        ])->assertRedirect();
+
+        $court->refresh();
+
+        $this->assertFalse($court->uses_rate_card);
+        $this->assertSame(0, $court->ratePlans()->count());
+        $this->assertSame('SPLIT', $court->pricing_mode);
+
+        $this->actingAs($owner)->get(route('facility.courts'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('facilities.0.courts.0.rate_plans', 0));
+    }
+
     public function test_owner_cannot_update_a_court_inside_another_owners_facility(): void
     {
         $owner = User::factory()->facilityOwner()->create();

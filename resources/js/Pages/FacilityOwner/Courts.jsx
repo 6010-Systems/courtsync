@@ -513,10 +513,13 @@ export default function Courts({ facilities = [], can = {} }) {
                 const assigned = (court.rate_plans || [])
                     .filter((plan) => (plan.pivot ? Number(plan.pivot.is_enabled) === 1 : true));
 
-                // Unassigned courts inherit the facility rate card.
+                // Unassigned courts inherit the facility rate card, unless this court
+                // was explicitly switched back to its own pricing.
                 const source = assigned.length > 0
                     ? assigned
-                    : (facility.rate_plans || []).filter((plan) => plan.is_active !== false);
+                    : (court.uses_rate_card === false || court.uses_rate_card === 0
+                        ? []
+                        : (facility.rate_plans || []).filter((plan) => plan.is_active !== false));
 
                 return source.map((plan) => ({
                     id: plan.id,

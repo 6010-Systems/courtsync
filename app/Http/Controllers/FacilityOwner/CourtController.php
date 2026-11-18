@@ -51,6 +51,21 @@ class CourtController extends Controller
                 ])
                 ->get();
 
+        // Courts without their own assignment follow the facility rate card,
+        // so every court card shows the same prices here and on the public page.
+        $facilities->each(function (Facility $facility) {
+            $activePlans = $facility->ratePlans
+                ->where('is_active', true)
+                ->sortBy([['sort_order', 'asc'], ['name', 'asc']])
+                ->values();
+
+            $facility->courts->each(function (Court $court) use ($activePlans) {
+                if ($court->ratePlans->isEmpty() && $court->uses_rate_card) {
+                    $court->setRelation('ratePlans', $activePlans);
+                }
+            });
+        });
+
         return Inertia::render('FacilityOwner/Courts', [
             'facilities' => $facilities,
             'can' => [
@@ -230,6 +245,12 @@ class CourtController extends Controller
                 ->all();
 
             $court->ratePlans()->sync($assignments);
+
+            // Unticking every plan opts this court out of the rate card and back to its
+            // own flat / day-night pricing.
+            $court->forceFill([
+                'uses_rate_card' => collect($assignments)->contains(fn ($row) => (bool) $row['is_enabled']),
+            ])->save();
 
             return;
         }

@@ -345,7 +345,7 @@ class FacilityController extends Controller
         ]);
     }
 
-    public function book(Facility $facility)
+    public function book(Request $request, Facility $facility)
     {
         $facility->load('verification:id,facility_id,facility_photos');
         $this->loadRateCard($facility);
@@ -354,8 +354,15 @@ class FacilityController extends Controller
                 ->whereDate('date', '>=', now()->toDateString());
         }]);
 
+        // "Book court" on a venue court card deep-links here with ?court={id}.
+        // Only honour it when that court really belongs to this facility.
+        $requestedCourtId = $request->integer('court');
+
         return Inertia::render('Facility/Book', [
             'facility' => $facility,
+            'preselectedCourtId' => $facility->courts->contains('id', $requestedCourtId)
+                ? $requestedCourtId
+                : null,
         ]);
     }
 
@@ -387,7 +394,7 @@ class FacilityController extends Controller
 
         // Courts without their own assignment follow the facility rate card.
         $facility->courts->each(function ($court) use ($facility) {
-            if ($court->ratePlans->isEmpty()) {
+            if ($court->ratePlans->isEmpty() && $court->uses_rate_card) {
                 $court->setRelation('ratePlans', $facility->ratePlans->values());
             }
         });

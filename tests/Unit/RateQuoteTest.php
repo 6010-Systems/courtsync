@@ -145,6 +145,22 @@ class RateQuoteTest extends TestCase
         $this->assertSame(300.0, $quote['total']);
     }
 
+    public function test_a_court_that_opted_out_of_the_rate_card_uses_its_own_rates(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = $this->planFor($facility, 'courtRental');
+        $court = Court::factory()->flatPricing(300)->create([
+            'facility_id' => $facility->id,
+            'uses_rate_card' => false,
+        ]);
+
+        $legacy = (new RateQuote)->forBooking($court, '10:00', '12:00');
+        $this->assertSame(600.0, $legacy['subtotal']);
+
+        $this->expectException(InvalidArgumentException::class);
+        (new RateQuote)->forBooking($court, '10:00', '12:00', $plan);
+    }
+
     public function test_the_court_falls_back_to_its_own_rates_without_a_plan(): void
     {
         $facility = Facility::factory()->create();
