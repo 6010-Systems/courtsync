@@ -117,7 +117,10 @@ class FacilityAvailabilityTest extends TestCase
     public function test_booking_is_rejected_outside_court_operating_hours(): void
     {
         [$facility, $court, $player] = $this->makeBookableSetup([], [
-            'time_range' => '8:00 AM - 12:00 PM',
+            'time_range' => 'All week 8:00 AM - 12:00 PM',
+            'operating_schedules' => [
+                ['days' => [1, 2, 3, 4, 5, 6, 7], 'start' => '08:00', 'end' => '12:00'],
+            ],
         ]);
 
         $this->actingAs($player)
