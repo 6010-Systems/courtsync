@@ -8,6 +8,7 @@ use App\Models\Facility;
 use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
+use App\Support\FacilityAvailability;
 use App\Support\RateQuote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -136,6 +137,23 @@ class BookingController extends Controller
 
         $user = $request->user();
 
+        $court = Court::findOrFail($validated['court_id']);
+        $facility = $court->facility()->firstOrFail();
+
+        if ((int) $facility->id !== (int) $validated['facility_id']) {
+            throw ValidationException::withMessages([
+                'court_id' => 'This court does not belong to the selected facility.',
+            ]);
+        }
+
+        (new FacilityAvailability)->assertBookable(
+            $facility,
+            $court,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time'],
+        );
+
         //  Prevent Double Booking
         $conflict = Booking::where('court_id', $validated['court_id'])
             ->where('date', $validated['date'])
@@ -153,9 +171,6 @@ class BookingController extends Controller
 
         // Determine user_id based on whether a guest name is provided
         $userId = ! empty($validated['guest_name']) ? null : $user->id;
-
-        $court = Court::findOrFail($validated['court_id']);
-        $facility = $court->facility()->firstOrFail();
 
         $plan = ! empty($validated['rate_plan_id'])
             ? RatePlan::findOrFail($validated['rate_plan_id'])
@@ -380,8 +395,29 @@ class BookingController extends Controller
             'end_time' => 'required',
         ]);
 
-        $startHour = (int) explode(':', $request->start_time)[0];
-        $endHour = (int) explode(':', $request->end_time)[0];
+        $court = Court::findOrFail($request->court_id);
+        $facility = $court->facility()->firstOrFail();
+        $startTime = substr((string) $request->start_time, 0, 5);
+        $endTime = substr((string) $request->end_time, 0, 5);
+
+        $reason = (new FacilityAvailability)->reason(
+            $facility,
+            $court,
+            $request->date,
+            $startTime,
+            $endTime,
+        );
+
+        if ($reason !== null) {
+            return response()->json([
+                'locked' => true,
+                'code' => $reason['code'],
+                'message' => $reason['message'],
+            ], 422);
+        }
+
+        $startHour = (int) explode(':', $startTime)[0];
+        $endHour = (int) explode(':', $endTime)[0];
 
         $keysToLock = [];
         $clientId = $request->idempotency_key ?? 'unknown';
@@ -394,7 +430,7 @@ class BookingController extends Controller
             if (Cache::has($cacheKey)) {
                 $heldBy = Cache::get($cacheKey);
                 if ($heldBy !== $clientId) {
-                    return response()->json(['locked' => true], 423); // 423 means Locked
+                    return response()->json(['locked' => true, 'message' => 'Sorry, this court is already booked for that time.'], 423); // 423 means Locked
                 }
             }
             $keysToLock[] = $cacheKey;
