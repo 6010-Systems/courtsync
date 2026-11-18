@@ -228,6 +228,11 @@ function pivotEnabled(plan) {
 }
 
 function planPool(court, facility) {
+    // Courts opted out of the rate card use their own flat / day-night rates.
+    if (court && (court.uses_rate_card === false || court.uses_rate_card === 0)) {
+        return [];
+    }
+
     const assigned = (court?.rate_plans || []).filter(pivotEnabled);
 
     if (assigned.length > 0) {

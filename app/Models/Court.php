@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
     'description',
     'hourly_rate',
     'pricing_mode',
+    'uses_rate_card',
     'day_rate',
     'night_rate',
     'day_start_time',
@@ -28,6 +29,15 @@ class Court extends Model
 {
     /** @use HasFactory<CourtFactory> */
     use HasFactory;
+
+    /**
+     * Courts follow the facility rate card unless they opt out.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'uses_rate_card' => true,
+    ];
 
     /**
      * Curated sport court mock images matching the exact presets.
@@ -116,6 +126,7 @@ class Court extends Model
             'hourly_rate' => 'decimal:2',
             'day_rate' => 'decimal:2',
             'night_rate' => 'decimal:2',
+            'uses_rate_card' => 'boolean',
         ];
     }
 
@@ -209,12 +220,15 @@ class Court extends Model
 
     /**
      * Rate card packages assigned to this court (see the court_rate_plan pivot).
+     * Ordered like the printed rate card (sort_order, then name).
      */
     public function ratePlans(): BelongsToMany
     {
         return $this->belongsToMany(RatePlan::class, 'court_rate_plan')
             ->withPivot('is_enabled', 'day_rate_override', 'night_rate_override')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->orderBy('rate_plans.sort_order')
+            ->orderBy('rate_plans.name');
     }
 
     /**

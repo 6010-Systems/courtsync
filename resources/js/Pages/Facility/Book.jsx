@@ -8,7 +8,7 @@ import Step4Payment from './BookSteps/Step4Payment';
 import { useBookingLogic } from './BookSteps/useBookingLogic';
 import TimerIcon from '@/Components/TimerIcon';
 
-export default function Book({ facility }) {
+export default function Book({ facility, preselectedCourtId = null }) {
     const isPlayer = usePage().props.auth.user?.role === 'PLAYER';
     const {
         selectableCourts,
@@ -32,7 +32,7 @@ export default function Book({ facility }) {
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
         proofFile, setProofFile
-    } = useBookingLogic(facility);
+    } = useBookingLogic(facility, preselectedCourtId);
 
     // STEP CONFIGURATION ARRAY
     const stepsData = [

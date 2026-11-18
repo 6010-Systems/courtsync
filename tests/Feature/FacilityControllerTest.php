@@ -64,6 +64,33 @@ class FacilityControllerTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Book'));
     }
 
+    public function test_book_page_preselects_the_court_passed_in_the_query_string(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->create(['facility_id' => $facility->id]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->get(route('facility.book', ['facility' => $facility->slug, 'court' => $court->id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Book')
+                ->where('preselectedCourtId', $court->id));
+    }
+
+    public function test_book_page_ignores_a_preselected_court_from_another_facility(): void
+    {
+        $facility = Facility::factory()->create();
+        $otherFacility = Facility::factory()->create();
+        $otherCourt = Court::factory()->create(['facility_id' => $otherFacility->id]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->get(route('facility.book', ['facility' => $facility->slug, 'court' => $otherCourt->id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Book')
+                ->where('preselectedCourtId', null));
+    }
+
     public function test_owner_payment_settings_page_renders_facility_payment_settings(): void
     {
         $owner = User::factory()->facilityOwner()->create();

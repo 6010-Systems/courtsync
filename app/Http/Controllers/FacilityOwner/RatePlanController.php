@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FacilityOwner;
 
 use App\Http\Controllers\Controller;
+use App\Models\Court;
 use App\Models\Facility;
 use App\Models\RatePlan;
 use Illuminate\Http\Request;
@@ -44,7 +45,10 @@ class RatePlanController extends Controller
             ? collect()
             : Facility::whereIn('id', $facilityIds)
                 ->with([
-                    'ratePlans' => fn ($query) => $query->orderBy('sort_order')->orderBy('name'),
+                    'ratePlans' => fn ($query) => $query
+                        ->with('courts:id,name')
+                        ->orderBy('sort_order')
+                        ->orderBy('name'),
                     'courts:id,facility_id,name,status',
                 ])
                 ->get();
@@ -71,8 +75,8 @@ class RatePlanController extends Controller
 
         $plan = RatePlan::create($this->payload($validated));
 
-        // New plans apply to the whole facility unless specific courts were chosen.
-        if ($request->has('court_ids') || $request->boolean('assign_to_all_courts')) {
+        // Honour an explicit "offer on every court" choice; otherwise default to every court.
+        if ($request->has('assign_to_all_courts') || $request->has('court_ids')) {
             $this->syncCourts($plan, $request);
         } else {
             $plan->courts()->sync(
@@ -81,6 +85,8 @@ class RatePlanController extends Controller
                     ->all()
             );
         }
+
+        Court::whereIn('id', $plan->courts()->pluck('courts.id'))->update(['uses_rate_card' => true]);
 
         return redirect()->back()->with('success', 'Rate added successfully.');
     }
@@ -194,5 +200,8 @@ class RatePlanController extends Controller
         $plan->courts()->sync(
             $courtIds->mapWithKeys(fn ($courtId) => [$courtId => ['is_enabled' => true]])->all()
         );
+
+        // Assigning a rate from the card puts these courts back on rate-card pricing.
+        Court::whereIn('id', $courtIds->all())->update(['uses_rate_card' => true]);
     }
 }
