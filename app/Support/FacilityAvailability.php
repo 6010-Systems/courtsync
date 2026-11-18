@@ -24,6 +24,8 @@ class FacilityAvailability
 
     public const REASON_OUTSIDE_HOURS = 'outside_hours';
 
+    public const REASON_COURT_CLOSED_DAY = 'court_closed_day';
+
     /**
      * @return array{code: string, message: string}|null
      */
@@ -76,11 +78,29 @@ class FacilityAvailability
             ];
         }
 
-        if ($startTime !== null && $endTime !== null && ! $this->timeRangeIsWithinSchedule($court->time_range, $startTime, $endTime)) {
+        $schedule = $court->scheduleForDate($date);
+
+        if ($schedule === null && Court::normalizeOperatingSchedules($court->operating_schedules) !== []) {
             return [
-                'code' => self::REASON_OUTSIDE_HOURS,
-                'message' => 'Outside operating hours.',
+                'code' => self::REASON_COURT_CLOSED_DAY,
+                'message' => 'This court is closed on this day.',
             ];
+        }
+
+        if ($startTime !== null && $endTime !== null) {
+            if ($schedule !== null) {
+                if (! $court->acceptsBookingWindow($date, $startTime, $endTime)) {
+                    return [
+                        'code' => self::REASON_OUTSIDE_HOURS,
+                        'message' => 'Outside operating hours.',
+                    ];
+                }
+            } elseif (! $this->timeRangeIsWithinSchedule($court->time_range, $startTime, $endTime)) {
+                return [
+                    'code' => self::REASON_OUTSIDE_HOURS,
+                    'message' => 'Outside operating hours.',
+                ];
+            }
         }
 
         return null;
@@ -103,7 +123,8 @@ class FacilityAvailability
         }
 
         $field = match ($reason['code']) {
-            self::REASON_FACILITY_CLOSED_DAY => 'date',
+            self::REASON_FACILITY_CLOSED_DAY,
+            self::REASON_COURT_CLOSED_DAY => 'date',
             self::REASON_OUTSIDE_HOURS => 'start_time',
             self::REASON_COURT_MAINTENANCE,
             self::REASON_COURT_UNSERVICEABLE,
@@ -125,7 +146,7 @@ class FacilityAvailability
         }
 
         $startMinutes = $this->clockToMinutes($startTime);
-        $endMinutes = $this->clockToMinutes($endTime);
+        $endMinutes = $this->clockToMinutes($endTime, allowMidnightEnd: true);
 
         if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
             return false;
@@ -153,8 +174,8 @@ class FacilityAvailability
             return null;
         }
 
-        $startMinutes = $this->partsToMinutes((int) $match[1], isset($match[2]) && $match[2] !== '' ? (int) $match[2] : 0, $match[3] ?? null);
-        $endMinutes = $this->partsToMinutes((int) $match[4], isset($match[5]) && $match[5] !== '' ? (int) $match[5] : 0, $match[6] ?? null);
+        $startMinutes = $this->partsToMinutes((int) $match[1], isset($match[2]) && $match[2] !== '' ? (int) $match[2] : 0, $match[3] ?? null, false);
+        $endMinutes = $this->partsToMinutes((int) $match[4], isset($match[5]) && $match[5] !== '' ? (int) $match[5] : 0, $match[6] ?? null, true);
 
         if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
             return null;
@@ -163,10 +184,16 @@ class FacilityAvailability
         return ['start' => $startMinutes, 'end' => $endMinutes];
     }
 
-    private function clockToMinutes(string $time): ?int
+    private function clockToMinutes(string $time, bool $allowMidnightEnd = false): ?int
     {
+        $normalized = substr(trim($time), 0, 5);
+
+        if ($allowMidnightEnd && $normalized === '24:00') {
+            return 24 * 60;
+        }
+
         try {
-            $carbon = Carbon::createFromFormat('H:i', substr($time, 0, 5));
+            $carbon = Carbon::createFromFormat('H:i', $normalized);
         } catch (\Throwable) {
             return null;
         }
@@ -174,20 +201,32 @@ class FacilityAvailability
         return ((int) $carbon->format('H') * 60) + (int) $carbon->format('i');
     }
 
-    private function partsToMinutes(int $hour, int $minute, ?string $meridiem): ?int
+    private function partsToMinutes(int $hour, int $minute, ?string $meridiem, bool $isEnd): ?int
     {
-        if ($hour < 0 || $hour > 23 || $minute < 0 || $minute > 59) {
+        if ($minute < 0 || $minute > 59 || $hour < 0 || $hour > 24) {
             return null;
         }
 
         if ($meridiem !== null && $meridiem !== '') {
             $upper = strtoupper($meridiem);
+            // "12:00 AM" as an end bound means midnight (end of day).
+            if ($isEnd && $upper === 'AM' && $hour === 12 && $minute === 0) {
+                return 24 * 60;
+            }
             if ($upper === 'PM' && $hour < 12) {
                 $hour += 12;
             }
             if ($upper === 'AM' && $hour === 12) {
                 $hour = 0;
             }
+        }
+
+        if ($hour === 24 && $minute === 0) {
+            return $isEnd ? 24 * 60 : null;
+        }
+
+        if ($hour > 23) {
+            return null;
         }
 
         return ($hour * 60) + $minute;
