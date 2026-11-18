@@ -13,6 +13,7 @@ import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
 import { formatPeso } from '@/Components/MetricCard';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { receiptUrl } from '@/Utils/receiptUrl';
+import { courtIsOpenOnDate, hoursForDate } from '@/Utils/courtOperatingSchedule';
 import {
     facilityAvailabilityBanner,
     facilityIsAcceptingBookings,
@@ -220,27 +221,20 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
         reset();
     };
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
+    const generateTimeOptions = (court, selectedDate, courtId, allBookings = []) => {
+        if (selectedDate && court && !courtIsOpenOnDate(court, selectedDate)) {
+            return [];
+        }
+
+        const hours = hoursForDate(court, selectedDate);
         let startHour = 6;
         let endHour = 22;
 
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
+        if (hours) {
+            startHour = parseInt(String(hours.start).split(':')[0], 10);
+            endHour = String(hours.end) === '24:00'
+                ? 24
+                : parseInt(String(hours.end).split(':')[0], 10);
         }
 
         const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
@@ -256,11 +250,17 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
 
         const options = [];
         for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
+            const timeValue = i === 24 ? '24:00' : `${i.toString().padStart(2, '0')}:00`;
             const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
+            date.setHours(i === 24 ? 0 : i, 0);
+            const formatted = i === 24
+                ? '12:00 AM'
+                : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            options.push({
+                value: timeValue,
+                label: formatted,
+                isBooked: i < endHour && bookedHours.has(i),
+            });
         }
         return options;
     };
@@ -268,11 +268,18 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
     const selectedFacility = facilities.find(f => f.id == data.facility_id);
     const selectedFacilityAccepting = facilityIsAcceptingBookings(selectedFacility);
     const selectedFacilityBanner = facilityAvailabilityBanner(selectedFacility);
-    const selectedDateClosed = Boolean(data.date && selectedFacility && !facilityIsOpenOnDate(selectedFacility, data.date));
     const availableCourts = (selectedFacility?.courts || []).filter((court) => court.status === 'AVAILABLE');
     const selectedCourt = availableCourts.find(c => c.id == data.court_id);
+    const selectedDateClosed = Boolean(
+        data.date
+        && selectedFacility
+        && (
+            !facilityIsOpenOnDate(selectedFacility, data.date)
+            || (selectedCourt && !courtIsOpenOnDate(selectedCourt, data.date))
+        ),
+    );
     const timeOptions = useMemo(() => {
-        return generateTimeOptions(selectedCourt?.time_range, data.date, selectedCourt?.id, bookings || []);
+        return generateTimeOptions(selectedCourt, data.date, selectedCourt?.id, bookings || []);
     }, [selectedCourt, data.date, bookings]);
 
     return (

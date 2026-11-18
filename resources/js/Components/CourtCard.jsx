@@ -122,8 +122,8 @@ export default function CourtCard({
                             <Clock size={12} className="shrink-0" />
                             Operating hours
                         </span>
-                        <span className="truncate font-bold text-[#10221C]" title={court.time_range}>
-                            {court.time_range || 'Venue standard'}
+                        <span className="truncate font-bold text-[#10221C]" title={court.operating_schedules_label || court.time_range}>
+                            {court.operating_schedules_label || court.time_range || 'Venue standard'}
                         </span>
                     </div>
 
