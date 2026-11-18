@@ -179,8 +179,6 @@ export default function Book({ facility, preselectedCourtId = null }) {
 
                     <div className="rounded-2xl border border-[#10221C]/10 bg-white px-4 py-3 text-xs text-[#10221C]/70">
                         Open days: <span className="font-bold text-[#10221C]">{operatingDaysLabel}</span>
-                        <span className="mx-1.5 text-[#10221C]/30">·</span>
-                        Court hours still follow each court&apos;s schedule.
                     </div>
                     
                     {selectableCourts.length === 0 ? (

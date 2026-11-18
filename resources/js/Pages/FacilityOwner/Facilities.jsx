@@ -483,7 +483,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                 <div>
                                     <InputLabel value="Open Days *" />
                                     <p className="mt-1 text-[11px] text-[#101F1A]/50">
-                                        Players can only book on these weekdays. Court hours still come from each court&apos;s schedule.
+                                        Players can only book on these days of the week.
                                     </p>
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {WEEKDAY_OPTIONS.map((day) => {

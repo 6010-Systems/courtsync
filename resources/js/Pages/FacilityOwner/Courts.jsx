@@ -1241,9 +1241,7 @@ export default function Courts({ facilities = [], can = {} }) {
                                     </span>
                                     <InputLabel value="Operating Hours by Day *" className="!block !text-xs !font-bold !text-[#101F1A]" />
                                 </div>
-                                <p className="mt-1 text-[11px] text-[#101F1A]/50">
-                                    Only facility open days can be scheduled. Add groups for different hours (e.g. weekdays vs weekend). Midnight = end of day.
-                                </p>
+                                
                             </div>
                             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${hasOperatingSchedule ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                                 {hasOperatingSchedule ? '✓ Hours set' : 'Required'}
