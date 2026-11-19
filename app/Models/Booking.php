@@ -30,6 +30,23 @@ class Booking extends Model
             });
     }
 
+    /**
+     * Active bookings that overlap [startTime, endTime) on the same court/date.
+     */
+    public function scopeOverlapping(
+        Builder $query,
+        int $courtId,
+        string $date,
+        string $startTime,
+        string $endTime,
+    ): void {
+        $query->where('court_id', $courtId)
+            ->where('date', $date)
+            ->where('status', '!=', 'cancelled')
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime);
+    }
+
     protected $fillable = [
         'facility_id', 'user_id', 'guest_name', 'court_id', 'rate_plan_id', 'rate_plan_name', 'date', 'start_time', 'end_time',
         'subtotal', 'addons_total', 'booking_fee', 'total_price', 'price_breakdown', 'status',

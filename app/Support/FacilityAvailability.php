@@ -10,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 
 class FacilityAvailability
 {
+    public const REASON_FACILITY_NOT_APPROVED = 'facility_not_approved';
+
     public const REASON_FACILITY_MAINTENANCE = 'facility_maintenance';
 
     public const REASON_FACILITY_UNSERVICEABLE = 'facility_unserviceable';
@@ -36,6 +38,13 @@ class FacilityAvailability
         ?string $startTime = null,
         ?string $endTime = null,
     ): ?array {
+        if (! $facility->isApproved()) {
+            return [
+                'code' => self::REASON_FACILITY_NOT_APPROVED,
+                'message' => 'This facility is not approved for bookings yet.',
+            ];
+        }
+
         if ($facility->operational_status === Facility::OPERATIONAL_MAINTENANCE) {
             return [
                 'code' => self::REASON_FACILITY_MAINTENANCE,
@@ -129,6 +138,9 @@ class FacilityAvailability
             self::REASON_COURT_MAINTENANCE,
             self::REASON_COURT_UNSERVICEABLE,
             self::REASON_COURT_NOT_BOOKABLE => 'court_id',
+            self::REASON_FACILITY_NOT_APPROVED,
+            self::REASON_FACILITY_MAINTENANCE,
+            self::REASON_FACILITY_UNSERVICEABLE => 'facility_id',
             default => 'facility_id',
         };
 

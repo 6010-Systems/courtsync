@@ -19,27 +19,14 @@ class CourtController extends Controller
      */
     private function allowedFacilityIds(Request $request): Collection
     {
-        $user = $request->user();
-
-        if ($user->role === 'FACILITY_OWNER') {
-            return $user->facilities()->pluck('id');
-        }
-
-        if ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            return collect([$user->facility_id]);
-        }
-
-        return collect();
+        return $request->user()->managedFacilityIds();
     }
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Court::class);
+
         $user = $request->user();
-
-        if (! $user->hasPermission('view_courts')) {
-            abort(403, 'You do not have permission to view courts.');
-        }
-
         $facilityIds = $this->allowedFacilityIds($request);
 
         $facilities = $facilityIds->isEmpty()
@@ -78,9 +65,7 @@ class CourtController extends Controller
 
     public function store(Request $request)
     {
-        if (! $request->user()->hasPermission('create_courts')) {
-            abort(403, 'You do not have permission to create courts.');
-        }
+        $this->authorize('create', Court::class);
 
         $request->validate([
             'facility_id' => 'required|exists:facilities,id',
@@ -104,11 +89,8 @@ class CourtController extends Controller
             ...$this->ratePlanRules(),
         ]);
 
-        if (! $this->allowedFacilityIds($request)->contains((int) $request->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $facility = Facility::query()->findOrFail($request->facility_id);
+        $this->authorize('create', [Court::class, $facility]);
         $schedules = $this->validatedOperatingSchedules($request->input('operating_schedules'), $facility);
 
         $pricingMode = $request->pricing_mode === 'SPLIT' ? 'SPLIT' : 'FLAT';
@@ -138,13 +120,7 @@ class CourtController extends Controller
 
     public function update(Request $request, Court $court)
     {
-        if (! $request->user()->hasPermission('edit_courts')) {
-            abort(403, 'You do not have permission to edit courts.');
-        }
-
-        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('update', $court);
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -202,13 +178,7 @@ class CourtController extends Controller
 
     public function destroy(Request $request, Court $court)
     {
-        if (! $request->user()->hasPermission('delete_courts')) {
-            abort(403, 'You do not have permission to delete courts.');
-        }
-
-        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('delete', $court);
 
         $court->delete();
 

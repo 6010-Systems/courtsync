@@ -8,6 +8,7 @@ use App\Models\Facility;
 use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
+use App\Support\BookingSlotGuard;
 use App\Support\FacilityAvailability;
 use App\Support\RateQuote;
 use Illuminate\Http\Request;
@@ -154,21 +155,6 @@ class BookingController extends Controller
             $validated['end_time'],
         );
 
-        //  Prevent Double Booking
-        $conflict = Booking::where('court_id', $validated['court_id'])
-            ->where('date', $validated['date'])
-            ->where(function ($query) use ($validated) {
-                // A requested time [A, B] overlaps with an existing time [C, D] if A < D and B > C.
-                $query->where('start_time', '<', $validated['end_time'])
-                    ->where('end_time', '>', $validated['start_time']);
-            })
-            ->where('status', '!=', 'cancelled')
-            ->exists();
-
-        if ($conflict) {
-            return back()->withErrors(['conflict' => 'Sorry, this court is already booked for that time.']);
-        }
-
         // Determine user_id based on whether a guest name is provided
         $userId = ! empty($validated['guest_name']) ? null : $user->id;
 
@@ -203,55 +189,61 @@ class BookingController extends Controller
         $bookingFee = $facility->calculateBookingFee($subtotal + $addonsTotal);
         $finalPrice = round($subtotal + $addonsTotal + $bookingFee, 2);
 
-        // Create the booking
-        $booking = Booking::create([
-            'facility_id' => $facility->id,
-            'user_id' => $userId,
-            'guest_name' => $validated['guest_name'] ?? null,
-            'court_id' => $validated['court_id'],
-            'rate_plan_id' => $quote['rate_plan_id'],
-            'rate_plan_name' => $quote['rate_plan_name'],
-            'date' => $validated['date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
-            'subtotal' => $subtotal,
-            'addons_total' => $addonsTotal,
-            'booking_fee' => $bookingFee,
-            'total_price' => $finalPrice,
-            'price_breakdown' => $quote,
-            'status' => 'pending',
-        ]);
-
-        // Handle Payment if present
-        if ($request->has('payment_method')) {
-            $proofPath = null;
-            if ($request->hasFile('proof_file')) {
-                $proofPath = $request->file('proof_file')->store('payments', 'public');
-            }
-
-            $booking->payment()->create([
-                'user_id' => $userId,
-                'amount' => $finalPrice,
-                'payment_method' => $request->input('payment_method'),
-                'proof_path' => $proofPath,
-                'status' => 'pending',
-            ]);
+        $proofPath = null;
+        if ($request->has('payment_method') && $request->hasFile('proof_file')) {
+            $proofPath = $request->file('proof_file')->store('payments', 'public');
         }
 
-        //  Register the player to the facility's player list
-        $facility->players()->syncWithoutDetaching([
-            $user->id => ['status' => 'ACTIVE'],
-        ]);
+        $booking = (new BookingSlotGuard)->claim(
+            $court,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time'],
+            function () use ($facility, $user, $userId, $validated, $quote, $subtotal, $addonsTotal, $bookingFee, $finalPrice, $request, $proofPath) {
+                $booking = Booking::create([
+                    'facility_id' => $facility->id,
+                    'user_id' => $userId,
+                    'guest_name' => $validated['guest_name'] ?? null,
+                    'court_id' => $validated['court_id'],
+                    'rate_plan_id' => $quote['rate_plan_id'],
+                    'rate_plan_name' => $quote['rate_plan_name'],
+                    'date' => $validated['date'],
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'subtotal' => $subtotal,
+                    'addons_total' => $addonsTotal,
+                    'booking_fee' => $bookingFee,
+                    'total_price' => $finalPrice,
+                    'price_breakdown' => $quote,
+                    'status' => 'pending',
+                ]);
 
-        //  Notify the facility owner and staff that a new booking awaits confirmation
+                if ($request->has('payment_method')) {
+                    $booking->payment()->create([
+                        'user_id' => $userId,
+                        'amount' => $finalPrice,
+                        'payment_method' => $request->input('payment_method'),
+                        'proof_path' => $proofPath,
+                        'status' => 'pending',
+                    ]);
+                }
+
+                $facility->players()->syncWithoutDetaching([
+                    $user->id => ['status' => 'ACTIVE'],
+                ]);
+
+                return $booking;
+            },
+        );
+
+        // Notify after commit so a rolled-back conflict never emails staff.
         $notifiables = collect([$facility->owner])
             ->merge($facility->staff->where('role', 'FACILITY_STAFF'))
             ->unique('id')
             ->filter();
 
-        $notifiables->each(fn ($user) => $user->notify(new BookingRequested($booking)));
+        $notifiables->each(fn ($notifiable) => $notifiable->notify(new BookingRequested($booking)));
 
-        //  Return success
         return back()->with('success', 'Booking submitted successfully. Awaiting confirmation.');
     }
 
@@ -276,18 +268,7 @@ class BookingController extends Controller
      */
     public function update(Request $request, Booking $booking)
     {
-        $user = $request->user();
-
-        $facilityIds = collect();
-        if ($user->role === 'FACILITY_OWNER') {
-            $facilityIds = $user->facilities()->pluck('id');
-        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            $facilityIds = collect([$user->facility_id]);
-        }
-
-        if (! $facilityIds->contains($booking->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('update', $booking);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in(['pending', 'confirmed', 'cancelled'])],
@@ -307,19 +288,7 @@ class BookingController extends Controller
      */
     public function destroy(Request $request, Booking $booking)
     {
-        $user = $request->user();
-
-        // Facility IDs this user is allowed to manage bookings for
-        $facilityIds = collect();
-        if ($user->role === 'FACILITY_OWNER') {
-            $facilityIds = $user->facilities()->pluck('id');
-        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            $facilityIds = collect([$user->facility_id]);
-        }
-
-        if (! $facilityIds->contains($booking->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('delete', $booking);
 
         $booking->delete();
 
@@ -328,19 +297,7 @@ class BookingController extends Controller
 
     public function verifyPayment(Request $request, Booking $booking)
     {
-        $user = $request->user();
-
-        // Check permissions
-        $facilityIds = collect();
-        if ($user->role === 'FACILITY_OWNER') {
-            $facilityIds = $user->facilities()->pluck('id');
-        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            $facilityIds = collect([$user->facility_id]);
-        }
-
-        if (! $facilityIds->contains($booking->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('verify', $booking);
 
         DB::transaction(function () use ($booking): void {
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
@@ -362,19 +319,7 @@ class BookingController extends Controller
 
     public function rejectPayment(Request $request, Booking $booking)
     {
-        $user = $request->user();
-
-        // Check permissions
-        $facilityIds = collect();
-        if ($user->role === 'FACILITY_OWNER') {
-            $facilityIds = $user->facilities()->pluck('id');
-        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            $facilityIds = collect([$user->facility_id]);
-        }
-
-        if (! $facilityIds->contains($booking->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('reject', $booking);
 
         $booking->update(['status' => 'cancelled']);
         if ($booking->payment) {

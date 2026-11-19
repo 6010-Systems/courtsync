@@ -361,6 +361,8 @@ class FacilityController extends Controller
 
     public function book(Request $request, Facility $facility)
     {
+        abort_unless($facility->isApproved(), 404);
+
         $facility->load('verification:id,facility_id,facility_photos');
         $this->loadRateCard($facility);
         $facility->load(['bookings' => function ($q) {

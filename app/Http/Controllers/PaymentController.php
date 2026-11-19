@@ -11,18 +11,13 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Payment::class);
+
         $user = $request->user();
 
         // Facility IDs this user is allowed to manage/view.
         // Admins see all payments across all facilities (no facility scoping).
-        $facilityIds = collect();
-        if ($user->role === 'FACILITY_OWNER') {
-            $facilityIds = $user->facilities()->pluck('id');
-        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            $facilityIds = collect([$user->facility_id]);
-        } elseif ($user->role === 'ADMIN') {
-            $facilityIds = null;
-        }
+        $facilityIds = $user->role === 'ADMIN' ? null : $user->managedFacilityIds();
 
         $query = Payment::with(['booking.court', 'booking.facility', 'booking.user:id,name,email', 'user'])->latest();
 

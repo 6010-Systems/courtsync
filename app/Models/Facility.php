@@ -85,7 +85,16 @@ class Facility extends Model
     }
 
     /**
-     * Whether the facility accepts new bookings right now.
+     * Whether admin verification has approved this facility for public booking.
+     */
+    public function isApproved(): bool
+    {
+        return ($this->verification_status ?? '') === 'APPROVED';
+    }
+
+    /**
+     * Whether the facility operational status allows new bookings right now.
+     * Approval is checked separately via isApproved().
      */
     public function isAcceptingBookings(): bool
     {

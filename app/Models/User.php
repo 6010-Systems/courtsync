@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,11 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password', 'role', 'staff_role', 'status', 'mobile_number', 'google_id', 'avatar', 'facility_id', 'permissions'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasPushSubscriptions, Notifiable;
@@ -78,6 +79,31 @@ class User extends Authenticatable
         }
 
         return in_array($key, $this->permissions ?? [], true);
+    }
+
+    /**
+     * Facility IDs this user may manage (owner's facilities or staff assignment).
+     *
+     * @return Collection<int, int>
+     */
+    public function managedFacilityIds()
+    {
+        if ($this->role === 'FACILITY_OWNER') {
+            return $this->facilities()->pluck('id')->map(fn ($id) => (int) $id);
+        }
+
+        if ($this->role === 'FACILITY_STAFF' && $this->facility_id) {
+            return collect([(int) $this->facility_id]);
+        }
+
+        return collect();
+    }
+
+    public function managesFacility(Facility|int $facility): bool
+    {
+        $facilityId = $facility instanceof Facility ? (int) $facility->id : (int) $facility;
+
+        return $this->managedFacilityIds()->contains($facilityId);
     }
 
     public function facilities()

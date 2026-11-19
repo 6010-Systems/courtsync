@@ -87,6 +87,10 @@ class SocialiteController extends Controller
                 'google_id' => $googleUser->getId(),
                 'avatar' => $user->avatar ?? $googleUser->getAvatar(),
             ]);
+
+            if ($user->email_verified_at === null && $googleUser->getEmail()) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
         } else {
             // Determine role based on tenant
             $role = $tenant === 'staff' ? 'FACILITY_STAFF' : ($tenant === 'player' ? 'PLAYER' : 'FACILITY_OWNER');
@@ -95,6 +99,7 @@ class SocialiteController extends Controller
             $user = User::create([
                 'name' => $googleUser->getName(),
                 'email' => $googleUser->getEmail(),
+                'email_verified_at' => now(),
                 'password' => bcrypt(Str::password(24)),
                 'role' => $role,
                 'status' => $role === 'PLAYER' ? 'VERIFIED' : 'PENDING_VERIFICATION',
