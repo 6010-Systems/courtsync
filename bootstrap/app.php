@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Facility;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,7 +23,17 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        // Guests heading to a facility booking page must land on that facility's
+        // player login, not the facility owner / staff portal login.
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->routeIs('facility.book') && ($facility = $request->route('facility'))) {
+                $slug = $facility instanceof Facility ? $facility->slug : $facility;
+
+                return route('player.login', ['facility' => $slug]);
+            }
+
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

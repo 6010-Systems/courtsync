@@ -88,9 +88,10 @@ export default function BookingDetailDrawer({
 
     const bookingFee = Number(booking.booking_fee ?? 0);
     const totalPrice = Number(payment?.amount ?? booking.total_price ?? 0);
+    const addonsTotal = Number(booking.addons_total ?? 0);
     const courtRate = booking.subtotal != null
         ? Number(booking.subtotal)
-        : Math.max(0, totalPrice - bookingFee);
+        : Math.max(0, totalPrice - bookingFee - addonsTotal);
 
     const playerName = booking.user?.name || booking.guest_name || 'Walk-in Player';
     const playerEmail = booking.user?.email || booking.guest_email || null;
@@ -245,6 +246,11 @@ export default function BookingDetailDrawer({
                                         <div className="font-bold text-sm text-[#101F1A] truncate">
                                             {courtName}
                                         </div>
+                                        {booking.rate_plan_name && (
+                                            <span className="inline-block mt-0.5 rounded bg-[#F5F2EA] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/70">
+                                                {booking.rate_plan_name}
+                                            </span>
+                                        )}
                                         <div className="text-xs text-[#101F1A]/60 truncate mt-0.5">
                                             {facilityName}
                                         </div>
@@ -278,9 +284,15 @@ export default function BookingDetailDrawer({
 
                                         <div className="space-y-1.5 text-xs text-[#101F1A]/70">
                                             <div className="flex items-center justify-between">
-                                                <span>Court rental subtotal</span>
+                                                <span>{booking.rate_plan_name || 'Court rental subtotal'}</span>
                                                 <span className="font-bold text-[#101F1A]">{formatPeso(courtRate)}</span>
                                             </div>
+                                            {addonsTotal > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>Add-ons</span>
+                                                    <span className="font-bold text-[#101F1A]">{formatPeso(addonsTotal)}</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-center justify-between">
                                                 <span>Facility booking fee</span>
                                                 <span className="font-bold text-[#101F1A]">

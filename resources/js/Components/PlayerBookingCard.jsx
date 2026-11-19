@@ -17,7 +17,8 @@ export default function PlayerBookingCard({ booking }) {
     const pesos = (value) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
     const total = Number(booking.total_price);
     const bookingFee = Number(booking.booking_fee ?? 0);
-    const subtotal = booking.subtotal != null ? Number(booking.subtotal) : total - bookingFee;
+    const addonsTotal = Number(booking.addons_total ?? 0);
+    const subtotal = booking.subtotal != null ? Number(booking.subtotal) : total - bookingFee - addonsTotal;
 
     return (
         <article className="rounded-xl border border-[#101F1A]/10 bg-white p-5 shadow-card sm:p-6">
@@ -26,6 +27,11 @@ export default function PlayerBookingCard({ booking }) {
                     <p className="text-xs font-bold uppercase tracking-wide text-[#101F1A]/50">Booking #{booking.id}</p>
                     <h3 className="mt-1 text-lg font-bold text-[#101F1A]">{booking.court?.name ?? 'Court unavailable'}</h3>
                     <p className="text-sm text-[#101F1A]/70">{booking.facility?.name ?? 'Facility unavailable'}</p>
+                    {booking.rate_plan_name && (
+                        <span className="mt-1 inline-block rounded-full bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#101F1A]/60">
+                            {booking.rate_plan_name}
+                        </span>
+                    )}
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusStyles[booking.status] ?? 'bg-gray-100 text-gray-700'}`}>
                     {booking.status === 'pending' ? 'Awaiting confirmation' : booking.status}
@@ -37,9 +43,11 @@ export default function PlayerBookingCard({ booking }) {
                 <p className="flex items-center gap-2"><MapPin size={16} aria-hidden="true" />{[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Location unavailable'}</p>
                 <div>
                     <p className="font-bold text-[#101F1A]">{pesos(total)}</p>
-                    {bookingFee > 0 && (
+                    {(bookingFee > 0 || addonsTotal > 0) && (
                         <p className="text-xs text-[#101F1A]/60">
-                            {pesos(subtotal)} court rate + {pesos(bookingFee)} booking fee
+                            {pesos(subtotal)} rate
+                            {addonsTotal > 0 && ` + ${pesos(addonsTotal)} add-ons`}
+                            {bookingFee > 0 && ` + ${pesos(bookingFee)} booking fee`}
                         </p>
                     )}
                 </div>
@@ -52,7 +60,7 @@ export default function PlayerBookingCard({ booking }) {
                 {booking.facility?.slug && (
                     <div className="flex gap-4 text-sm font-bold text-[#101F1A]">
                         <Link href={route('facility.show', booking.facility.slug)} className="underline underline-offset-4 hover:text-green-700">View Facility</Link>
-                        <Link href={route('facility.book', booking.facility.slug)} className="underline underline-offset-4 hover:text-green-700">Book Again</Link>
+                        <Link href={route('facility.book', { facility: booking.facility.slug, court: booking.court_id })} className="underline underline-offset-4 hover:text-green-700">Book Again</Link>
                     </div>
                 )}
             </div>

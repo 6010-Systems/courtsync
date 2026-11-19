@@ -2,6 +2,8 @@ import React from 'react';
 import { Clock } from 'lucide-react';
 
 import { formatPeso } from '@/Components/MetricCard';
+import { planRates } from '@/Utils/rateQuote';
+
 export default function Step2DateTime({ 
     selectedCourt, 
     price, 
@@ -18,27 +20,137 @@ export default function Step2DateTime({
     timeOptions, 
     durationHours, 
     formatDateString, 
-    formatTimeString 
+    formatTimeString,
+    courtPlans = [],
+    addonPlans = [],
+    selectedRatePlan = null,
+    setRatePlanId,
+    addonQuantities = {},
+    setAddonQuantity,
+    addonsTotal = 0,
+    bookingFee = 0,
 }) {
-    const hasSplitRates = selectedCourt?.pricing_mode === 'SPLIT' && Boolean(selectedCourt?.day_rate && selectedCourt?.night_rate);
+    const hasSplitRates = selectedRatePlan
+        ? planRates(selectedRatePlan).night !== null
+        : selectedCourt?.pricing_mode === 'SPLIT' && Boolean(selectedCourt?.day_rate && selectedCourt?.night_rate);
+    const selectedRates = selectedRatePlan ? planRates(selectedRatePlan) : null;
 
     return (
         <div className="p-6 sm:p-10">
             <div className="mb-8">
                 <h2 className="text-2xl sm:text-3xl font-black text-[#10221C] mb-1">Select Date & Time</h2>
                 <p className="text-sm text-gray-500">
-                    Booking <strong className="text-[#10221C]">{selectedCourt?.name}</strong> · {hasSplitRates ? (
+                    Booking <strong className="text-[#10221C]">{selectedCourt?.name}</strong>
+                    {selectedRatePlan && (
+                        <> · <span className="font-bold text-[#10221C]">{selectedRatePlan.name}</span></>
+                    )}
+                    {' · '}
+                    {hasSplitRates ? (
                         <span className="font-semibold text-[#10221C]">
-                            <span className="text-amber-700">☀️ {formatPeso(selectedCourt.day_rate)}/hr Day</span>
+                            <span className="text-amber-700">☀️ {formatPeso(selectedRates ? selectedRates.day : selectedCourt.day_rate)}/hr Day</span>
                             <span className="text-gray-300 mx-1.5">·</span>
-                            <span className="text-indigo-700">🌙 {formatPeso(selectedCourt.night_rate)}/hr Night</span>
+                            <span className="text-indigo-700">🌙 {formatPeso(selectedRates ? selectedRates.night : selectedCourt.night_rate)}/hr Night</span>
                         </span>
                     ) : (
-                        `${formatPeso(price)}/hr`
+                        `${formatPeso(selectedRates ? selectedRates.day : price)}/hr`
                     )}
                 </p>
             </div>
             
+            {/* Rate card selection */}
+            {courtPlans.length > 0 && (
+                <div className="mb-8">
+                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-widest mb-3">
+                        Choose your rate
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {courtPlans.map((plan) => {
+                            const rates = planRates(plan);
+                            const active = selectedRatePlan?.id === plan.id;
+                            const inclusions = plan.description
+                                || `Court${plan.includes_ball ? ', ball' : ''}${Number(plan.included_paddles) > 0 ? ` & ${plan.included_paddles} paddles` : ''}`;
+
+                            return (
+                                <button
+                                    type="button"
+                                    key={plan.id}
+                                    onClick={() => setRatePlanId(plan.id)}
+                                    className={`text-left rounded-xl border-2 p-3.5 transition-all ${
+                                        active
+                                            ? 'border-[#10221C] bg-[#10221C] text-white shadow-lg shadow-[#10221C]/10'
+                                            : 'border-gray-100 bg-white hover:border-gray-300 hover:shadow-md'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p className={`font-bold text-sm ${active ? 'text-white' : 'text-[#10221C]'}`}>
+                                                {plan.name}
+                                            </p>
+                                            <p className={`text-[11px] ${active ? 'text-gray-300' : 'text-gray-500'}`}>
+                                                {inclusions}
+                                            </p>
+                                        </div>
+                                        <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${
+                                            active ? 'border-[#D6FF3F] bg-[#D6FF3F]' : 'border-gray-300'
+                                        }`} />
+                                    </div>
+                                    <p className={`mt-2 text-xs font-bold ${active ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
+                                        ☀️ {formatPeso(rates.day)}/hr
+                                        {rates.night !== null && <> · 🌙 {formatPeso(rates.night)}/hr</>}
+                                    </p>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {addonPlans.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                            {addonPlans.map((plan) => {
+                                const qty = Number(addonQuantities[plan.id] || 0);
+                                const max = Math.max(1, Number(plan.max_quantity || 1));
+
+                                return (
+                                    <div
+                                        key={plan.id}
+                                        className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-[#FAFAF8] px-3.5 py-2.5"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-bold text-[#10221C]">{plan.name}</p>
+                                            <p className="text-[11px] text-gray-500">
+                                                {formatPeso(planRates(plan).day)}/hr each · max {max}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddonQuantity(plan, qty - 1)}
+                                                disabled={qty === 0}
+                                                className="h-7 w-7 rounded-lg border border-gray-200 bg-white text-sm font-black text-[#10221C] disabled:opacity-40"
+                                            >
+                                                −
+                                            </button>
+                                            <span className="w-6 text-center text-sm font-black text-[#10221C]">{qty}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddonQuantity(plan, qty + 1)}
+                                                disabled={qty >= max}
+                                                className="h-7 w-7 rounded-lg border border-gray-200 bg-white text-sm font-black text-[#10221C] disabled:opacity-40"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {addonsTotal > 0 && (
+                                <p className="text-[11px] font-bold text-[#10221C]/60 text-right">
+                                    Add-ons: {formatPeso(addonsTotal)}
+                                </p>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Date Picker */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
@@ -153,18 +265,30 @@ export default function Step2DateTime({
                                 <span className="ml-auto text-xs font-bold bg-[#10221C] text-white px-2 py-0.5 rounded-full">{durationHours} hr{durationHours > 1 ? 's' : ''}</span>
                             </div>
 
-                            {pricingSummary?.isSplit && (
+                            {pricingSummary?.breakdown?.length > 0 && (
                                 <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs space-y-1.5">
                                     <div className="flex justify-between items-center text-[#10221C] font-bold">
                                         <span>⏱️ Rate Breakdown</span>
                                         <span className="text-sm font-black">Total: {formatPeso(totalPrice || 0)}</span>
                                     </div>
-                                    {pricingSummary.breakdown?.map((item, idx) => (
+                                    {pricingSummary.breakdown.map((item, idx) => (
                                         <div key={idx} className="flex justify-between text-gray-600">
                                             <span>• {item.label}: {item.hours} hr{item.hours > 1 ? 's' : ''} @ {formatPeso(item.rate)}/hr</span>
                                             <span className="font-semibold text-[#10221C]">{formatPeso(item.subtotal)}</span>
                                         </div>
                                     ))}
+                                    {(pricingSummary.addonLines || []).map((line, idx) => (
+                                        <div key={`addon-${idx}`} className="flex justify-between text-gray-600">
+                                            <span>• {line.name}: {line.quantity} × {line.hours} hr @ {formatPeso(line.rate)}</span>
+                                            <span className="font-semibold text-[#10221C]">{formatPeso(line.subtotal)}</span>
+                                        </div>
+                                    ))}
+                                    {bookingFee > 0 && (
+                                        <div className="flex justify-between text-gray-500">
+                                            <span>• Booking fee</span>
+                                            <span className="font-semibold text-[#10221C]">{formatPeso(bookingFee)}</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

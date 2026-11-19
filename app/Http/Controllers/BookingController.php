@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Facility;
+use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
+use App\Support\RateQuote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class BookingController extends Controller
 {
@@ -150,8 +154,13 @@ class BookingController extends Controller
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            // Kept for older clients; the amount is always recalculated server-side.
             'total_price' => 'required|numeric|min:0',
             'guest_name' => 'nullable|string|max:255',
+            'rate_plan_id' => 'nullable|integer|exists:rate_plans,id',
+            'addons' => 'nullable|array',
+            'addons.*.rate_plan_id' => 'required|integer|exists:rate_plans,id',
+            'addons.*.quantity' => 'required|integer|min:0|max:50',
         ]);
 
         $user = $request->user();
@@ -188,10 +197,36 @@ class BookingController extends Controller
         $court = Court::findOrFail($validated['court_id']);
         $facility = $court->facility()->firstOrFail();
 
-        $pricingResult = $court->calculatePriceForRange($validated['start_time'], $validated['end_time']);
-        $subtotal = $pricingResult['total'] > 0 ? $pricingResult['total'] : (float) $validated['total_price'];
-        $bookingFee = $facility->calculateBookingFee($subtotal);
-        $finalPrice = round($subtotal + $bookingFee, 2);
+        $plan = ! empty($validated['rate_plan_id'])
+            ? RatePlan::findOrFail($validated['rate_plan_id'])
+            : null;
+
+        try {
+            $quote = (new RateQuote)->forBooking(
+                $court,
+                $validated['start_time'],
+                $validated['end_time'],
+                $plan,
+                $validated['addons'] ?? [],
+            );
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages([
+                'rate_plan_id' => $exception->getMessage(),
+            ]);
+        }
+
+        $subtotal = $quote['subtotal'];
+
+        // Legacy courts with no configured rate still accept the previewed amount.
+        if ($plan === null && $subtotal <= 0) {
+            $subtotal = round((float) $validated['total_price'], 2);
+            $quote['subtotal'] = $subtotal;
+        }
+
+        $addonsTotal = $quote['addons_total'];
+        // The platform fee is charged on the full booking value (package + add-ons).
+        $bookingFee = $facility->calculateBookingFee($subtotal + $addonsTotal);
+        $finalPrice = round($subtotal + $addonsTotal + $bookingFee, 2);
 
         // Create the booking
         $booking = Booking::create([
@@ -199,12 +234,16 @@ class BookingController extends Controller
             'user_id' => $userId,
             'guest_name' => $validated['guest_name'] ?? null,
             'court_id' => $validated['court_id'],
+            'rate_plan_id' => $quote['rate_plan_id'],
+            'rate_plan_name' => $quote['rate_plan_name'],
             'date' => $validated['date'],
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
             'subtotal' => $subtotal,
+            'addons_total' => $addonsTotal,
             'booking_fee' => $bookingFee,
             'total_price' => $finalPrice,
+            'price_breakdown' => $quote,
             'status' => 'pending',
         ]);
 

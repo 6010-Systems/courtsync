@@ -1,3 +1,4 @@
+import CourtRatePlans from '@/Components/CourtRatePlans';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES, STATUS_CONFIG } from '@/Utils/courtStatus';
 import { Clock, Sun, Moon } from 'lucide-react';
 
@@ -44,11 +45,20 @@ export default function CourtCard({
 }) {
     const statusCfg = STATUS_CONFIG[court.status] || STATUS_CONFIG.AVAILABLE;
     const isSplitPriced = court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate;
+    const offeredPlans = (court.rate_plans || []).filter(
+        (plan) => plan.kind !== 'ADDON'
+            && plan.is_active !== false
+            && (!plan.pivot || Boolean(Number(plan.pivot.is_enabled))),
+    );
     const isBookable = court.status === 'AVAILABLE';
     const isInteractive = typeof onClick === 'function';
 
     const dayStart = isSplitPriced ? formatCourtTime(court.day_start_time || '06:00') : '';
-    const nightStart = isSplitPriced ? formatCourtTime(court.night_start_time || '18:00') : '';
+    const nightStart = isSplitPriced
+        ? formatCourtTime(court.night_start_time || '18:00')
+        : offeredPlans[0]?.night_start_time
+            ? formatCourtTime(offeredPlans[0].night_start_time)
+            : '';
 
     const handleImageError = (event) => {
         if (fallbackImage && event.currentTarget.src !== fallbackImage) {
@@ -132,27 +142,34 @@ export default function CourtCard({
                         {court.description || 'Quality sports court with verified playing surface and standard regulations.'}
                     </p>
 
-                    {/* Pricing Strip — clean badges aligned with Facilities */}
-                    <div className="mt-2.5 pt-2 border-t border-[#101F1A]/5 flex items-center justify-between gap-2">
-                        {isSplitPriced ? (
-                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                                <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-[#101F1A]/5">
-                                    <Sun size={11} className="text-amber-600 shrink-0" />
-                                    <span>Day: ₱{Number(court.day_rate).toFixed(0)}</span>
+                    {/* Pricing Strip — rate plans or clean badges aligned with Facilities */}
+                    {offeredPlans.length > 0 ? (
+                        <CourtRatePlans
+                            plans={offeredPlans}
+                            className="mt-2.5 border-t border-[#101F1A]/5 pt-2"
+                        />
+                    ) : (
+                        <div className="mt-2.5 pt-2 border-t border-[#101F1A]/5 flex items-center justify-between gap-2">
+                            {isSplitPriced ? (
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-[#101F1A]/5">
+                                        <Sun size={11} className="text-amber-600 shrink-0" />
+                                        <span>Day: ₱{Number(court.day_rate).toFixed(0)}</span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-[#101F1A]/5">
+                                        <Moon size={11} className="text-indigo-600 shrink-0" />
+                                        <span>Night: ₱{Number(court.night_rate).toFixed(0)}</span>
+                                    </span>
+                                </div>
+                            ) : court.hourly_rate ? (
+                                <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
+                                    ₱{Number(court.hourly_rate).toFixed(2)} / hr
                                 </span>
-                                <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-[#101F1A]/5">
-                                    <Moon size={11} className="text-indigo-600 shrink-0" />
-                                    <span>Night: ₱{Number(court.night_rate).toFixed(0)}</span>
-                                </span>
-                            </div>
-                        ) : court.hourly_rate ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
-                                ₱{Number(court.hourly_rate).toFixed(2)} / hr
-                            </span>
-                        ) : (
-                            <span className="text-[11px] text-[#101F1A]/55 font-medium">Standard rate</span>
-                        )}
-                    </div>
+                            ) : (
+                                <span className="text-[11px] text-[#101F1A]/55 font-medium">Standard rate</span>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Fixed Footer — pinned to bottom, h-10 matching Facilities */}

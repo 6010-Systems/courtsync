@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Court;
 use App\Models\Facility;
+use App\Models\RatePlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -21,13 +23,35 @@ class FacilityControllerTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Show'));
     }
 
-    public function test_guest_book_page_redirects_to_login(): void
+    public function test_public_facility_page_exposes_only_offered_active_rates(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->flatPricing(300)->create(['facility_id' => $facility->id]);
+
+        $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->allIn()->inactive()->create(['facility_id' => $facility->id]);
+        RatePlan::factory()->paddleAddon()->create(['facility_id' => $facility->id]);
+        $court->ratePlans()->attach($rental->id);
+
+        $this->get(route('facility.show', $facility->slug))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Show')
+                ->has('facility.rate_plans', 1)
+                ->where('facility.rate_plans.0.name', 'Court Rental')
+                ->has('facility.courts.0.rate_plans', 1));
+    }
+
+    public function test_guest_is_redirected_to_the_facility_player_login_page(): void
     {
         $facility = Facility::factory()->create();
 
         $response = $this->get(route('facility.book', $facility->slug));
 
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(route('player.login', $facility->slug));
+        $this->assertSame(
+            route('facility.book', $facility->slug),
+            session('url.intended'),
+        );
     }
 
     public function test_authenticated_book_page_renders_facility_book(): void
@@ -38,6 +62,33 @@ class FacilityControllerTest extends TestCase
         $response = $this->actingAs($player)->get(route('facility.book', $facility->slug));
 
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Book'));
+    }
+
+    public function test_book_page_preselects_the_court_passed_in_the_query_string(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->create(['facility_id' => $facility->id]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->get(route('facility.book', ['facility' => $facility->slug, 'court' => $court->id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Book')
+                ->where('preselectedCourtId', $court->id));
+    }
+
+    public function test_book_page_ignores_a_preselected_court_from_another_facility(): void
+    {
+        $facility = Facility::factory()->create();
+        $otherFacility = Facility::factory()->create();
+        $otherCourt = Court::factory()->create(['facility_id' => $otherFacility->id]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->get(route('facility.book', ['facility' => $facility->slug, 'court' => $otherCourt->id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Book')
+                ->where('preselectedCourtId', null));
     }
 
     public function test_owner_payment_settings_page_renders_facility_payment_settings(): void

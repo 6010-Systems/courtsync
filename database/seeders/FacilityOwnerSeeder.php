@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Facility;
 use App\Models\Payment;
+use App\Models\RatePlan;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -69,6 +70,15 @@ class FacilityOwnerSeeder extends Seeder
             Court::factory()->flatPricing(350)->create(['facility_id' => $facility->id, 'name' => 'Court 2 (Flat Rate)']);
             Court::factory()->openPlay()->splitPricing(250, 400, '17:00:00')->create(['facility_id' => $facility->id, 'name' => 'Court 3 (Open Play)']);
             Court::factory()->blocked()->flatPricing(400)->create(['facility_id' => $facility->id, 'name' => 'Court 4 (Maintenance)']);
+
+            // Poster-style rate card: court rental, all-in package, paddle add-on.
+            $rental = RatePlan::factory()->courtRental(150, 250)->create(['facility_id' => $facility->id, 'sort_order' => 1]);
+            $allIn = RatePlan::factory()->allIn(250, 350)->create(['facility_id' => $facility->id, 'sort_order' => 2]);
+            $paddle = RatePlan::factory()->paddleAddon(50)->create(['facility_id' => $facility->id, 'sort_order' => 3]);
+
+            $facility->courts()->get()->each(
+                fn (Court $court) => $court->ratePlans()->attach([$rental->id, $allIn->id, $paddle->id])
+            );
         });
 
         // Create sample bookings and payment for the first facility to test receipt viewing

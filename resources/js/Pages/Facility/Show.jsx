@@ -5,6 +5,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import CourtCard from '@/Components/CourtCard';
+import RateCard from '@/Components/RateCard';
 import { Camera, Image as ImageIcon, Sparkles, Check, Upload, Link2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -399,7 +400,7 @@ export default function Show({ facility }) {
                                                 actions={
                                                     isBookable ? (
                                                         <Link
-                                                            href={user ? route('facility.book', facility.slug) : `/${facility.slug}/login`}
+                                                            href={user ? route('facility.book', { facility: facility.slug, court: court.id }) : `/${facility.slug}/login`}
                                                             className="inline-flex items-center gap-1 rounded-xl bg-[#10221C] px-3.5 py-2 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0c4a34]"
                                                         >
                                                             Book court
@@ -421,6 +422,9 @@ export default function Show({ facility }) {
                                 </div>
                             )}
                         </section>
+
+                        {/* Rate card (poster-style packages + add-ons) */}
+                        <RateCard plans={facility.rate_plans || []} courts={facility.courts || []} />
 
                         {/* Premium Facility Gallery */}
                         <section>
