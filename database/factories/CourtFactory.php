@@ -66,7 +66,14 @@ class CourtFactory extends Factory
             'name' => 'Court '.fake()->unique()->numberBetween(1, 999),
             'type' => $type,
             'image_url' => Court::defaultImageFor($type, fake()->numberBetween(0, 1)),
-            'time_range' => fake()->randomElement(['6:00 AM - 10:00 PM', '7:00 AM - 9:00 PM', '24 Hours', '8:00 AM - 11:00 PM']),
+            'time_range' => 'All week 6:00 AM - 10:00 PM',
+            'operating_schedules' => [
+                [
+                    'days' => [1, 2, 3, 4, 5, 6, 7],
+                    'start' => '06:00',
+                    'end' => '22:00',
+                ],
+            ],
             'description' => fake()->optional()->sentence(),
             'pricing_mode' => $isSplit ? 'SPLIT' : 'FLAT',
             'hourly_rate' => $isSplit ? $dayRate : $flatRate,

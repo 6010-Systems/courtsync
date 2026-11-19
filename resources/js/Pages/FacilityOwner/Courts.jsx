@@ -13,6 +13,18 @@ import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
 import { useState, useMemo } from 'react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import {
+    buildHourOptions,
+    clockToMinutes,
+    constrainSchedulesToFacilityDays,
+    defaultSchedulesForFacilityDays,
+    schedulesFromLegacyTimeRange,
+    schedulesHaveUniqueDays,
+    summarizeSchedules,
+    unionScheduleBounds,
+    WEEKDAY_OPTIONS,
+} from '@/Utils/courtOperatingSchedule';
+import { normalizedOperatingDays } from '@/Utils/facilityAvailability';
 import CourtCard from '@/Components/CourtCard';
 import {
     Plus,
@@ -35,6 +47,9 @@ import {
     ChevronRight,
     CircleDot
 } from 'lucide-react';
+
+const START_HOUR_OPTIONS = buildHourOptions();
+const END_HOUR_OPTIONS = buildHourOptions({ includeMidnightEnd: true });
 
 const SPORT_PRESETS = [
     { name: 'Badminton', sport: 'Badminton' },
@@ -263,6 +278,9 @@ export default function Courts({ facilities = [], can = {} }) {
         type: '',
         image_url: '',
         time_range: '',
+        operating_schedules: defaultSchedulesForFacilityDays(
+            facilities[0]?.operating_days || [1, 2, 3, 4, 5, 6, 7],
+        ),
         description: '',
         pricing_mode: 'FLAT',
         hourly_rate: '',
@@ -274,20 +292,36 @@ export default function Courts({ facilities = [], can = {} }) {
         rate_plans: [],
     });
 
-    const hasOperatingSchedule = useMemo(() => Boolean((data.time_range || '').trim()), [data.time_range]);
-    const scheduleBounds = useMemo(() => parseScheduleBounds(data.time_range), [data.time_range]);
+    const selectedFacility = useMemo(
+        () => facilities.find((item) => item.id == data.facility_id) || null,
+        [facilities, data.facility_id],
+    );
+    const facilityOpenDays = useMemo(
+        () => normalizedOperatingDays(selectedFacility?.operating_days),
+        [selectedFacility],
+    );
+    const hasOperatingSchedule = useMemo(
+        () => constrainSchedulesToFacilityDays(data.operating_schedules, facilityOpenDays).length > 0,
+        [data.operating_schedules, facilityOpenDays],
+    );
+    const scheduleBounds = useMemo(
+        () => unionScheduleBounds(constrainSchedulesToFacilityDays(data.operating_schedules, facilityOpenDays)),
+        [data.operating_schedules, facilityOpenDays],
+    );
     const startTimeOptions = useMemo(() => buildStartTimeOptions(scheduleBounds), [scheduleBounds]);
     const dayStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.day_start_time), [startTimeOptions, data.day_start_time]);
     const nightStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.night_start_time), [startTimeOptions, data.night_start_time]);
+    const scheduleSummary = useMemo(
+        () => summarizeSchedules(constrainSchedulesToFacilityDays(data.operating_schedules, facilityOpenDays)),
+        [data.operating_schedules, facilityOpenDays],
+    );
 
     /**
      * Rate-card packages available at the selected facility (owner can assign them to this court).
      */
     const facilityRatePlans = useMemo(() => {
-        const facility = facilities.find((item) => item.id == data.facility_id);
-
-        return (facility?.rate_plans || []).filter((plan) => plan.is_active);
-    }, [facilities, data.facility_id]);
+        return (selectedFacility?.rate_plans || []).filter((plan) => plan.is_active);
+    }, [selectedFacility]);
 
     const assignedRatePlan = (planId) => (data.rate_plans || []).find(
         (row) => Number(row.id) === Number(planId),
@@ -320,30 +354,84 @@ export default function Courts({ facilities = [], can = {} }) {
         )));
     };
 
-    /**
-     * Update the schedule and re-clamp the day/night start times to the new range.
-     */
-    const applyOperatingSchedule = (value) => {
-        const options = buildStartTimeOptions(parseScheduleBounds(value));
+    const clampPricingBounds = (schedules) => {
+        const options = buildStartTimeOptions(unionScheduleBounds(schedules));
+        if (options.length === 0) {
+            return {
+                day_start_time: data.day_start_time,
+                night_start_time: data.night_start_time,
+            };
+        }
+
         const eveningOption = options.reduce(
             (closest, option) => (Math.abs(option.minutes - 18 * 60) < Math.abs(closest.minutes - 18 * 60) ? option : closest),
             options[0],
         );
 
-        setData({
-            ...data,
-            time_range: value,
+        return {
             day_start_time: options.some((option) => option.value === data.day_start_time)
                 ? data.day_start_time
                 : (options[0]?.value ?? '06:00'),
             night_start_time: options.some((option) => option.value === data.night_start_time)
                 ? data.night_start_time
                 : (eveningOption?.value ?? '18:00'),
+        };
+    };
+
+    const setOperatingSchedules = (nextSchedules) => {
+        const constrained = constrainSchedulesToFacilityDays(nextSchedules, facilityOpenDays);
+        const pricing = clampPricingBounds(constrained);
+
+        setData({
+            ...data,
+            operating_schedules: constrained.length > 0 ? constrained : nextSchedules,
+            time_range: summarizeSchedules(constrained),
+            ...pricing,
         });
 
-        if (clientErrors.time_range) {
-            setClientErrors(prev => ({ ...prev, time_range: undefined }));
+        if (clientErrors.operating_schedules || clientErrors.time_range) {
+            setClientErrors((prev) => ({ ...prev, operating_schedules: undefined, time_range: undefined }));
         }
+    };
+
+    const updateScheduleGroup = (index, patch) => {
+        const next = (data.operating_schedules || []).map((group, groupIndex) => (
+            groupIndex === index ? { ...group, ...patch } : group
+        ));
+        setOperatingSchedules(next);
+    };
+
+    const toggleScheduleDay = (index, day) => {
+        if (!facilityOpenDays.includes(day)) {
+            return;
+        }
+
+        const group = data.operating_schedules?.[index];
+        if (!group) {
+            return;
+        }
+
+        const current = normalizedOperatingDays(group.days);
+        const nextDays = current.includes(day)
+            ? current.filter((value) => value !== day)
+            : [...current, day].sort((a, b) => a - b);
+
+        updateScheduleGroup(index, { days: nextDays });
+    };
+
+    const addScheduleGroup = () => {
+        const used = new Set((data.operating_schedules || []).flatMap((group) => group.days || []));
+        const unused = facilityOpenDays.filter((day) => !used.has(day));
+        const days = unused.length > 0 ? unused : facilityOpenDays.slice(0, 1);
+
+        setOperatingSchedules([
+            ...(data.operating_schedules || []),
+            { days, start: '08:00', end: '24:00' },
+        ]);
+    };
+
+    const removeScheduleGroup = (index) => {
+        setOperatingSchedules((data.operating_schedules || []).filter((_, groupIndex) => groupIndex !== index));
     };
 
     // Check if the form has been altered from its initial state
@@ -354,7 +442,7 @@ export default function Courts({ facilities = [], can = {} }) {
                 (data.type || '').trim() !== (editingCourt.type || '').trim() ||
                 (data.image_url || '').trim() !== (editingCourt.image_url || '').trim() ||
                 String(data.facility_id || '') !== String(editingCourt.facility_id || '') ||
-                (data.time_range || '').trim() !== (editingCourt.time_range || '').trim() ||
+                summarizeSchedules(data.operating_schedules) !== summarizeSchedules(editingCourt.operating_schedules || schedulesFromLegacyTimeRange(editingCourt.time_range, facilityOpenDays)) ||
                 (data.description || '').trim() !== (editingCourt.description || '').trim() ||
                 data.pricing_mode !== (editingCourt.pricing_mode || 'FLAT') ||
                 String(data.hourly_rate ?? '') !== String(editingCourt.hourly_rate ?? '') ||
@@ -369,7 +457,7 @@ export default function Courts({ facilities = [], can = {} }) {
             data.name?.trim() ||
             data.type?.trim() ||
             data.image_url?.trim() ||
-            data.time_range?.trim() ||
+            summarizeSchedules(data.operating_schedules) ||
             data.description?.trim() ||
             data.pricing_mode !== 'FLAT' ||
             (data.hourly_rate !== '' && data.hourly_rate !== null) ||
@@ -392,7 +480,9 @@ export default function Courts({ facilities = [], can = {} }) {
             errs.facility_id = 'Please select a facility venue.';
         }
         if (!hasOperatingSchedule) {
-            errs.time_range = 'Set the operating schedule before choosing a pricing mode.';
+            errs.operating_schedules = 'Add at least one hour group using the facility\'s open days.';
+        } else if (!schedulesHaveUniqueDays(data.operating_schedules)) {
+            errs.operating_schedules = 'Each open day can only belong to one hour group.';
         } else if (assignedPlanCount === 0 && data.pricing_mode === 'FLAT') {
             if (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0)) {
                 errs.hourly_rate = 'Hourly rate must be a positive number.';
@@ -429,7 +519,9 @@ export default function Courts({ facilities = [], can = {} }) {
             errs.facility_id = 'Please select a facility venue.';
         }
         if (!hasOperatingSchedule) {
-            errs.time_range = 'Set the operating schedule to continue.';
+            errs.operating_schedules = 'Add at least one hour group using the facility\'s open days.';
+        } else if (!schedulesHaveUniqueDays(data.operating_schedules)) {
+            errs.operating_schedules = 'Each open day can only belong to one hour group.';
         }
 
         setClientErrors(errs);
@@ -461,11 +553,15 @@ export default function Courts({ facilities = [], can = {} }) {
         reset();
         clearErrors();
         setClientErrors({});
+        const facility = facilities.find((item) => item.id == (defaultFacilityId || facilities[0]?.id));
+        const schedules = defaultSchedulesForFacilityDays(facility?.operating_days);
+
         setData({
             facility_id: defaultFacilityId || facilities[0]?.id || '',
             name: '',
             type: '',
-            time_range: '',
+            time_range: summarizeSchedules(schedules),
+            operating_schedules: schedules,
             description: '',
             pricing_mode: 'FLAT',
             hourly_rate: '',
@@ -474,9 +570,7 @@ export default function Courts({ facilities = [], can = {} }) {
             day_start_time: '06:00',
             night_start_time: '18:00',
             status: 'AVAILABLE',
-            rate_plans: (
-                facilities.find((facility) => facility.id == (defaultFacilityId || facilities[0]?.id))?.rate_plans || []
-            )
+            rate_plans: (facility?.rate_plans || [])
                 .filter((plan) => plan.is_active)
                 .map((plan) => ({
                     id: plan.id,
@@ -495,12 +589,18 @@ export default function Courts({ facilities = [], can = {} }) {
         clearErrors();
         setClientErrors({});
         setEditingCourt(court);
+        const openDays = normalizedOperatingDays(facility.operating_days);
+        const schedules = court.operating_schedules?.length
+            ? constrainSchedulesToFacilityDays(court.operating_schedules, openDays)
+            : schedulesFromLegacyTimeRange(court.time_range, openDays);
+
         setData({
             facility_id: facility.id,
             name: court.name || '',
             type: court.type || '',
             image_url: court.image_url || '',
-            time_range: court.time_range || '',
+            time_range: summarizeSchedules(schedules) || court.time_range || '',
+            operating_schedules: schedules,
             description: court.description || '',
             pricing_mode: court.pricing_mode || 'FLAT',
             hourly_rate: court.hourly_rate ?? '',
@@ -578,7 +678,7 @@ export default function Courts({ facilities = [], can = {} }) {
                 },
                 onError: (serverErrors = {}) => {
                     toast.error('Failed to update court. Please check the form.');
-                    if (['name', 'type', 'facility_id', 'time_range'].some((key) => key in serverErrors)) {
+                    if (['name', 'type', 'facility_id', 'time_range', 'operating_schedules'].some((key) => key in serverErrors)) {
                         setStep(1);
                     }
                 },
@@ -592,7 +692,7 @@ export default function Courts({ facilities = [], can = {} }) {
                 },
                 onError: (serverErrors = {}) => {
                     toast.error('Failed to create court. Please check the form.');
-                    if (['name', 'type', 'facility_id', 'time_range'].some((key) => key in serverErrors)) {
+                    if (['name', 'type', 'facility_id', 'time_range', 'operating_schedules'].some((key) => key in serverErrors)) {
                         setStep(1);
                     }
                 },
@@ -1034,10 +1134,13 @@ export default function Courts({ facilities = [], can = {} }) {
                                     value={data.facility_id}
                                     onChange={(e) => {
                                         const nextFacility = facilities.find((item) => item.id == e.target.value);
+                                        const nextSchedules = defaultSchedulesForFacilityDays(nextFacility?.operating_days);
 
                                         setData({
                                             ...data,
                                             facility_id: e.target.value,
+                                            operating_schedules: nextSchedules,
+                                            time_range: summarizeSchedules(nextSchedules),
                                             rate_plans: (nextFacility?.rate_plans || [])
                                                 .filter((plan) => plan.is_active)
                                                 .map((plan) => ({
@@ -1128,57 +1231,113 @@ export default function Courts({ facilities = [], can = {} }) {
                         </div>
                     </div>
 
-                    {/* Operating Schedule — drives the pricing time options */}
-                    <div className="space-y-2 pt-2 border-t border-[#101F1A]/5">
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="flex min-w-0 items-center gap-1.5">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#101F1A] text-[#D6FF3F]">
-                                    <Clock size={12} strokeWidth={2.4} />
-                                </span>
-                                <InputLabel htmlFor="time_range" value="Operating Schedule *" className="!block !text-xs !font-bold !text-[#101F1A]" />
+                    {/* Operating Schedule — day groups tied to facility open days */}
+                    <div className="space-y-3 pt-2 border-t border-[#101F1A]/5">
+                        <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#101F1A] text-[#D6FF3F]">
+                                        <Clock size={12} strokeWidth={2.4} />
+                                    </span>
+                                    <InputLabel value="Operating Hours by Day *" className="!block !text-xs !font-bold !text-[#101F1A]" />
+                                </div>
+                                
                             </div>
                             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${hasOperatingSchedule ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                                 {hasOperatingSchedule ? '✓ Hours set' : 'Required'}
                             </span>
                         </div>
 
-                        <TextInput
-                            id="time_range"
-                            value={data.time_range}
-                            onChange={(e) => applyOperatingSchedule(e.target.value)}
-                            className={`block w-full text-xs font-medium ${activeErrors.time_range ? '!border-rose-300' : ''}`}
-                            placeholder="e.g. 6:00 AM - 10:00 PM"
-                        />
-                        <InputError message={activeErrors.time_range} className="mt-1" />
-                        <p className="text-[10px] font-medium text-[#101F1A]/50">
-                            Pricing time options follow this range{describeScheduleBounds(scheduleBounds) ? ` — ${describeScheduleBounds(scheduleBounds)}.` : '.'}
-                        </p>
+                        {facilityOpenDays.length === 0 ? (
+                            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                                This facility has no open days configured. Set open days on the facility first.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {(data.operating_schedules || []).map((group, index) => (
+                                    <div key={index} className="rounded-xl border border-[#101F1A]/10 bg-[#F5F2EA]/50 p-3 space-y-2.5">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-[11px] font-black uppercase tracking-wider text-[#101F1A]/60">
+                                                Hour group {index + 1}
+                                            </p>
+                                            {(data.operating_schedules || []).length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeScheduleGroup(index)}
+                                                    className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
 
-                        {/* Quick Schedule Preset Pills */}
-                        <div className="pt-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 block mb-1.5">
-                                Schedule Presets:
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                                {TIME_PRESETS.map((preset) => {
-                                    const isSelected = data.time_range === preset;
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={preset}
-                                            onClick={() => applyOperatingSchedule(preset)}
-                                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                                                isSelected
-                                                    ? 'bg-[#101F1A] text-white font-bold shadow-xs'
-                                                    : 'bg-[#F5F2EA] text-[#101F1A]/70 hover:bg-[#E8E4D9] hover:text-[#101F1A] border border-[#101F1A]/5'
-                                            }`}
-                                        >
-                                            {preset}
-                                        </button>
-                                    );
-                                })}
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {WEEKDAY_OPTIONS.filter((day) => facilityOpenDays.includes(day.value)).map((day) => {
+                                                const selected = (group.days || []).map(Number).includes(day.value);
+
+                                                return (
+                                                    <button
+                                                        key={day.value}
+                                                        type="button"
+                                                        onClick={() => toggleScheduleDay(index, day.value)}
+                                                        className={`rounded-lg border px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                                                            selected
+                                                                ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F]'
+                                                                : 'border-[#101F1A]/10 bg-white text-[#101F1A]/55 hover:border-[#101F1A]/30'
+                                                        }`}
+                                                    >
+                                                        {day.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <InputLabel value="Opens" className="!text-[10px]" />
+                                                <select
+                                                    value={group.start}
+                                                    onChange={(e) => updateScheduleGroup(index, { start: e.target.value })}
+                                                    className="mt-1 block h-9 w-full rounded-xl border border-[#101F1A]/15 bg-white px-2 text-xs font-bold text-[#101F1A]"
+                                                >
+                                                    {START_HOUR_OPTIONS.map((option) => (
+                                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <InputLabel value="Closes" className="!text-[10px]" />
+                                                <select
+                                                    value={group.end}
+                                                    onChange={(e) => updateScheduleGroup(index, { end: e.target.value })}
+                                                    className="mt-1 block h-9 w-full rounded-xl border border-[#101F1A]/15 bg-white px-2 text-xs font-bold text-[#101F1A]"
+                                                >
+                                                    {END_HOUR_OPTIONS.filter((option) => (clockToMinutes(option.value) ?? 0) > (clockToMinutes(group.start) ?? 0)).map((option) => (
+                                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={addScheduleGroup}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[#101F1A]/20 px-3 py-2 text-xs font-bold text-[#101F1A]/70 hover:border-[#101F1A]/40 hover:text-[#101F1A] cursor-pointer"
+                                >
+                                    <Plus size={13} />
+                                    Add hour group
+                                </button>
                             </div>
-                        </div>
+                        )}
+
+                        <InputError message={activeErrors.operating_schedules || activeErrors.time_range} className="mt-1" />
+                        {scheduleSummary && (
+                            <p className="text-[10px] font-medium text-[#101F1A]/55">
+                                Summary: <span className="font-bold text-[#101F1A]">{scheduleSummary}</span>
+                            </p>
+                        )}
                     </div>
                         </>
                     )}
@@ -1191,7 +1350,7 @@ export default function Courts({ facilities = [], can = {} }) {
                             <div className="flex min-w-0 items-center gap-1.5">
                                 <Clock size={12} className="shrink-0 text-[#101F1A]/45" />
                                 <span className="truncate text-[11px] font-medium text-[#101F1A]/60">
-                                    Operating hours: <span className="font-bold text-[#101F1A]">{data.time_range || 'Not set'}</span>
+                                    Operating hours: <span className="font-bold text-[#101F1A]">{scheduleSummary || data.time_range || 'Not set'}</span>
                                 </span>
                             </div>
                             <button

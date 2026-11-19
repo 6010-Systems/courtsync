@@ -12,6 +12,8 @@ export default function Book({ facility, preselectedCourtId = null }) {
     const isPlayer = usePage().props.auth.user?.role === 'PLAYER';
     const {
         selectableCourts,
+        availabilityBanner,
+        operatingDaysLabel,
         selectedCourtId, setSelectedCourtId,
         selectedDate, setSelectedDate,
         startTime, setStartTime,
@@ -163,12 +165,32 @@ export default function Book({ facility, preselectedCourtId = null }) {
 
             {/* Main Wizard Content */}
             <div className="flex-1 flex items-start justify-center px-4 sm:px-6 py-6 sm:py-8">
-                <div className="w-full max-w-4xl">
+                <div className="w-full max-w-4xl space-y-4">
+                    {availabilityBanner && (
+                        <div className={`rounded-2xl border px-4 py-3 ${
+                            availabilityBanner.tone === 'rose'
+                                ? 'border-rose-200 bg-rose-50 text-rose-900'
+                                : 'border-amber-200 bg-amber-50 text-amber-950'
+                        }`}>
+                            <p className="text-sm font-black">{availabilityBanner.title}</p>
+                            <p className="text-xs mt-0.5 opacity-80">{availabilityBanner.body}</p>
+                        </div>
+                    )}
+
+                    <div className="rounded-2xl border border-[#10221C]/10 bg-white px-4 py-3 text-xs text-[#10221C]/70">
+                        Open days: <span className="font-bold text-[#10221C]">{operatingDaysLabel}</span>
+                    </div>
                     
                     {selectableCourts.length === 0 ? (
                         <div className="bg-white rounded-2xl p-8 text-center shadow-lg border border-gray-100">
-                            <h3 className="text-xl font-bold text-[#10221C] mb-2">No Courts Available</h3>
-                            <p className="text-gray-500 text-sm">This facility hasn't listed any courts for booking yet.</p>
+                            <h3 className="text-xl font-bold text-[#10221C] mb-2">
+                                {availabilityBanner ? availabilityBanner.title : 'No Courts Available'}
+                            </h3>
+                            <p className="text-gray-500 text-sm">
+                                {availabilityBanner
+                                    ? availabilityBanner.body
+                                    : "This facility hasn't listed any bookable courts yet."}
+                            </p>
                         </div>
                     ) : (
                         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">

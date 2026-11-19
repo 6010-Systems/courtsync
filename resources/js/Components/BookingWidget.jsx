@@ -1,32 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES_DARK, courtIsBookable } from '@/Utils/courtStatus';
+import { courtIsOpenOnDate, hoursForDate } from '@/Utils/courtOperatingSchedule';
 
 export default function BookingWidget({ facility, user, courts = [] }) {
     const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
     const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
+    const generateTimeOptions = (court, selectedDate, courtId, allBookings = []) => {
+        if (selectedDate && court && !courtIsOpenOnDate(court, selectedDate)) {
+            return [];
+        }
+
+        const hours = hoursForDate(court, selectedDate);
         let startHour = 6;
         let endHour = 22;
 
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
+        if (hours) {
+            startHour = parseInt(String(hours.start).split(':')[0], 10);
+            endHour = String(hours.end) === '24:00'
+                ? 24
+                : parseInt(String(hours.end).split(':')[0], 10);
         }
 
         const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
@@ -42,11 +36,17 @@ export default function BookingWidget({ facility, user, courts = [] }) {
 
         const options = [];
         for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
+            const timeValue = i === 24 ? '24:00' : `${i.toString().padStart(2, '0')}:00`;
             const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
+            date.setHours(i === 24 ? 0 : i, 0);
+            const formatted = i === 24
+                ? '12:00 AM'
+                : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            options.push({
+                value: timeValue,
+                label: formatted,
+                isBooked: i < endHour && bookedHours.has(i),
+            });
         }
         return options;
     };
@@ -65,7 +65,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
     
     const selectedCourt = selectableCourts.find(c => c.id == selectedCourtId);
     const timeOptions = useMemo(() => {
-        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || []);
+        return generateTimeOptions(selectedCourt, selectedDate, selectedCourt?.id, facility.bookings || []);
     }, [selectedCourt, selectedDate, facility.bookings]);
 
     // Generate next 14 days
@@ -233,7 +233,7 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                     {selectedCourt && (
                         <span className={`mt-2 inline-block rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${COURT_STATUS_STYLES_DARK[selectedCourt.status] || COURT_STATUS_STYLES_DARK.NOT_AVAILABLE}`}>
                             {COURT_STATUS_LABELS[selectedCourt.status] || selectedCourt.status}
-                            {selectedCourt.time_range ? ` · ${selectedCourt.time_range}` : ''}
+                            {(selectedCourt.operating_schedules_label || selectedCourt.time_range) ? ` · ${selectedCourt.operating_schedules_label || selectedCourt.time_range}` : ''}
                         </span>
                     )}
                 </div>

@@ -13,6 +13,13 @@ import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
 import { formatPeso } from '@/Components/MetricCard';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { receiptUrl } from '@/Utils/receiptUrl';
+import { courtIsOpenOnDate, hoursForDate } from '@/Utils/courtOperatingSchedule';
+import {
+    facilityAvailabilityBanner,
+    facilityIsAcceptingBookings,
+    facilityIsOpenOnDate,
+    formatOperatingDaysLabel,
+} from '@/Utils/facilityAvailability';
 
 const FILTERS = [
     { key: 'All', label: 'All' },
@@ -214,27 +221,20 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
         reset();
     };
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
+    const generateTimeOptions = (court, selectedDate, courtId, allBookings = []) => {
+        if (selectedDate && court && !courtIsOpenOnDate(court, selectedDate)) {
+            return [];
+        }
+
+        const hours = hoursForDate(court, selectedDate);
         let startHour = 6;
         let endHour = 22;
 
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
+        if (hours) {
+            startHour = parseInt(String(hours.start).split(':')[0], 10);
+            endHour = String(hours.end) === '24:00'
+                ? 24
+                : parseInt(String(hours.end).split(':')[0], 10);
         }
 
         const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
@@ -250,20 +250,36 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
 
         const options = [];
         for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
+            const timeValue = i === 24 ? '24:00' : `${i.toString().padStart(2, '0')}:00`;
             const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
+            date.setHours(i === 24 ? 0 : i, 0);
+            const formatted = i === 24
+                ? '12:00 AM'
+                : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            options.push({
+                value: timeValue,
+                label: formatted,
+                isBooked: i < endHour && bookedHours.has(i),
+            });
         }
         return options;
     };
 
     const selectedFacility = facilities.find(f => f.id == data.facility_id);
-    const availableCourts = selectedFacility?.courts || [];
+    const selectedFacilityAccepting = facilityIsAcceptingBookings(selectedFacility);
+    const selectedFacilityBanner = facilityAvailabilityBanner(selectedFacility);
+    const availableCourts = (selectedFacility?.courts || []).filter((court) => court.status === 'AVAILABLE');
     const selectedCourt = availableCourts.find(c => c.id == data.court_id);
+    const selectedDateClosed = Boolean(
+        data.date
+        && selectedFacility
+        && (
+            !facilityIsOpenOnDate(selectedFacility, data.date)
+            || (selectedCourt && !courtIsOpenOnDate(selectedCourt, data.date))
+        ),
+    );
     const timeOptions = useMemo(() => {
-        return generateTimeOptions(selectedCourt?.time_range, data.date, selectedCourt?.id, bookings || []);
+        return generateTimeOptions(selectedCourt, data.date, selectedCourt?.id, bookings || []);
     }, [selectedCourt, data.date, bookings]);
 
     return (
@@ -410,6 +426,21 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                     </div>
 
                     <form onSubmit={handleAdd} className="flex flex-col gap-6">
+                        {selectedFacilityBanner && (
+                            <div className={`rounded-xl border px-3 py-2.5 text-xs ${
+                                selectedFacilityBanner.tone === 'rose'
+                                    ? 'border-rose-200 bg-rose-50 text-rose-900'
+                                    : 'border-amber-200 bg-amber-50 text-amber-950'
+                            }`}>
+                                <p className="font-black">{selectedFacilityBanner.title}</p>
+                                <p className="mt-0.5 opacity-80">{selectedFacilityBanner.body}</p>
+                            </div>
+                        )}
+                        {selectedFacility && (
+                            <p className="text-xs text-gray-500">
+                                Open days: <span className="font-bold text-[#10221C]">{selectedFacility.operating_days_label || formatOperatingDaysLabel(selectedFacility.operating_days)}</span>
+                            </p>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <InputLabel htmlFor="facility_id" value="Facility" />
@@ -430,7 +461,12 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                                 >
                                     <option value="">Select a facility</option>
                                     {facilities.map((f) => (
-                                        <option key={f.id} value={f.id}>{f.name}</option>
+                                        <option key={f.id} value={f.id}>
+                                            {f.name}
+                                            {(f.operational_status && f.operational_status !== 'OPEN')
+                                                ? ` (${f.operational_status === 'MAINTENANCE' ? 'Maintenance' : 'Unserviceable'})`
+                                                : ''}
+                                        </option>
                                     ))}
                                 </select>
                                 <InputError message={errors.facility_id} className="mt-2" />
@@ -464,7 +500,17 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
 
                             <div>
                                 <InputLabel htmlFor="date" value="Date" />
-                                <TextInput id="date" type="date" value={data.date} onChange={(e) => setData('date', e.target.value)} className="mt-1 block w-full" />
+                                <TextInput
+                                    id="date"
+                                    type="date"
+                                    value={data.date}
+                                    onChange={(e) => setData('date', e.target.value)}
+                                    className="mt-1 block w-full"
+                                    disabled={!selectedFacilityAccepting}
+                                />
+                                {selectedDateClosed && (
+                                    <p className="mt-2 text-xs font-semibold text-rose-600">Facility closed this day.</p>
+                                )}
                                 <InputError message={errors.date} className="mt-2" />
                             </div>
 
@@ -551,7 +597,10 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                             >
                                 Cancel
                             </button>
-                            <PrimaryButton disabled={processing} className="!bg-[#10221C] hover:!bg-[#1a382d]">
+                            <PrimaryButton
+                                disabled={processing || !selectedFacilityAccepting || selectedDateClosed}
+                                className="!bg-[#10221C] hover:!bg-[#1a382d]"
+                            >
                                 Confirm Manual Booking
                             </PrimaryButton>
                         </div>
