@@ -379,8 +379,8 @@ export default function PlayerBookingCard({ booking }) {
                                 {/* Solid Progress Line */}
                                 <div className="flex-1 h-[2px] bg-[#10221C]" />
                                 {/* Moving Icon Marker with Pickleball Icon */}
-                                <div className="px-1.5 py-0.5 rounded-full bg-[#101F1A] shrink-0 flex items-center justify-center shadow-xs border border-[#101F1A]/20">
-                                    <PickleballIcon size={16} className="shrink-0" />
+                                <div className="shrink-0 flex items-center justify-center">
+                                    <PickleballIcon size={18} className="shrink-0" />
                                 </div>
                                 {/* Dashed Incomplete Line */}
                                 <div className="flex-1 border-t-2 border-dashed border-[#10221C]/60" />
