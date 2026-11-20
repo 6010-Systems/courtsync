@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export default function PickleballIcon({
     className = '',
     size = 24,
     ...props
 }) {
+    const id = useId();
+    const clipId = `pb-clip-${id.replace(/:/g, '')}`;
+    const maskId = `pb-mask-${id.replace(/:/g, '')}`;
+
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -17,12 +21,12 @@ export default function PickleballIcon({
             {...props}
         >
             <defs>
-                <clipPath id="pb-ball-clip">
+                <clipPath id={clipId}>
                     <circle cx="185" cy="173" r="123" />
                 </clipPath>
 
                 {/* White = visible, black = cut out (transparent) */}
-                <mask id="pb-holes-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="330" height="350">
+                <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="330" height="350">
                     <rect width="330" height="350" fill="#FFFFFF" />
                     <g fill="#000000">
                         <circle cx="183" cy="123" r="21" />
@@ -42,12 +46,12 @@ export default function PickleballIcon({
                 </mask>
             </defs>
 
-            <g mask="url(#pb-holes-mask)">
+            <g mask={`url(#${maskId})`}>
                 {/* Ball base (light highlight tone) */}
                 <circle cx="185" cy="173" r="123" fill="#BCE232" />
 
                 {/* Darker body, clipped to the ball, leaving a highlight in the upper right */}
-                <g clip-path="url(#pb-ball-clip)">
+                <g clipPath={`url(#${clipId})`}>
                     <circle cx="150" cy="215" r="150" fill="#AAD90A" />
                 </g>
             </g>

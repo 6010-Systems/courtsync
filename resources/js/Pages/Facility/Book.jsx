@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, ArrowLeft, Check, AlertCircle, RotateCcw } from 'lucide-react';
+import { Clock, ArrowLeft, ArrowRight, Check, AlertCircle, RotateCcw, MapPin, ShieldCheck } from 'lucide-react';
 
 import Step1Court from './BookSteps/Step1Court';
 import Step2DateTime from './BookSteps/Step2DateTime';
@@ -9,6 +9,7 @@ import Step3Confirm from './BookSteps/Step3Confirm';
 import Step4Payment from './BookSteps/Step4Payment';
 import { useBookingLogic } from './BookSteps/useBookingLogic';
 import TimerIcon from '@/Components/TimerIcon';
+import { getCourtImage } from '@/Utils/courtImages';
 
 export default function Book({ facility, preselectedCourtId = null }) {
     const isPlayer = usePage().props.auth.user?.role === 'PLAYER';
@@ -128,28 +129,48 @@ export default function Book({ facility, preselectedCourtId = null }) {
         <div className="min-h-screen bg-[#F5F2EA] font-sans selection:bg-[#D6FF3F] selection:text-[#10221C] flex flex-col">
             <Head title={`Book a Court - ${facility.name}`} />
 
-            {/* Top Bar */}
-            <header className="bg-[#F5F2EA] border-b border-gray-200/60 px-4 sm:px-6 py-4 sticky top-0 z-30 backdrop-blur-md bg-[#F5F2EA]/90">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                    <Link 
-                        href={route('facility.show', facility.slug)}
-                        className="inline-flex items-center text-sm font-bold text-gray-600 hover:text-[#10221C] transition group"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-0.5 transition-transform" />
-                        <span>You're booking at <strong className="text-[#10221C]">{facility.name}</strong></span>
-                    </Link>
+            {/* Venue Hero Identity Header */}
+            <header className="bg-[#101F1A] text-[#F5F2EA] px-4 sm:px-6 py-5 border-b border-white/10 shadow-md">
+                <div className="max-w-5xl lg:max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                        <Link 
+                            href={route('facility.show', facility.slug)}
+                            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-[#F5F2EA] transition active:scale-95 shrink-0"
+                            title="Back to Facility Details"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                        </Link>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#D6FF3F]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#D6FF3F] animate-pulse" />
+                                    Verified Facility
+                                </span>
+                                <span className="text-white/30">•</span>
+                                <span className="text-[11px] text-white/70 font-semibold">
+                                    {operatingDaysLabel}
+                                </span>
+                            </div>
+                            <h1 className="font-display text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
+                                {facility.name}
+                            </h1>
+                            <p className="text-xs text-white/60 font-medium">
+                                {[facility.city, facility.province].filter(Boolean).join(', ') || 'Premier Sports Venue'}
+                            </p>
+                        </div>
+                    </div>
 
                     {/* Active Slot Lock Timer Badge */}
                     {step >= 3 && lockSecondsRemaining > 0 && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-xs border transition-colors ${
+                            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black shadow-xs border transition-colors self-start sm:self-auto ${
                                 lockSecondsRemaining < 120
-                                    ? 'bg-rose-100 text-rose-800 border-rose-200 animate-pulse'
+                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
                                     : lockSecondsRemaining < 240
-                                        ? 'bg-amber-100 text-amber-900 border-amber-200'
-                                        : 'bg-[#D6FF3F]/40 text-[#10221C] border-[#D6FF3F]'
+                                        ? 'bg-amber-400/20 text-amber-300 border-amber-400/40'
+                                        : 'bg-[#D6FF3F]/20 text-[#D6FF3F] border-[#D6FF3F]/40'
                             }`}
                         >
                             <Clock className="w-3.5 h-3.5" />
@@ -159,40 +180,55 @@ export default function Book({ facility, preselectedCourtId = null }) {
                 </div>
             </header>
 
-            {/* Progress Stepper */}
-            <div className="bg-[#F5F2EA] px-4 sm:px-6 pt-5 pb-3 border-b border-gray-200/40">
+            {/* Stepper Progress Bar */}
+            <div className="bg-white border-b border-gray-200/70 px-4 sm:px-6 py-4 shadow-xs sticky top-0 z-30 backdrop-blur-md bg-white/95">
                 <div className="max-w-5xl lg:max-w-6xl mx-auto">
-                    <div className="flex items-center justify-between mb-2.5">
-                        {stepsData.map((s) => (
-                            <div key={s.id} className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
-                                    step > s.id 
-                                        ? 'bg-[#10221C] text-[#D6FF3F]' 
-                                        : step === s.id 
-                                            ? 'bg-[#D6FF3F] text-[#10221C] shadow-md shadow-[#D6FF3F]/30 ring-2 ring-[#10221C]' 
-                                            : 'bg-gray-200/80 text-gray-400'
-                                }`}>
-                                    {step > s.id ? <Check className="w-4 h-4 stroke-[3]" /> : s.id}
-                                </div>
-                                <span className={`text-xs font-bold hidden sm:block transition-colors ${step === s.id ? 'text-[#10221C]' : 'text-gray-400'}`}>
-                                    {s.label}
-                                </span>
-                            </div>
-                        ))}
+                    <div className="grid grid-cols-4 gap-2 sm:gap-4">
+                        {stepsData.map((s) => {
+                            const isDone = step > s.id;
+                            const isActive = step === s.id;
+                            return (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    disabled={s.id > step}
+                                    onClick={() => s.id < step && setStep(s.id)}
+                                    className={`group flex items-center gap-2.5 text-left transition-all ${
+                                        s.id < step ? 'cursor-pointer' : 'cursor-default'
+                                    }`}
+                                >
+                                    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 transition-all ${
+                                        isDone 
+                                            ? 'bg-[#101F1A] text-[#D6FF3F]' 
+                                            : isActive 
+                                                ? 'bg-[#D6FF3F] text-[#10221C] shadow-md shadow-[#D6FF3F]/30 ring-2 ring-[#10221C]' 
+                                                : 'bg-gray-100 text-gray-400'
+                                    }`}>
+                                        {isDone ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : `0${s.id}`}
+                                    </div>
+                                    <div className="hidden sm:block min-w-0">
+                                        <p className={`text-[10px] font-bold uppercase tracking-wider leading-none ${
+                                            isActive ? 'text-[#FF5A36]' : 'text-gray-400'
+                                        }`}>
+                                            Step 0{s.id}
+                                        </p>
+                                        <p className={`text-xs font-black truncate mt-0.5 ${
+                                            isActive ? 'text-[#10221C]' : isDone ? 'text-gray-700' : 'text-gray-400'
+                                        }`}>
+                                            {s.label}
+                                        </p>
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {/* Progress Bar Line */}
-                    <div className="w-full bg-gray-200/80 rounded-full h-1.5 overflow-hidden">
+                    {/* Animated Track Line */}
+                    <div className="w-full bg-gray-100 rounded-full h-1 mt-3 overflow-hidden">
                         <div 
                             className="bg-[#D6FF3F] h-full rounded-full transition-all duration-500 ease-out" 
                             style={{ width: `${progressPercent}%` }}
                         />
-                    </div>
-
-                    {/* Mobile Step Description */}
-                    <div className="sm:hidden mt-2.5 flex items-center justify-between text-xs font-bold text-[#10221C]">
-                        <span>Step {step} of 4: {stepsData[step - 1]?.label}</span>
-                        <span className="text-[11px] text-gray-500 font-semibold">{Math.round(progressPercent)}% completed</span>
                     </div>
                 </div>
             </div>
@@ -210,11 +246,6 @@ export default function Book({ facility, preselectedCourtId = null }) {
                             <p className="text-xs mt-0.5 opacity-80">{availabilityBanner.body}</p>
                         </div>
                     )}
-
-                    <div className="rounded-2xl border border-[#10221C]/10 bg-white px-4 py-3 text-xs text-[#10221C]/70 shadow-xs flex items-center justify-between">
-                        <span>Open schedule: <strong className="text-[#10221C]">{operatingDaysLabel}</strong></span>
-                        <span className="text-[11px] text-[#10221C]/50 font-medium">Verified Facility</span>
-                    </div>
                     
                     {selectableCourts.length === 0 ? (
                         <div className="bg-white rounded-3xl p-8 text-center shadow-lg border border-gray-100">
@@ -242,70 +273,106 @@ export default function Book({ facility, preselectedCourtId = null }) {
                                 </motion.div>
                             </AnimatePresence>
 
-                            {/* Footer Navigation Dock */}
-                            <div className="px-6 sm:px-8 py-5 bg-gray-50/90 border-t border-gray-100 flex items-center justify-between gap-4">
-                                {step > 1 ? (
-                                    <button
-                                        type="button"
-                                        onClick={goPrev}
-                                        className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#10221C] transition px-4 py-2.5 rounded-xl hover:bg-gray-200/60 active:scale-[0.98]"
-                                    >
-                                        <ArrowLeft className="w-4 h-4" />
-                                        Previous
-                                    </button>
-                                ) : (
-                                    <div />
-                                )}
+                            {/* Smart Concierge Action Dock */}
+                            <div className="px-6 sm:px-8 py-5 bg-gradient-to-r from-[#FAF9F5] to-gray-50 border-t border-gray-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                {/* Left Info Column */}
+                                <div className="flex items-center gap-3 min-w-0">
+                                    {selectedCourt ? (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-200/80 shadow-2xs">
+                                                <img 
+                                                    src={getCourtImage(selectedCourt, facility)} 
+                                                    alt={selectedCourt.name}
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Court</span>
+                                                    <span className="text-gray-300">•</span>
+                                                    <span className="text-[10px] font-bold text-emerald-700 uppercase">Available</span>
+                                                </div>
+                                                <p className="text-sm font-black text-[#10221C] truncate">{selectedCourt.name}</p>
+                                                <p className="text-xs font-semibold text-gray-500">
+                                                    {step === 1 && (selectedCourt.hourly_rate ? `₱${Number(selectedCourt.hourly_rate).toFixed(0)} / hour` : 'Standard Rate')}
+                                                    {step === 2 && selectedDate && startTime && `${formatDateString(selectedDate)} · ${formatTimeString(startTime)} – ${formatTimeString(endTime)}`}
+                                                    {step >= 3 && `Total Reservation: ${totalPrice}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-xs text-gray-400 font-medium">
+                                            <Clock className="w-4 h-4 text-gray-300" />
+                                            <span>Select a court above to proceed with your reservation.</span>
+                                        </div>
+                                    )}
+                                </div>
 
-                                {step < stepsData.length ? (
-                                    <button
-                                        type="button"
-                                        onClick={goNext}
-                                        disabled={!canGoNext() || processing}
-                                        className={`inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.98] ${
-                                            canGoNext() && !processing
-                                                ? 'bg-[#10221C] text-[#D6FF3F] hover:bg-[#18342b] shadow-md shadow-[#10221C]/10 cursor-pointer' 
-                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                        }`}
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Holding slot...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Continue
-                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </>
-                                        )}
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={handleBooking}
-                                        disabled={!canConfirm || processing}
-                                        className={`inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.98] ${
-                                            canConfirm && !processing
-                                                ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#cbf536] shadow-lg shadow-[#D6FF3F]/30 cursor-pointer' 
-                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                        }`}
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <span className="w-4 h-4 border-2 border-[#10221C]/30 border-t-[#10221C] rounded-full animate-spin" />
-                                                Submitting Reservation...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Confirm & Complete Booking
-                                                <Check className="w-4 h-4 stroke-[3]" />
-                                            </>
-                                        )}
-                                    </button>
-                                )}
+                                {/* Right Action Buttons */}
+                                <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+                                    {step > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={goPrev}
+                                            className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#10221C] transition px-4 py-3 rounded-xl border border-gray-200 hover:bg-white hover:shadow-2xs active:scale-[0.98] cursor-pointer"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" />
+                                            Back
+                                        </button>
+                                    )}
+
+                                    {step < stepsData.length ? (
+                                        <button
+                                            type="button"
+                                            onClick={goNext}
+                                            disabled={!canGoNext() || processing}
+                                            className={`inline-flex items-center gap-2 text-xs font-black px-6 sm:px-7 py-3 rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                                                canGoNext() && !processing
+                                                    ? 'bg-[#10221C] text-[#D6FF3F] hover:bg-[#18342b] hover:shadow-lg shadow-md shadow-[#10221C]/10 cursor-pointer' 
+                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            {processing ? (
+                                                <>
+                                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Holding slot...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span>
+                                                        {step === 1 && 'Choose Date & Time'}
+                                                        {step === 2 && 'Review Details'}
+                                                        {step === 3 && 'Proceed to Payment'}
+                                                    </span>
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleBooking}
+                                            disabled={!canConfirm || processing}
+                                            className={`inline-flex items-center gap-2 text-xs font-black px-7 sm:px-8 py-3 rounded-xl transition-all duration-200 active:scale-[0.98] ${
+                                                canConfirm && !processing
+                                                    ? 'bg-[#D6FF3F] text-[#10221C] hover:bg-[#cbf536] shadow-lg shadow-[#D6FF3F]/30 cursor-pointer' 
+                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        >
+                                            {processing ? (
+                                                <>
+                                                    <span className="w-4 h-4 border-2 border-[#10221C]/30 border-t-[#10221C] rounded-full animate-spin" />
+                                                    Submitting Reservation...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Confirm & Complete Booking
+                                                    <Check className="w-4 h-4 stroke-[3]" />
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -1,7 +1,8 @@
 import CourtRatePlans from '@/Components/CourtRatePlans';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES, STATUS_CONFIG } from '@/Utils/courtStatus';
 import { offeredCourtPlans } from '@/Utils/rateQuote';
-import { Clock, Sun, Moon } from 'lucide-react';
+import { Clock, Sun, Moon, Check } from 'lucide-react';
+import PickleballIcon from '@/Components/Icons/PickleballIcon';
 
 /**
  * 12-hour label for a stored court time, e.g. "06:00:00" -> "6:00 AM".
@@ -68,33 +69,29 @@ export default function CourtCard({
         <article
             onClick={isInteractive ? onClick : undefined}
             className={[
-                'group relative flex h-full flex-col justify-between overflow-hidden rounded-xl border bg-white shadow-sm transition-all duration-300',
+                'group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border bg-white shadow-xs transition-all duration-300',
                 isSelected
-                    ? 'border-[#D6FF3F] ring-2 ring-[#D6FF3F] shadow-lg shadow-[#D6FF3F]/25 -translate-y-1'
-                    : 'border-[#10221C]/10 hover:-translate-y-1 hover:border-[#D6FF3F] hover:shadow-lg',
+                    ? 'border-[#10221C] ring-2 ring-[#10221C] shadow-xl shadow-[#10221C]/10 -translate-y-1'
+                    : 'border-[#10221C]/10 hover:-translate-y-1 hover:border-[#10221C]/30 hover:shadow-md',
                 isDimmed ? 'opacity-85 grayscale-[20%]' : '',
                 isInteractive ? 'cursor-pointer' : '',
                 className,
             ].filter(Boolean).join(' ')}
             style={style}
         >
-            {/* Top Image: Edge-to-edge container with gradient mask dissolving into card body */}
-            <div className="relative h-40 sm:h-44 w-full shrink-0 overflow-hidden bg-white">
+            {/* Top Image: Edge-to-edge photography with clean fade */}
+            <div className="relative h-44 sm:h-48 w-full shrink-0 overflow-hidden bg-[#101F1A]/5">
                 <img
                     src={image}
                     alt={court.name}
                     loading="lazy"
                     onError={handleImageError}
-                    className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08] ${
+                    className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${
                         isDimmed ? 'opacity-85 grayscale-[25%]' : ''
                     }`}
-                    style={{
-                        maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                        WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 100%)',
-                    }}
                 />
 
-                {/* Floating Status Badge — top-left matching Facilities */}
+                {/* Floating Status Badge — top-left */}
                 <div className="absolute top-3 left-3 z-10">
                     <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-2xs border bg-white/95 transition-transform duration-300 group-hover:scale-105 ${statusCfg.text} ${statusCfg.border}`}
@@ -104,23 +101,30 @@ export default function CourtCard({
                     </span>
                 </div>
 
-                {/* Floating Sport / Category Pill — top-right matching Facilities */}
-                <div className="absolute top-3 right-3 z-10">
-                    <span className="inline-flex items-center gap-1 bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-2xs border border-white/10">
-                        {court.type || 'Court'}
+                {/* Floating Sport / Category Pill & Selected Indicator — top-right */}
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                    {isSelected && (
+                        <span className="inline-flex items-center gap-1 bg-[#D6FF3F] text-[#10221C] text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs border border-[#101F1A]/10">
+                            <Check size={11} strokeWidth={3} />
+                            Selected
+                        </span>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-2xs border border-white/10">
+                        {court.type === 'Pickleball' && <PickleballIcon size={12} className="shrink-0" />}
+                        <span>{court.type || 'Court'}</span>
                     </span>
                 </div>
 
-                {/* Smooth 7-stop gradient overlay dissolving seamlessly into card body */}
+                {/* Clean gradient overlay dissolving into card body */}
                 <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                        background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.06) 58%, rgba(255,255,255,0.25) 72%, rgba(255,255,255,0.65) 86%, #ffffff 100%)',
+                        background: 'linear-gradient(to bottom, rgba(16,31,26,0.25) 0%, rgba(16,31,26,0) 40%, rgba(255,255,255,0.7) 85%, #ffffff 100%)',
                     }}
                 />
             </div>
 
-            {/* Card Body — flex-1 with negative margin matching Facilities */}
+            {/* Card Body */}
             <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-5 sm:pb-4 flex-1 flex flex-col justify-between">
                 <div>
                     {/* Court Title */}
@@ -143,7 +147,7 @@ export default function CourtCard({
                         {court.description || 'Quality sports court with verified playing surface and standard regulations.'}
                     </p>
 
-                    {/* Pricing Strip — rate plans or clean badges aligned with Facilities */}
+                    {/* Pricing Strip */}
                     {offeredPlans.length > 0 ? (
                         <CourtRatePlans
                             plans={offeredPlans}
@@ -153,19 +157,24 @@ export default function CourtCard({
                         <div className="mt-2.5 pt-2 border-t border-[#101F1A]/5 flex items-center justify-between gap-2">
                             {isSplitPriced ? (
                                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                                    <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-[#101F1A]/5">
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-[#FAF9F5] px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-[#101F1A]/5">
                                         <Sun size={11} className="text-amber-600 shrink-0" />
                                         <span>Day: ₱{Number(court.day_rate).toFixed(0)}</span>
                                     </span>
-                                    <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-[#101F1A]/5">
+                                    <span className="inline-flex items-center gap-1 rounded-lg bg-[#FAF9F5] px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-[#101F1A]/5">
                                         <Moon size={11} className="text-indigo-600 shrink-0" />
                                         <span>Night: ₱{Number(court.night_rate).toFixed(0)}</span>
                                     </span>
                                 </div>
                             ) : court.hourly_rate ? (
-                                <span className="inline-flex items-center gap-1 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
-                                    ₱{Number(court.hourly_rate).toFixed(2)} / hr
-                                </span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-base sm:text-lg font-black text-[#10221C]">
+                                        ₱{Number(court.hourly_rate).toFixed(0)}
+                                    </span>
+                                    <span className="text-xs text-[#10221C]/50 font-semibold">
+                                        / hr
+                                    </span>
+                                </div>
                             ) : (
                                 <span className="text-[11px] text-[#101F1A]/55 font-medium">Standard rate</span>
                             )}
@@ -173,11 +182,20 @@ export default function CourtCard({
                     )}
                 </div>
 
-                {/* Fixed Footer — pinned to bottom, h-10 matching Facilities */}
+                {/* Fixed Footer */}
                 <div className="mt-3 pt-2.5 border-t border-[#10221C]/6 flex items-center justify-between shrink-0 h-10">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isBookable ? 'text-emerald-700' : 'text-[#10221C]/65'}`}>
-                        {hint ?? (isBookable ? 'Ready to book' : 'Offline / Hold')}
-                    </span>
+                    <div>
+                        {hint ? (
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isBookable ? 'text-emerald-700' : 'text-[#10221C]/65'}`}>
+                                {hint}
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Instant Booking
+                            </span>
+                        )}
+                    </div>
                     {actions ? (
                         <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                             {actions}
