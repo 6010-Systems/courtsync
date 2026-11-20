@@ -34,4 +34,7 @@
       <circle cx="150" cy="215" r="150" fill="#AAD90A"/>
     </g>
   </g>
+
+  <!-- Crisp Dark Perimeter Border -->
+  <circle cx="185" cy="173" r="123" fill="none" stroke="#10221C" stroke-width="18"/>
 </svg>

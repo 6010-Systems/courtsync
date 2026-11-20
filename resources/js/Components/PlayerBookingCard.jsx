@@ -49,11 +49,11 @@ function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
                 className={className} 
                 aria-label="Basketball"
             >
-                <circle cx="16" cy="16" r="14" fill="#FF7A00" stroke="#10221C" strokeWidth="1.6" />
-                <line x1="2" y1="16" x2="30" y2="16" stroke="#10221C" strokeWidth="1.5" />
-                <line x1="16" y1="2" x2="16" y2="30" stroke="#10221C" strokeWidth="1.5" />
-                <path d="M 6.1 6.1 C 12 11 12 21 6.1 25.9" fill="none" stroke="#10221C" strokeWidth="1.5" />
-                <path d="M 25.9 6.1 C 20 11 20 21 25.9 25.9" fill="none" stroke="#10221C" strokeWidth="1.5" />
+                <circle cx="16" cy="16" r="14" fill="#FF7A00" stroke="#10221C" strokeWidth="2" />
+                <line x1="2" y1="16" x2="30" y2="16" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="16" y1="2" x2="16" y2="30" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 6.1 6.1 C 12 11 12 21 6.1 25.9" fill="none" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 25.9 6.1 C 20 11 20 21 25.9 25.9" fill="none" stroke="#10221C" strokeWidth="1.6" />
             </svg>
         );
     }
@@ -67,12 +67,12 @@ function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
                 className={className} 
                 aria-label="Badminton Shuttlecock"
             >
-                <path d="M 9 9 L 23 9 L 19 23 L 13 23 Z" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.5" strokeLinejoin="round" />
-                <line x1="13" y1="9" x2="15" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
-                <line x1="16" y1="9" x2="16" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
-                <line x1="19" y1="9" x2="17" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
-                <line x1="10.5" y1="15" x2="21.5" y2="15" stroke="#10221C" strokeWidth="1.3" />
-                <path d="M 13 23 C 13 27 19 27 19 23 Z" fill="#E2E8F0" stroke="#10221C" strokeWidth="1.5" />
+                <path d="M 9 9 L 23 9 L 19 23 L 13 23 Z" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.8" strokeLinejoin="round" />
+                <line x1="13" y1="9" x2="15" y2="23" stroke="#CBD5E1" strokeWidth="1.3" />
+                <line x1="16" y1="9" x2="16" y2="23" stroke="#CBD5E1" strokeWidth="1.3" />
+                <line x1="19" y1="9" x2="17" y2="23" stroke="#CBD5E1" strokeWidth="1.3" />
+                <line x1="10.5" y1="15" x2="21.5" y2="15" stroke="#10221C" strokeWidth="1.5" />
+                <path d="M 13 23 C 13 27 19 27 19 23 Z" fill="#E2E8F0" stroke="#10221C" strokeWidth="1.8" />
             </svg>
         );
     }
@@ -86,9 +86,11 @@ function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
                 className={className} 
                 aria-label="Tennis Ball"
             >
-                <circle cx="16" cy="16" r="14" fill="#D6FF3F" stroke="#10221C" strokeWidth="1.6" />
-                <path d="M 6.1 6.1 C 13 11 13 21 6.1 25.9" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
-                <path d="M 25.9 6.1 C 19 11 19 21 25.9 25.9" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+                <circle cx="16" cy="16" r="14" fill="#D6FF3F" stroke="#10221C" strokeWidth="2" />
+                <path d="M 6.1 6.1 C 13 11 13 21 6.1 25.9" fill="none" stroke="#10221C" strokeWidth="2.6" strokeLinecap="round" />
+                <path d="M 6.1 6.1 C 13 11 13 21 6.1 25.9" fill="none" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
+                <path d="M 25.9 6.1 C 19 11 19 21 25.9 25.9" fill="none" stroke="#10221C" strokeWidth="2.6" strokeLinecap="round" />
+                <path d="M 25.9 6.1 C 19 11 19 21 25.9 25.9" fill="none" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
         );
     }
@@ -102,10 +104,10 @@ function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
                 className={className} 
                 aria-label="Volleyball"
             >
-                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.6" />
-                <path d="M 16 2 C 16 16 2 16 2 16" fill="none" stroke="#10221C" strokeWidth="1.4" />
-                <path d="M 16 30 C 16 16 30 16 30 16" fill="none" stroke="#10221C" strokeWidth="1.4" />
-                <path d="M 2 16 C 16 16 26 26 26 26" fill="none" stroke="#10221C" strokeWidth="1.4" />
+                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="2" />
+                <path d="M 16 2 C 16 16 2 16 2 16" fill="none" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 16 30 C 16 16 30 16 30 16" fill="none" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 2 16 C 16 16 26 26 26 26" fill="none" stroke="#10221C" strokeWidth="1.6" />
             </svg>
         );
     }
@@ -119,19 +121,44 @@ function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
                 className={className} 
                 aria-label="Soccer Ball"
             >
-                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.6" />
+                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="2" />
                 <polygon points="16,11 20,14 18,19 14,19 12,14" fill="#10221C" />
-                <line x1="16" y1="11" x2="16" y2="2" stroke="#10221C" strokeWidth="1.4" />
-                <line x1="20" y1="14" x2="28" y2="10" stroke="#10221C" strokeWidth="1.4" />
-                <line x1="18" y1="19" x2="25" y2="25" stroke="#10221C" strokeWidth="1.4" />
-                <line x1="14" y1="19" x2="7" y2="25" stroke="#10221C" strokeWidth="1.4" />
-                <line x1="12" y1="14" x2="4" y2="10" stroke="#10221C" strokeWidth="1.4" />
+                <line x1="16" y1="11" x2="16" y2="2" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="20" y1="14" x2="28" y2="10" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="18" y1="19" x2="25" y2="25" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="14" y1="19" x2="7" y2="25" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="12" y1="14" x2="4" y2="10" stroke="#10221C" strokeWidth="1.6" />
             </svg>
         );
     }
 
-    // Default to Pickleball icon
-    return <PickleballIcon size={size} className={className} />;
+    if (norm.includes('table tennis') || norm.includes('ping pong')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Table Tennis"
+            >
+                <circle cx="15" cy="14" r="10" fill="#FF5A36" stroke="#10221C" strokeWidth="2" />
+                <path d="M 22 21 L 28 27" stroke="#10221C" strokeWidth="3.5" strokeLinecap="round" />
+                <path d="M 22 21 L 28 27" stroke="#E2E8F0" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="8" cy="9" r="3.5" fill="#FFFFFF" stroke="#10221C" strokeWidth="1.5" />
+            </svg>
+        );
+    }
+
+    // Pickleball (and default) with crisp dark border & hole contrast
+    return (
+        <PickleballIcon 
+            size={size} 
+            className={className} 
+            stroke="#10221C" 
+            strokeWidth={18} 
+            withHoleBorders={true} 
+        />
+    );
 }
 
 /**
