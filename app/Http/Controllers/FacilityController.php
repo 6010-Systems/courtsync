@@ -21,7 +21,7 @@ class FacilityController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'facility_id' => 'nullable|exists:facilities,id',
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:facilities,slug,'.$request->facility_id,
@@ -31,7 +31,17 @@ class FacilityController extends Controller
             'country' => 'required|string|max:255',
             'contact_number' => 'required|string|max:20',
             'description' => 'nullable|string',
+            'operating_days' => 'required|array|min:1',
+            'operating_days.*' => 'integer|distinct|between:1,7',
+            'operational_status' => 'required|string|in:'.implode(',', Facility::OPERATIONAL_STATUSES),
         ]);
+
+        $operatingDays = collect($validated['operating_days'])
+            ->map(fn ($day) => (int) $day)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
 
         if ($request->facility_id) {
             $facility = $request->user()->facilities()->findOrFail($request->facility_id);
@@ -44,6 +54,8 @@ class FacilityController extends Controller
                 'country' => $request->country,
                 'contact_number' => $request->contact_number,
                 'description' => $request->description,
+                'operating_days' => $operatingDays,
+                'operational_status' => $validated['operational_status'],
             ];
 
             if ($facility->verification_status === 'APPROVED' && $request->filled('slug')) {
@@ -61,6 +73,8 @@ class FacilityController extends Controller
                 'country' => $request->country,
                 'contact_number' => $request->contact_number,
                 'description' => $request->description,
+                'operating_days' => $operatingDays,
+                'operational_status' => $validated['operational_status'],
                 'verification_status' => 'DRAFT',
             ]);
         }
@@ -347,6 +361,8 @@ class FacilityController extends Controller
 
     public function book(Request $request, Facility $facility)
     {
+        abort_unless($facility->isApproved(), 404);
+
         $facility->load('verification:id,facility_id,facility_photos');
         $this->loadRateCard($facility);
         $facility->load(['bookings' => function ($q) {

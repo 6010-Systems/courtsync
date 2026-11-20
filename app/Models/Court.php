@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 #[Fillable([
     'facility_id',
@@ -15,6 +17,7 @@ use Illuminate\Support\Carbon;
     'type',
     'image_url',
     'time_range',
+    'operating_schedules',
     'description',
     'hourly_rate',
     'pricing_mode',
@@ -120,6 +123,13 @@ class Court extends Model
      */
     public const STATUSES = ['AVAILABLE', 'OPEN_PLAY', 'BLOCKED', 'NOT_AVAILABLE'];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = ['operating_schedules_label'];
+
     protected function casts(): array
     {
         return [
@@ -127,7 +137,234 @@ class Court extends Model
             'day_rate' => 'decimal:2',
             'night_rate' => 'decimal:2',
             'uses_rate_card' => 'boolean',
+            'operating_schedules' => 'array',
         ];
+    }
+
+    /**
+     * Normalize schedule groups: days 1–7, start/end as H:i (end may be 24:00).
+     *
+     * @param  array<int, mixed>|null  $schedules
+     * @return array<int, array{days: array<int, int>, start: string, end: string}>
+     */
+    public static function normalizeOperatingSchedules(?array $schedules): array
+    {
+        return collect($schedules ?? [])
+            ->map(function ($group) {
+                $days = collect($group['days'] ?? [])
+                    ->map(fn ($day) => (int) $day)
+                    ->filter(fn (int $day) => $day >= 1 && $day <= 7)
+                    ->unique()
+                    ->sort()
+                    ->values()
+                    ->all();
+
+                $start = self::normalizeClock((string) ($group['start'] ?? ''), false);
+                $end = self::normalizeClock((string) ($group['end'] ?? ''), true);
+
+                if ($days === [] || $start === null || $end === null) {
+                    return null;
+                }
+
+                if (self::clockToMinutes($end) <= self::clockToMinutes($start)) {
+                    return null;
+                }
+
+                return [
+                    'days' => $days,
+                    'start' => $start,
+                    'end' => $end,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Build a human-readable summary kept in time_range for legacy displays.
+     *
+     * @param  array<int, array{days: array<int, int>, start: string, end: string}>  $schedules
+     */
+    public static function summarizeOperatingSchedules(array $schedules): string
+    {
+        $normalized = self::normalizeOperatingSchedules($schedules);
+
+        if ($normalized === []) {
+            return '';
+        }
+
+        return collect($normalized)
+            ->map(function (array $group) {
+                $daysLabel = self::daysLabel($group['days']);
+                $hoursLabel = self::formatClockLabel($group['start']).' - '.self::formatClockLabel($group['end']);
+
+                return trim($daysLabel.' '.$hoursLabel);
+            })
+            ->implode(' · ');
+    }
+
+    /**
+     * @return array{days: array<int, int>, start: string, end: string}|null
+     */
+    public function scheduleForDate(string|CarbonInterface $date): ?array
+    {
+        $carbon = $date instanceof CarbonInterface ? $date->copy() : Carbon::parse($date);
+        $weekday = (int) $carbon->isoWeekday();
+
+        foreach ($this->normalizedOperatingSchedules() as $group) {
+            if (in_array($weekday, $group['days'], true)) {
+                return $group;
+            }
+        }
+
+        return null;
+    }
+
+    public function isOpenOnDate(string|CarbonInterface $date): bool
+    {
+        return $this->scheduleForDate($date) !== null;
+    }
+
+    /**
+     * Whether [start, end) falls inside this court's hours for the date.
+     */
+    public function acceptsBookingWindow(string|CarbonInterface $date, string $startTime, string $endTime): bool
+    {
+        $group = $this->scheduleForDate($date);
+
+        if ($group === null) {
+            return false;
+        }
+
+        $startMinutes = self::clockToMinutes(self::normalizeClock($startTime, false) ?? '');
+        $endMinutes = self::clockToMinutes(self::normalizeClock($endTime, true) ?? '');
+
+        if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
+            return false;
+        }
+
+        return $startMinutes >= self::clockToMinutes($group['start'])
+            && $endMinutes <= self::clockToMinutes($group['end']);
+    }
+
+    /**
+     * @return array<int, array{days: array<int, int>, start: string, end: string}>
+     */
+    public function normalizedOperatingSchedules(): array
+    {
+        return self::normalizeOperatingSchedules($this->operating_schedules);
+    }
+
+    public function getOperatingSchedulesLabelAttribute(): string
+    {
+        $label = self::summarizeOperatingSchedules($this->normalizedOperatingSchedules());
+
+        return $label !== '' ? $label : (string) ($this->time_range ?: '');
+    }
+
+    /**
+     * @param  array<int, int>  $days
+     */
+    public static function daysLabel(array $days): string
+    {
+        $days = collect($days)->map(fn ($day) => (int) $day)->unique()->sort()->values()->all();
+
+        if ($days === Facility::ALL_OPERATING_DAYS) {
+            return 'All week';
+        }
+
+        if ($days === [1, 2, 3, 4, 5]) {
+            return 'Mon–Fri';
+        }
+
+        if ($days === [6, 7]) {
+            return 'Sat–Sun';
+        }
+
+        return collect($days)
+            ->map(fn (int $day) => Facility::WEEKDAY_LABELS[$day] ?? (string) $day)
+            ->implode(', ');
+    }
+
+    public static function formatClockLabel(string $hi): string
+    {
+        if ($hi === '24:00') {
+            return '12:00 AM';
+        }
+
+        try {
+            return Carbon::createFromFormat('H:i', $hi)->format('g:i A');
+        } catch (\Throwable) {
+            return $hi;
+        }
+    }
+
+    public static function normalizeClock(string $value, bool $allowMidnightEnd): ?string
+    {
+        $value = substr(trim($value), 0, 5);
+
+        if ($value === '24:00') {
+            return $allowMidnightEnd ? '24:00' : null;
+        }
+
+        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $value)) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    public static function clockToMinutes(?string $hi): ?int
+    {
+        if ($hi === null || $hi === '') {
+            return null;
+        }
+
+        if ($hi === '24:00') {
+            return 24 * 60;
+        }
+
+        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $hi, $match)) {
+            return null;
+        }
+
+        return ((int) $match[1] * 60) + (int) $match[2];
+    }
+
+    /**
+     * Restrict schedule days to the facility's open days and drop empty groups.
+     *
+     * @param  array<int, mixed>|null  $schedules
+     * @param  array<int, int>  $facilityDays
+     * @return array<int, array{days: array<int, int>, start: string, end: string}>
+     */
+    public static function constrainSchedulesToFacilityDays(?array $schedules, array $facilityDays): array
+    {
+        $allowed = collect($facilityDays)->map(fn ($day) => (int) $day)->all();
+
+        return collect(self::normalizeOperatingSchedules($schedules))
+            ->map(function (array $group) use ($allowed) {
+                $group['days'] = array_values(array_intersect($group['days'], $allowed));
+
+                return $group['days'] === [] ? null : $group;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Ensure no weekday appears in more than one group.
+     *
+     * @param  array<int, array{days: array<int, int>, start: string, end: string}>  $schedules
+     */
+    public static function schedulesHaveUniqueDays(array $schedules): bool
+    {
+        /** @var Collection<int, int> $days */
+        $days = collect($schedules)->flatMap(fn (array $group) => $group['days']);
+
+        return $days->count() === $days->unique()->count();
     }
 
     /**

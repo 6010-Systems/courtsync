@@ -134,7 +134,9 @@ export default function CourtCard({
                     {/* Schedule / Hours */}
                     <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-[#10221C]/75 truncate h-5">
                         <Clock size={12} className="text-[#FF5A36]/80 shrink-0" />
-                        <span className="truncate">{court.time_range || 'Venue standard hours'}</span>
+                        <span className="truncate" title={court.operating_schedules_label || court.time_range}>
+                            {court.operating_schedules_label || court.time_range || 'Venue standard hours'}
+                        </span>
                     </p>
 
                     {/* Description */}

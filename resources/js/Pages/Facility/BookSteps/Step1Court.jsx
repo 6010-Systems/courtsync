@@ -41,14 +41,14 @@ export default function Step1Court({ facilityName, facility = null, selectableCo
                             </div>
                         </div>
                         <div className="space-y-2">
-                            {court.time_range && (
+                            {(court.operating_schedules_label || court.time_range) && (
                                 <div className="flex justify-end">
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                         selectedCourtId == court.id
                                             ? 'bg-white/15 text-gray-200'
                                             : 'bg-gray-100 text-gray-500'
-                                    }`}>
-                                        {court.time_range}
+                                    }`} title={court.operating_schedules_label || court.time_range}>
+                                        {court.operating_schedules_label || court.time_range}
                                     </span>
                                 </div>
                             )}

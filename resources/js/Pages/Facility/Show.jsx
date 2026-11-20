@@ -4,6 +4,11 @@ import Dialog from '@/Components/Dialog';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import {
+    facilityAvailabilityBanner,
+    facilityIsAcceptingBookings,
+    formatOperatingDaysLabel,
+} from '@/Utils/facilityAvailability';
 import CourtCard from '@/Components/CourtCard';
 import RateCard from '@/Components/RateCard';
 import { Camera, Image as ImageIcon, Sparkles, Check, Upload, Link2, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
@@ -81,6 +86,9 @@ export default function Show({ facility }) {
     const { auth } = usePage().props;
     const user = auth.user;
     const isOwner = user && (user.role === 'ADMIN' || (user.role === 'FACILITY_OWNER' && user.id === facility.user_id));
+    const acceptingBookings = facilityIsAcceptingBookings(facility);
+    const availabilityBanner = facilityAvailabilityBanner(facility);
+    const operatingDaysLabel = facility.operating_days_label || formatOperatingDaysLabel(facility.operating_days);
 
     const defaultCover = 'https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1600&q=80';
     const coverPhoto = facility.cover_photo_url || facility.cover_image_url || facility.verification?.facility_photos?.[0] || defaultCover;
@@ -342,27 +350,50 @@ export default function Show({ facility }) {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-14 lg:py-20 relative z-20">
+                {availabilityBanner && (
+                    <div className={`mb-4 rounded-2xl border px-4 py-3 ${
+                        availabilityBanner.tone === 'rose'
+                            ? 'border-rose-200 bg-rose-50 text-rose-900'
+                            : 'border-amber-200 bg-amber-50 text-amber-950'
+                    }`}>
+                        <p className="text-sm font-black">{availabilityBanner.title}</p>
+                        <p className="text-xs mt-0.5 opacity-80">{availabilityBanner.body}</p>
+                    </div>
+                )}
+
                 {/* Mobile-Only Compact Rectangle Booking CTA  */}
                 <div className="block lg:hidden mb-6 sm:mb-8">
                     <div className="bg-[#10221C] p-4 sm:p-5 rounded-2xl shadow-xl border border-white/5 flex items-center justify-between gap-3.5">
                         <div className="min-w-0 flex-1">
-                            <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Ready to play?</h2>
-                            <p className="text-xs text-gray-300 truncate mt-0.5">Book a court now at {facility.name}</p>
+                            <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">
+                                {acceptingBookings ? 'Ready to play?' : (availabilityBanner?.title || 'Bookings paused')}
+                            </h2>
+                            <p className="text-xs text-gray-300 truncate mt-0.5">
+                                {acceptingBookings
+                                    ? `Open ${operatingDaysLabel} · Book a court at ${facility.name}`
+                                    : (availabilityBanner?.body || 'New bookings are unavailable.')}
+                            </p>
                         </div>
-                        {user ? (
-                            <Link
-                                href={route('facility.book', facility.slug)}
-                                className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
-                            >
-                                Book a Court
-                            </Link>
+                        {acceptingBookings ? (
+                            user ? (
+                                <Link
+                                    href={route('facility.book', facility.slug)}
+                                    className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
+                                >
+                                    Book a Court
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={`/${facility.slug}/login`}
+                                    className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
+                                >
+                                    Sign In to Book
+                                </Link>
+                            )
                         ) : (
-                            <Link
-                                href={`/${facility.slug}/login`}
-                                className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
-                            >
-                                Sign In to Book
-                            </Link>
+                            <span className="shrink-0 inline-flex items-center justify-center bg-white/10 text-white/70 font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl border border-white/10">
+                                Unavailable
+                            </span>
                         )}
                     </div>
                 </div>
@@ -389,7 +420,7 @@ export default function Show({ facility }) {
                             {facility.courts && facility.courts.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     {facility.courts.map((court, courtIndex) => {
-                                        const isBookable = court.status === 'AVAILABLE';
+                                        const isBookable = acceptingBookings && court.status === 'AVAILABLE';
 
                                         return (
                                             <CourtCard
@@ -408,7 +439,9 @@ export default function Show({ facility }) {
                                                         </Link>
                                                     ) : (
                                                         <span className="rounded-xl bg-[#10221C]/5 px-3 py-2 text-xs font-bold text-[#10221C]/50">
-                                                            Unavailable
+                                                            {!acceptingBookings
+                                                                ? (availabilityBanner?.title || 'Unavailable')
+                                                                : (COURT_STATUS_LABELS[court.status] || 'Unavailable')}
                                                         </span>
                                                     )
                                                 }
@@ -587,23 +620,36 @@ export default function Show({ facility }) {
                     {/* Right Column - Booking CTA (Desktop Sticky Sidebar) */}
                     <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
                         <div className="bg-[#10221C] p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5 sticky top-8">
-                            <h2 className="text-2xl font-bold text-white mb-4">Ready to play?</h2>
-                            <p className="text-gray-400 mb-6">Book a court now at {facility.name}.</p>
+                            <h2 className="text-2xl font-bold text-white mb-4">
+                                {acceptingBookings ? 'Ready to play?' : (availabilityBanner?.title || 'Bookings paused')}
+                            </h2>
+                            <p className="text-gray-400 mb-2">
+                                {acceptingBookings
+                                    ? `Book a court now at ${facility.name}.`
+                                    : (availabilityBanner?.body || 'New bookings are unavailable.')}
+                            </p>
+                            <p className="text-xs text-gray-500 mb-6">Open days: {operatingDaysLabel}</p>
 
-                            {user ? (
-                                <Link
-                                    href={route('facility.book', facility.slug)}
-                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
-                                >
-                                    Book a Court
-                                </Link>
+                            {acceptingBookings ? (
+                                user ? (
+                                    <Link
+                                        href={route('facility.book', facility.slug)}
+                                        className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
+                                    >
+                                        Book a Court
+                                    </Link>
+                                ) : (
+                                    <Link
+                                        href={`/${facility.slug}/login`}
+                                        className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
+                                    >
+                                        Sign In to Book
+                                    </Link>
+                                )
                             ) : (
-                                <Link
-                                    href={`/${facility.slug}/login`}
-                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
-                                >
-                                    Sign In to Book
-                                </Link>
+                                <div className="w-full flex items-center justify-center bg-white/10 text-white/70 font-black text-lg py-4 px-4 rounded-xl border border-white/10">
+                                    Unavailable
+                                </div>
                             )}
                         </div>
                     </div>

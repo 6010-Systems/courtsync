@@ -163,27 +163,54 @@ export default function Step2DateTime({
                             type="date" 
                             className="text-xs font-bold text-blue-600 bg-transparent border-none outline-none cursor-pointer p-0 m-0 w-24 focus:ring-0" 
                             min={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => { if (e.target.value) setSelectedDate(e.target.value); }}
+                            onChange={(e) => {
+                                if (!e.target.value) {
+                                    return;
+                                }
+
+                                const match = dates.find((d) => d.date === e.target.value);
+                                if (match?.isClosed) {
+                                    return;
+                                }
+
+                                setSelectedDate(e.target.value);
+                            }}
                         />
                     </label>
                 </div>
 
                 <div className="grid grid-cols-7 gap-2">
-                    {dates.map((d, i) => (
-                        <button 
-                            key={i} 
-                            onClick={() => setSelectedDate(d.date)}
-                            className={`relative py-3 sm:py-4 rounded-xl border-2 text-center transition-all duration-200 ${
-                                selectedDate === d.date 
-                                    ? 'border-[#10221C] bg-[#10221C] text-white shadow-lg shadow-[#10221C]/15' 
-                                    : 'border-gray-100 bg-white text-gray-500 hover:border-gray-300 hover:shadow-md hover:bg-gray-50'
-                            }`}
-                        >
-                            <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${selectedDate === d.date ? 'text-gray-400' : 'text-gray-400'}`}>{d.dayName}</div>
-                            <div className="text-xl sm:text-2xl font-black leading-tight my-1">{d.dayNumber}</div>
-                            <div className={`text-[10px] sm:text-xs font-semibold ${selectedDate === d.date ? 'text-gray-300' : 'text-gray-400'}`}>{d.monthName}</div>
-                        </button>
-                    ))}
+                    {dates.map((d, i) => {
+                        const isClosed = Boolean(d.isClosed);
+                        const isSelected = selectedDate === d.date;
+
+                        return (
+                            <button 
+                                key={i}
+                                type="button"
+                                disabled={isClosed}
+                                title={isClosed ? (d.closedReason || 'Facility closed this day') : undefined}
+                                onClick={() => {
+                                    if (!isClosed) {
+                                        setSelectedDate(d.date);
+                                    }
+                                }}
+                                className={`relative py-3 sm:py-4 rounded-xl border-2 text-center transition-all duration-200 ${
+                                    isClosed
+                                        ? 'border-rose-100 bg-rose-50/70 text-rose-300 cursor-not-allowed opacity-80'
+                                        : isSelected 
+                                        ? 'border-[#10221C] bg-[#10221C] text-white shadow-lg shadow-[#10221C]/15' 
+                                        : 'border-gray-100 bg-white text-gray-500 hover:border-gray-300 hover:shadow-md hover:bg-gray-50'
+                                }`}
+                            >
+                                <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${isSelected && !isClosed ? 'text-gray-400' : isClosed ? 'text-rose-300' : 'text-gray-400'}`}>{d.dayName}</div>
+                                <div className="text-xl sm:text-2xl font-black leading-tight my-1">{d.dayNumber}</div>
+                                <div className={`text-[10px] sm:text-xs font-semibold ${isSelected && !isClosed ? 'text-gray-300' : isClosed ? 'text-rose-300' : 'text-gray-400'}`}>
+                                    {isClosed ? 'Closed' : d.monthName}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Selected Date Preview */}

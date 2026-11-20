@@ -135,12 +135,18 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/facility/bookings', [BookingController::class, 'index'])->name('facility.bookings');
     Route::patch('/bookings/{booking}', [BookingController::class, 'update'])->name('bookings.update');
     Route::get('/facility/payments', [PaymentController::class, 'index'])->name('facility.payments');
-    Route::post('/bookings', [BookingController::class, 'store'])->middleware(EnsureIdempotency::class)->name('bookings.store');
+    Route::post('/bookings', [BookingController::class, 'store'])
+        ->middleware(['verified', EnsureIdempotency::class])
+        ->name('bookings.store');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/verify', [BookingController::class, 'verifyPayment'])->name('bookings.verify');
     Route::post('/bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
-    Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])->name('bookings.lock');
-    Route::post('/bookings/unlock', [BookingController::class, 'unlockSlot'])->name('bookings.unlock');
+    Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])
+        ->middleware('verified')
+        ->name('bookings.lock');
+    Route::post('/bookings/unlock', [BookingController::class, 'unlockSlot'])
+        ->middleware('verified')
+        ->name('bookings.unlock');
 
 });
 
@@ -179,8 +185,8 @@ Route::middleware('guest')->group(function () use ($facilitySlugPattern) {
     Route::post('/{facility:slug}/register', [PlayerRegisteredUserController::class, 'store'])->where('facility', $facilitySlugPattern);
 });
 
-// Book Route (Requires Authentication)
-Route::middleware(['auth'])->group(function () {
+// Book Route (Requires Authentication + verified email)
+Route::middleware(['auth', CheckBanned::class, 'verified'])->group(function () {
     Route::get('/api/courts/{court}/locked-slots', [BookingController::class, 'getLockedSlots']);
     Route::get('/{facility:slug}/book', [RootFacilityController::class, 'book'])->name('facility.book');
 });

@@ -25,6 +25,18 @@ class FacilityOwnerCourtControllerTest extends TestCase
         return Facility::factory()->create(['user_id' => $owner->id]);
     }
 
+    /**
+     * @return array<int, array{days: array<int, int>, start: string, end: string}>
+     */
+    private function schedule(string $start = '06:00', string $end = '22:00'): array
+    {
+        return [[
+            'days' => [1, 2, 3, 4, 5, 6, 7],
+            'start' => $start,
+            'end' => $end,
+        ]];
+    }
+
     public function test_owner_creates_a_split_priced_court_with_its_operating_schedule(): void
     {
         $owner = User::factory()->facilityOwner()->create();
@@ -34,7 +46,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
             'facility_id' => $facility->id,
             'name' => 'Court 1',
             'type' => 'Badminton',
-            'time_range' => '7:00 AM - 11:00 PM',
+            'operating_schedules' => $this->schedule('07:00', '23:00'),
             'pricing_mode' => 'SPLIT',
             'day_rate' => 250,
             'night_rate' => 400,
@@ -46,7 +58,8 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $court = Court::where('name', 'Court 1')->firstOrFail();
 
         $this->assertSame($facility->id, $court->facility_id);
-        $this->assertSame('7:00 AM - 11:00 PM', $court->time_range);
+        $this->assertSame('07:00', $court->normalizedOperatingSchedules()[0]['start']);
+        $this->assertSame('23:00', $court->normalizedOperatingSchedules()[0]['end']);
         $this->assertSame('SPLIT', $court->pricing_mode);
         $this->assertEquals(250.0, (float) $court->day_rate);
         $this->assertEquals(400.0, (float) $court->night_rate);
@@ -60,7 +73,8 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $facility = $this->facilityFor($owner);
         $court = Court::factory()->flatPricing(350)->create([
             'facility_id' => $facility->id,
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
+            'time_range' => Court::summarizeOperatingSchedules($this->schedule()),
         ]);
 
         $this->actingAs($owner)->post(route('facility.courts.store'), [
@@ -69,7 +83,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
             'type' => 'Tennis',
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 300,
-        ])->assertSessionHasErrors('time_range');
+        ])->assertSessionHasErrors('operating_schedules');
 
         $this->assertDatabaseMissing('courts', ['name' => 'Court Without Hours']);
 
@@ -78,9 +92,8 @@ class FacilityOwnerCourtControllerTest extends TestCase
             'type' => 'Tennis',
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 350,
-        ])->assertSessionHasErrors('time_range');
+        ])->assertSessionHasErrors('operating_schedules');
 
-        $this->assertSame('6:00 AM - 10:00 PM', $court->fresh()->time_range);
         $this->assertSame($court->name, $court->fresh()->name);
     }
 
@@ -90,13 +103,14 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $facility = $this->facilityFor($owner);
         $court = Court::factory()->splitPricing(300, 450, '19:00:00')->create([
             'facility_id' => $facility->id,
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
+            'time_range' => Court::summarizeOperatingSchedules($this->schedule()),
         ]);
 
         $this->actingAs($owner)->put(route('facility.courts.update', $court), [
             'name' => 'Court A',
             'type' => 'Badminton',
-            'time_range' => '7:00 AM - 11:00 PM',
+            'operating_schedules' => $this->schedule('07:00', '23:00'),
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 350,
             'status' => 'AVAILABLE',
@@ -105,7 +119,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $court->refresh();
 
         $this->assertSame('FLAT', $court->pricing_mode);
-        $this->assertSame('7:00 AM - 11:00 PM', $court->time_range);
+        $this->assertSame('07:00', $court->normalizedOperatingSchedules()[0]['start']);
         $this->assertEquals(350.0, (float) $court->hourly_rate);
         $this->assertEquals(300.0, (float) $court->day_rate);
         $this->assertEquals(450.0, (float) $court->night_rate);
@@ -114,7 +128,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $this->actingAs($owner)->put(route('facility.courts.update', $court), [
             'name' => 'Court A',
             'type' => 'Badminton',
-            'time_range' => '7:00 AM - 11:00 PM',
+            'operating_schedules' => $this->schedule('07:00', '23:00'),
             'pricing_mode' => 'SPLIT',
             'day_rate' => 300,
             'night_rate' => 450,
@@ -136,13 +150,14 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $facility = $this->facilityFor($owner);
         Court::factory()->splitPricing(300, 450)->create([
             'facility_id' => $facility->id,
-            'time_range' => '8:00 AM - 9:00 PM',
+            'operating_schedules' => $this->schedule('08:00', '21:00'),
+            'time_range' => Court::summarizeOperatingSchedules($this->schedule('08:00', '21:00')),
         ]);
 
         $this->actingAs($owner)->get(route('facility.courts'))->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('FacilityOwner/Courts')
-                ->where('facilities.0.courts.0.time_range', '8:00 AM - 9:00 PM')
+                ->where('facilities.0.courts.0.operating_schedules.0.start', '08:00')
                 ->where('facilities.0.courts.0.pricing_mode', 'SPLIT')
                 ->where('facilities.0.courts.0.day_rate', fn ($rate) => (float) $rate === 300.0));
     }
@@ -153,7 +168,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $facility = $this->facilityFor($owner);
         $court = Court::factory()->flatPricing(300)->create([
             'facility_id' => $facility->id,
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
         ]);
 
         $rental = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
@@ -163,7 +178,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $this->actingAs($owner)->put(route('facility.courts.update', $court), [
             'name' => $court->name,
             'type' => $court->type,
-            'time_range' => $court->time_range,
+            'operating_schedules' => $this->schedule(),
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 300,
             'status' => 'AVAILABLE',
@@ -195,7 +210,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
             'facility_id' => $facility->id,
             'name' => 'Court With Card',
             'type' => 'Pickleball',
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 300,
             'status' => 'AVAILABLE',
@@ -248,14 +263,14 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $plan = RatePlan::factory()->courtRental()->create(['facility_id' => $facility->id]);
         $court = Court::factory()->flatPricing(300)->create([
             'facility_id' => $facility->id,
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
         ]);
         $court->ratePlans()->attach($plan->id);
 
         $this->actingAs($owner)->put(route('facility.courts.update', $court), [
             'name' => $court->name,
             'type' => $court->type,
-            'time_range' => $court->time_range,
+            'operating_schedules' => $this->schedule(),
             'pricing_mode' => 'SPLIT',
             'day_rate' => 300,
             'night_rate' => 450,
@@ -285,7 +300,7 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $this->actingAs($owner)->put(route('facility.courts.update', $foreignCourt), [
             'name' => 'Hijacked Court',
             'type' => 'Tennis',
-            'time_range' => '6:00 AM - 10:00 PM',
+            'operating_schedules' => $this->schedule(),
             'pricing_mode' => 'FLAT',
             'hourly_rate' => 300,
         ])->assertForbidden();

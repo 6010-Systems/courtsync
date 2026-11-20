@@ -3,8 +3,8 @@ export const COURT_STATUSES = ['AVAILABLE', 'OPEN_PLAY', 'BLOCKED', 'NOT_AVAILAB
 export const COURT_STATUS_LABELS = {
     AVAILABLE: 'Available',
     OPEN_PLAY: 'Open Play',
-    BLOCKED: 'Blocked',
-    NOT_AVAILABLE: 'Not Available',
+    BLOCKED: 'Maintenance',
+    NOT_AVAILABLE: 'Unserviceable',
 };
 
 // Badge classes (high contrast — clearly visible on both light and photo backgrounds)

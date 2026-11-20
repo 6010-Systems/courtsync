@@ -439,7 +439,7 @@ export default function Courts({ facilities = [] }) {
                                                             <td className="px-4 py-2.5 text-[#101F1A]/60 font-medium">
                                                                 <div className="flex items-center gap-1">
                                                                     <Clock size={11} className="text-[#101F1A]/40" />
-                                                                    <span>{court.time_range || 'Venue standard'}</span>
+                                                                    <span>{court.operating_schedules_label || court.time_range || 'Venue standard'}</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-2.5 font-bold text-[#101F1A]">

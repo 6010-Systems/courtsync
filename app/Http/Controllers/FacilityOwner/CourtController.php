@@ -19,27 +19,14 @@ class CourtController extends Controller
      */
     private function allowedFacilityIds(Request $request): Collection
     {
-        $user = $request->user();
-
-        if ($user->role === 'FACILITY_OWNER') {
-            return $user->facilities()->pluck('id');
-        }
-
-        if ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
-            return collect([$user->facility_id]);
-        }
-
-        return collect();
+        return $request->user()->managedFacilityIds();
     }
 
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Court::class);
+
         $user = $request->user();
-
-        if (! $user->hasPermission('view_courts')) {
-            abort(403, 'You do not have permission to view courts.');
-        }
-
         $facilityIds = $this->allowedFacilityIds($request);
 
         $facilities = $facilityIds->isEmpty()
@@ -78,15 +65,18 @@ class CourtController extends Controller
 
     public function store(Request $request)
     {
-        if (! $request->user()->hasPermission('create_courts')) {
-            abort(403, 'You do not have permission to create courts.');
-        }
+        $this->authorize('create', Court::class);
 
         $request->validate([
             'facility_id' => 'required|exists:facilities,id',
             'name' => 'required|string|max:255',
             'type' => 'nullable|string|max:255',
-            'time_range' => 'required|string|max:100',
+            'time_range' => 'nullable|string|max:255',
+            'operating_schedules' => 'required|array|min:1',
+            'operating_schedules.*.days' => 'required|array|min:1',
+            'operating_schedules.*.days.*' => 'integer|between:1,7',
+            'operating_schedules.*.start' => ['required', 'string', 'regex:/^([01]\d|2[0-3]):([0-5]\d)$/'],
+            'operating_schedules.*.end' => ['required', 'string', 'regex:/^(([01]\d|2[0-3]):([0-5]\d)|24:00)$/'],
             'description' => 'nullable|string',
             'pricing_mode' => 'nullable|string|in:FLAT,SPLIT',
             'hourly_rate' => 'nullable|numeric|min:0',
@@ -99,9 +89,9 @@ class CourtController extends Controller
             ...$this->ratePlanRules(),
         ]);
 
-        if (! $this->allowedFacilityIds($request)->contains((int) $request->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $facility = Facility::query()->findOrFail($request->facility_id);
+        $this->authorize('create', [Court::class, $facility]);
+        $schedules = $this->validatedOperatingSchedules($request->input('operating_schedules'), $facility);
 
         $pricingMode = $request->pricing_mode === 'SPLIT' ? 'SPLIT' : 'FLAT';
         $hourlyRate = $pricingMode === 'SPLIT' ? ($request->day_rate ?? $request->hourly_rate) : $request->hourly_rate;
@@ -111,7 +101,8 @@ class CourtController extends Controller
             'name' => $request->name,
             'type' => $request->type,
             'image_url' => $request->image_url,
-            'time_range' => $request->time_range,
+            'operating_schedules' => $schedules,
+            'time_range' => Court::summarizeOperatingSchedules($schedules),
             'description' => $request->description,
             'pricing_mode' => $pricingMode,
             'hourly_rate' => $hourlyRate,
@@ -129,18 +120,17 @@ class CourtController extends Controller
 
     public function update(Request $request, Court $court)
     {
-        if (! $request->user()->hasPermission('edit_courts')) {
-            abort(403, 'You do not have permission to edit courts.');
-        }
-
-        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('update', $court);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'nullable|string|max:255',
-            'time_range' => 'required|string|max:100',
+            'time_range' => 'nullable|string|max:255',
+            'operating_schedules' => 'required|array|min:1',
+            'operating_schedules.*.days' => 'required|array|min:1',
+            'operating_schedules.*.days.*' => 'integer|between:1,7',
+            'operating_schedules.*.start' => ['required', 'string', 'regex:/^([01]\d|2[0-3]):([0-5]\d)$/'],
+            'operating_schedules.*.end' => ['required', 'string', 'regex:/^(([01]\d|2[0-3]):([0-5]\d)|24:00)$/'],
             'description' => 'nullable|string',
             'pricing_mode' => 'nullable|string|in:FLAT,SPLIT',
             'hourly_rate' => 'nullable|numeric|min:0',
@@ -153,6 +143,9 @@ class CourtController extends Controller
             ...$this->ratePlanRules(),
         ]);
 
+        $facility = $court->facility()->firstOrFail();
+        $schedules = $this->validatedOperatingSchedules($request->input('operating_schedules'), $facility);
+
         $pricingMode = $request->pricing_mode === 'SPLIT' ? 'SPLIT' : 'FLAT';
         $hourlyRate = $pricingMode === 'SPLIT' ? ($request->day_rate ?? $request->hourly_rate) : $request->hourly_rate;
 
@@ -162,7 +155,8 @@ class CourtController extends Controller
             'name' => $request->name,
             'type' => $request->type,
             'image_url' => $request->has('image_url') ? $request->image_url : $court->image_url,
-            'time_range' => $request->time_range,
+            'operating_schedules' => $schedules,
+            'time_range' => Court::summarizeOperatingSchedules($schedules),
             'description' => $request->description,
             'pricing_mode' => $pricingMode,
             'hourly_rate' => $hourlyRate,
@@ -184,17 +178,39 @@ class CourtController extends Controller
 
     public function destroy(Request $request, Court $court)
     {
-        if (! $request->user()->hasPermission('delete_courts')) {
-            abort(403, 'You do not have permission to delete courts.');
-        }
-
-        if (! $this->allowedFacilityIds($request)->contains($court->facility_id)) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('delete', $court);
 
         $court->delete();
 
         return redirect()->back()->with('success', 'Court removed successfully.');
+    }
+
+    /**
+     * Normalize schedule groups, constrain them to facility open days, and reject overlaps.
+     *
+     * @param  array<int, mixed>  $raw
+     * @return array<int, array{days: array<int, int>, start: string, end: string}>
+     */
+    private function validatedOperatingSchedules(array $raw, Facility $facility): array
+    {
+        $schedules = Court::constrainSchedulesToFacilityDays(
+            $raw,
+            $facility->normalizedOperatingDays(),
+        );
+
+        if ($schedules === []) {
+            throw ValidationException::withMessages([
+                'operating_schedules' => 'Add at least one hour group using the facility\'s open days.',
+            ]);
+        }
+
+        if (! Court::schedulesHaveUniqueDays($schedules)) {
+            throw ValidationException::withMessages([
+                'operating_schedules' => 'Each open day can only belong to one hour group.',
+            ]);
+        }
+
+        return $schedules;
     }
 
     /**

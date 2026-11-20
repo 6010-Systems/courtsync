@@ -86,8 +86,40 @@ class FacilityFactory extends Factory
             'country' => 'Philippines',
             'contact_number' => fake()->numerify('09#########'),
             'description' => fake()->paragraph(),
+            'operating_days' => Facility::ALL_OPERATING_DAYS,
+            'operational_status' => Facility::OPERATIONAL_OPEN,
             'verification_status' => 'APPROVED',
         ];
+    }
+
+    /**
+     * Facility only opens Monday–Friday.
+     */
+    public function weekdaysOnly(): static
+    {
+        return $this->state(fn () => [
+            'operating_days' => [1, 2, 3, 4, 5],
+        ]);
+    }
+
+    /**
+     * Facility is temporarily under maintenance.
+     */
+    public function underMaintenance(): static
+    {
+        return $this->state(fn () => [
+            'operational_status' => Facility::OPERATIONAL_MAINTENANCE,
+        ]);
+    }
+
+    /**
+     * Facility cannot accept bookings.
+     */
+    public function unserviceable(): static
+    {
+        return $this->state(fn () => [
+            'operational_status' => Facility::OPERATIONAL_UNSERVICEABLE,
+        ]);
     }
 
     /**

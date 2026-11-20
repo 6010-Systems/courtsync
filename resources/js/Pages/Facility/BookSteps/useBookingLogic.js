@@ -1,12 +1,26 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
+import {
+    courtIsOpenOnDate,
+    hoursForDate,
+} from '@/Utils/courtOperatingSchedule';
+import {
+    facilityAvailabilityBanner,
+    facilityIsAcceptingBookings,
+    facilityIsOpenOnDate,
+    formatOperatingDaysLabel,
+} from '@/Utils/facilityAvailability';
 import { offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
 
 export function useBookingLogic(facility, preselectedCourtId = null) {
     const courts = facility.courts || [];
-    const bookableCourts = courts.filter((c) => courtIsBookable(c.status));
-    const selectableCourts = bookableCourts.length > 0 ? bookableCourts : courts;
+    const facilityAcceptingBookings = facilityIsAcceptingBookings(facility);
+    const availabilityBanner = facilityAvailabilityBanner(facility);
+    const bookableCourts = facilityAcceptingBookings
+        ? courts.filter((c) => courtIsBookable(c.status))
+        : [];
+    const selectableCourts = bookableCourts;
 
     // "Book court" on a venue court card deep-links here with ?court={id}.
     // When that court belongs to this facility, start with it already chosen.
@@ -234,27 +248,17 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         
     }, [selectedCourtId, selectedDate, idempotencyKey]);
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = [], currentLockedSlots = []) => {
+    const generateTimeOptions = (court, selectedDate, courtId, allBookings = [], currentLockedSlots = []) => {
+        const hours = hoursForDate(court, selectedDate);
         let startHour = 6;
         let endHour = 22;
 
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
+        if (hours) {
+            startHour = parseInt(String(hours.start).split(':')[0], 10);
+            const endMinutes = String(hours.end) === '24:00'
+                ? 24 * 60
+                : (parseInt(String(hours.end).split(':')[0], 10) * 60);
+            endHour = Math.floor(endMinutes / 60);
         }
 
         const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
@@ -273,13 +277,16 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         });
 
         const options = [];
+        // Include the closing hour as an end-time option (e.g. midnight 24:00).
         for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
+            const timeValue = i === 24 ? '24:00' : `${i.toString().padStart(2, '0')}:00`;
             const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            date.setHours(i === 24 ? 0 : i, 0);
+            const formatted = i === 24
+                ? '12:00 AM'
+                : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
             
-            const isUnavailable = bookedHours.has(i) || lockedHours.has(i);
+            const isUnavailable = i < endHour && (bookedHours.has(i) || lockedHours.has(i));
             const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
 
             let rateTag = '';
@@ -313,7 +320,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     
     const timeOptions = useMemo(() => {
         if (!selectedCourt || !selectedDate) return [];
-        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || [], lockedSlots);
+        if (!courtIsOpenOnDate(selectedCourt, selectedDate)) return [];
+        return generateTimeOptions(selectedCourt, selectedDate, selectedCourt?.id, facility.bookings || [], lockedSlots);
     }, [selectedCourt, selectedDate, facility.bookings, lockedSlots, selectedRatePlan]);
 
     // Generate next 14 days
@@ -323,15 +331,39 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             const d = new Date();
             d.setDate(d.getDate() + i);
             const localDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            const facilityClosed = !facilityIsOpenOnDate(facility, localDate);
+            const courtClosed = selectedCourt
+                ? !courtIsOpenOnDate(selectedCourt, localDate)
+                : false;
+            const isClosed = facilityClosed || courtClosed;
             generatedDates.push({
                 date: localDate,
                 dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
                 dayNumber: d.getDate(),
                 monthName: d.toLocaleDateString('en-US', { month: 'short' }),
+                isClosed,
+                closedReason: facilityClosed
+                    ? 'Facility closed this day'
+                    : (courtClosed ? 'This court is closed on this day' : null),
             });
         }
         return generatedDates;
-    }, []);
+    }, [facility, selectedCourt]);
+
+    useEffect(() => {
+        if (!selectedDate) {
+            return;
+        }
+
+        const facilityClosed = !facilityIsOpenOnDate(facility, selectedDate);
+        const courtClosed = selectedCourt ? !courtIsOpenOnDate(selectedCourt, selectedDate) : false;
+
+        if (facilityClosed || courtClosed) {
+            setSelectedDate(null);
+            setStartTime('');
+            setEndTime('');
+        }
+    }, [facility, selectedCourt, selectedDate]);
 
     // Auto-save to browser memory whenever these variables change
     useEffect(() => {
@@ -556,7 +588,14 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             },
             onError: (errors) => {
                 console.error(errors);
-                const errorMsg = errors.idempotency || errors.conflict || errors.rate_plan_id || 'Failed to process booking. Please try again.';
+                const errorMsg = errors.idempotency
+                    || errors.conflict
+                    || errors.facility_id
+                    || errors.court_id
+                    || errors.date
+                    || errors.start_time
+                    || errors.rate_plan_id
+                    || 'Failed to process booking. Please try again.';
                 showModal('error', errorMsg);
                 setIdempotencyKey(crypto.randomUUID());
             }
@@ -589,6 +628,9 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
 
     return {
         selectableCourts,
+        facilityAcceptingBookings,
+        availabilityBanner,
+        operatingDaysLabel: facility.operating_days_label || formatOperatingDaysLabel(facility.operating_days),
         selectedCourtId, setSelectedCourtId: handleCourtChange,
         selectedDate, setSelectedDate,
         startTime, setStartTime,

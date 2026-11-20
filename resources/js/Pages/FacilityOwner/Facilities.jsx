@@ -31,6 +31,15 @@ import {
     XCircle,
     HelpCircle
 } from 'lucide-react';
+import {
+    ALL_OPERATING_DAYS,
+    OPERATIONAL_STATUS_LABELS,
+    OPERATIONAL_STATUS_STYLES,
+    OPERATIONAL_STATUSES,
+    WEEKDAY_OPTIONS,
+    formatOperatingDaysLabel,
+    normalizedOperatingDays,
+} from '@/Utils/facilityAvailability';
 
 const STATUS_BADGES = {
     APPROVED: {
@@ -141,7 +150,18 @@ export default function Facilities({ auth, facilities = [] }) {
         country: '',
         contact_number: '',
         description: '',
+        operating_days: ALL_OPERATING_DAYS,
+        operational_status: 'OPEN',
     });
+
+    const toggleOperatingDay = (day) => {
+        const current = normalizedOperatingDays(facilityData.operating_days);
+        const next = current.includes(day)
+            ? current.filter((value) => value !== day)
+            : [...current, day].sort((a, b) => a - b);
+
+        setFacilityData('operating_days', next.length > 0 ? next : [day]);
+    };
 
     const [isEditing, setIsEditing] = useState(false);
     const [editingFacilityId, setEditingFacilityId] = useState(null);
@@ -188,6 +208,8 @@ export default function Facilities({ auth, facilities = [] }) {
             country: facility.country,
             contact_number: facility.contact_number,
             description: facility.description || '',
+            operating_days: normalizedOperatingDays(facility.operating_days),
+            operational_status: facility.operational_status || 'OPEN',
         });
 
         if (facility.verification) {
@@ -456,6 +478,66 @@ export default function Facilities({ auth, facilities = [] }) {
                                         placeholder="Briefly describe available amenities, parking, operating guidelines, or special equipment."
                                     />
                                     <InputError message={facilityErrors.description} className="mt-1" />
+                                </div>
+
+                                <div>
+                                    <InputLabel value="Open Days *" />
+                                    <p className="mt-1 text-[11px] text-[#101F1A]/50">
+                                        Players can only book on these days of the week.
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {WEEKDAY_OPTIONS.map((day) => {
+                                            const selected = normalizedOperatingDays(facilityData.operating_days).includes(day.value);
+
+                                            return (
+                                                <button
+                                                    key={day.value}
+                                                    type="button"
+                                                    onClick={() => toggleOperatingDay(day.value)}
+                                                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                                                        selected
+                                                            ? 'border-[#101F1A] bg-[#101F1A] text-[#D6FF3F]'
+                                                            : 'border-[#101F1A]/15 bg-white text-[#101F1A]/60 hover:border-[#101F1A]/40'
+                                                    }`}
+                                                >
+                                                    {day.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <InputError message={facilityErrors.operating_days} className="mt-1" />
+                                </div>
+
+                                <div>
+                                    <InputLabel value="Facility Status *" />
+                                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        {OPERATIONAL_STATUSES.map((status) => {
+                                            const selected = facilityData.operational_status === status;
+
+                                            return (
+                                                <button
+                                                    key={status}
+                                                    type="button"
+                                                    onClick={() => setFacilityData('operational_status', status)}
+                                                    className={`rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                                                        selected
+                                                            ? 'border-[#101F1A] bg-[#101F1A] text-white shadow-sm'
+                                                            : 'border-[#101F1A]/10 bg-[#F5F2EA]/60 text-[#101F1A] hover:border-[#101F1A]/25'
+                                                    }`}
+                                                >
+                                                    <span className={`text-xs font-black ${selected ? 'text-[#D6FF3F]' : 'text-[#101F1A]'}`}>
+                                                        {OPERATIONAL_STATUS_LABELS[status]}
+                                                    </span>
+                                                    <p className={`mt-0.5 text-[10px] leading-snug ${selected ? 'text-white/70' : 'text-[#101F1A]/50'}`}>
+                                                        {status === 'OPEN' && 'Accepting new bookings'}
+                                                        {status === 'MAINTENANCE' && 'Pause new bookings'}
+                                                        {status === 'UNSERVICEABLE' && 'Venue cannot take bookings'}
+                                                    </p>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <InputError message={facilityErrors.operational_status} className="mt-1" />
                                 </div>
                                 
                                 <div className="mt-6 pt-4 border-t border-[#101F1A]/10 flex justify-between items-center">
@@ -1022,6 +1104,13 @@ export default function Facilities({ auth, facilities = [] }) {
                                                 <span className="inline-flex items-center gap-1.5 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
                                                     <Layers size={11} className="text-[#101F1A]/60" />
                                                     <span>{courtsCount} {courtsCount === 1 ? 'Court' : 'Courts'}</span>
+                                                </span>
+                                                <span className="inline-flex items-center gap-1.5 rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A] border border-[#101F1A]/5">
+                                                    <Clock size={11} className="text-[#101F1A]/60" />
+                                                    <span>{facility.operating_days_label || formatOperatingDaysLabel(facility.operating_days)}</span>
+                                                </span>
+                                                <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${OPERATIONAL_STATUS_STYLES[facility.operational_status] || OPERATIONAL_STATUS_STYLES.OPEN}`}>
+                                                    {OPERATIONAL_STATUS_LABELS[facility.operational_status] || 'Open'}
                                                 </span>
                                                 {facility.slug && (
                                                     <span className="font-mono text-[10px] bg-[#10221C]/5 px-1.5 py-0.5 rounded text-[#10221C]/60 truncate max-w-[120px]">
