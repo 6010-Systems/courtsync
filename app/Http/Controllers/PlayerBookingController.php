@@ -67,7 +67,7 @@ class PlayerBookingController extends Controller
         return $user->bookings()->getQuery()
             ->select(['id', 'facility_id', 'court_id', 'date', 'start_time', 'end_time', 'rate_plan_name', 'addons_total', 'subtotal', 'booking_fee', 'total_price', 'status', 'price_breakdown'])
             ->with([
-                'facility:id,name,slug,city,province,phone_number,address',
+                'facility:id,name,slug,city,province,contact_number,address',
                 'court:id,name,type',
                 'payment:id,booking_id,status,payment_method,amount',
             ]);

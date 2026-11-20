@@ -239,8 +239,8 @@ export default function PlayerBookingCard({ booking }) {
                         <div className="text-xs text-gray-500 p-3 rounded-xl bg-gray-50 space-y-1">
                             <p className="font-bold text-[#10221C]">{booking.facility.name}</p>
                             <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0" /> {[booking.facility.address, booking.facility.city, booking.facility.province].filter(Boolean).join(', ')}</p>
-                            {booking.facility.phone_number && (
-                                <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> {booking.facility.phone_number}</p>
+                            {(booking.facility.contact_number || booking.facility.phone_number) && (
+                                <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> {booking.facility.contact_number || booking.facility.phone_number}</p>
                             )}
                         </div>
                     )}
