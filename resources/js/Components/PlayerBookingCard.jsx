@@ -310,7 +310,7 @@ export default function PlayerBookingCard({ booking }) {
                         left: 50% !important;
                         top: 50% !important;
                         transform: translate(-50%, -50%) !important;
-                        width: 380px !important;
+                        width: 340px !important;
                         box-shadow: none !important;
                         border: 1px solid #e5e7eb !important;
                         margin: 0 !important;
@@ -325,24 +325,24 @@ export default function PlayerBookingCard({ booking }) {
                 closeOnClickOutside={true}
                 header={null}
                 footer={null}
-                size="md"
-                className="!bg-transparent !border-0 !shadow-none !p-0 max-w-sm sm:max-w-md"
+                size="sm"
+                className="!bg-transparent !border-0 !shadow-none !p-0 !max-w-[340px] sm:!max-w-[350px] mx-auto"
                 contentClassName="!bg-transparent !p-0"
             >
                 {/* Pure Physical Ticket Card */}
                 <div 
                     id="booking-ticket-card"
-                    className="relative w-full bg-white rounded-[32px] overflow-hidden shadow-2xl text-[#10221C] select-none"
+                    className="relative w-full bg-white rounded-3xl overflow-hidden shadow-2xl text-[#10221C] select-none border border-gray-100"
                 >
                     {/* Upper Ticket Section */}
-                    <div className="p-6 sm:p-8 pb-5">
+                    <div className="p-5 sm:p-6 pb-4 sm:pb-5">
                         {/* Passenger / Player Row */}
-                        <div className="flex items-start justify-between gap-3 mb-6">
+                        <div className="flex items-start justify-between gap-3 mb-5">
                             <div>
-                                <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                     Player
                                 </span>
-                                <h3 className="text-2xl sm:text-[26px] font-black text-[#10221C] tracking-tight leading-tight mt-0.5">
+                                <h3 className="text-xl sm:text-2xl font-black text-[#10221C] tracking-tight leading-tight mt-0.5">
                                     {playerName}
                                 </h3>
                             </div>
@@ -354,16 +354,16 @@ export default function PlayerBookingCard({ booking }) {
                         </div>
 
                         {/* Times & Route Timeline Graphic */}
-                        <div className="mb-6">
+                        <div className="mb-5">
                             {/* Time row with duration in center */}
                             <div className="flex items-baseline justify-between mb-1.5">
-                                <span className="text-sm font-bold text-[#10221C]">
+                                <span className="text-xs sm:text-sm font-bold text-[#10221C]">
                                     {timeFormatted(booking.start_time)}
                                 </span>
-                                <span className="text-xs font-black text-[#10221C] tracking-tight">
+                                <span className="text-[11px] font-black text-[#10221C] tracking-tight">
                                     {durationText}
                                 </span>
-                                <span className="text-sm font-bold text-[#10221C]">
+                                <span className="text-xs sm:text-sm font-bold text-[#10221C]">
                                     {timeFormatted(booking.end_time)}
                                 </span>
                             </div>
@@ -371,36 +371,36 @@ export default function PlayerBookingCard({ booking }) {
                             {/* Timeline Line with Moving Sport Icon */}
                             <div className="flex items-center gap-1 my-1.5">
                                 {/* Left Filled Start Dot */}
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#10221C] shrink-0" />
+                                <div className="w-2 h-2 rounded-full bg-[#10221C] shrink-0" />
                                 {/* Solid Progress Line */}
                                 <div className="flex-1 h-[2px] bg-[#10221C]" />
                                 {/* Moving Icon Marker */}
-                                <div className="px-2 py-0.5 rounded-full bg-[#10221C] text-[#D6FF3F] shrink-0 flex items-center justify-center shadow-xs">
-                                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <div className="px-1.5 py-0.5 rounded-full bg-[#10221C] text-[#D6FF3F] shrink-0 flex items-center justify-center shadow-xs">
+                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
                                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
                                     </svg>
                                 </div>
                                 {/* Dashed Incomplete Line */}
                                 <div className="flex-1 border-t-2 border-dashed border-[#10221C]/60" />
                                 {/* Right Stroked End Dot */}
-                                <div className="w-2.5 h-2.5 rounded-full border-2 border-[#10221C] bg-white shrink-0" />
+                                <div className="w-2 h-2 rounded-full border-2 border-[#10221C] bg-white shrink-0" />
                             </div>
 
                             {/* Origin & Destination Station Details */}
-                            <div className="flex items-start justify-between gap-3 mt-2">
+                            <div className="flex items-start justify-between gap-2 mt-2">
                                 <div className="max-w-[55%]">
-                                    <h4 className="text-base sm:text-lg font-black text-[#10221C] tracking-tight leading-snug line-clamp-1" title={booking.facility?.name}>
+                                    <h4 className="text-sm sm:text-base font-black text-[#10221C] tracking-tight leading-snug truncate" title={booking.facility?.name}>
                                         {booking.facility?.name ?? 'Venue'}
                                     </h4>
-                                    <p className="text-xs text-gray-400 font-medium truncate mt-0.5">
+                                    <p className="text-[11px] text-gray-400 font-medium truncate mt-0.5">
                                         {[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Venue Address'}
                                     </p>
                                 </div>
                                 <div className="text-right max-w-[45%]">
-                                    <h4 className="text-base sm:text-lg font-black text-[#10221C] tracking-tight leading-snug line-clamp-1" title={booking.court?.name}>
+                                    <h4 className="text-sm sm:text-base font-black text-[#10221C] tracking-tight leading-snug truncate" title={booking.court?.name}>
                                         {booking.court?.name ?? 'Court'}
                                     </h4>
-                                    <p className="text-xs text-gray-400 font-medium truncate mt-0.5">
+                                    <p className="text-[11px] text-gray-400 font-medium truncate mt-0.5">
                                         {booking.court?.type || 'Sports Court'}
                                     </p>
                                 </div>
@@ -408,22 +408,22 @@ export default function PlayerBookingCard({ booking }) {
                         </div>
 
                         {/* Booking Reference Code */}
-                        <div className="mb-6">
-                            <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                        <div className="mb-5">
+                            <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                 Booking Reference
                             </span>
-                            <span className="block text-2xl sm:text-[28px] font-black text-[#10221C] tracking-wide font-mono mt-0.5">
+                            <span className="block text-xl sm:text-2xl font-black text-[#10221C] tracking-wide font-mono mt-0.5">
                                 {referenceCode}
                             </span>
                         </div>
 
                         {/* 3-Column Info Strip (Train Car | Train | Seat equivalent) */}
-                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100">
+                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
                             <div>
-                                <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                     Date
                                 </span>
-                                <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight">
+                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight">
                                     {dateShort}
                                 </span>
                                 <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
@@ -432,10 +432,10 @@ export default function PlayerBookingCard({ booking }) {
                             </div>
 
                             <div className="text-center">
-                                <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                     Rate Plan
                                 </span>
-                                <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight truncate">
+                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight truncate">
                                     {booking.rate_plan_name || (booking.court?.pricing_mode === 'SPLIT' ? 'Split' : 'Standard')}
                                 </span>
                                 <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
@@ -444,10 +444,10 @@ export default function PlayerBookingCard({ booking }) {
                             </div>
 
                             <div className="text-right">
-                                <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                     Total
                                 </span>
-                                <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight">
+                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight">
                                     {pesos(total)}
                                 </span>
                                 <span className="block text-[10px] font-bold text-emerald-600 mt-0.5 capitalize">
@@ -457,20 +457,13 @@ export default function PlayerBookingCard({ booking }) {
                         </div>
                     </div>
 
-                    {/* Perforated Tear Line with Left and Right Circular Punches */}
-                    <div className="relative flex items-center justify-between my-1">
-                        {/* Left Punch Notch */}
-                        <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#101F1A] shadow-inner" />
-                        
-                        {/* Dashed Horizontal Perforation */}
-                        <div className="w-full border-t-2 border-dashed border-gray-200 mx-5" />
-                        
-                        {/* Right Punch Notch */}
-                        <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#101F1A] shadow-inner" />
+                    {/* Perforated Tear Line */}
+                    <div className="relative flex items-center justify-center my-1 px-5">
+                        <div className="w-full border-t-2 border-dashed border-gray-200" />
                     </div>
 
                     {/* Lower Stub (Barcode & Entry Pass) */}
-                    <div className="p-6 sm:p-8 pt-4 pb-7 bg-white flex flex-col items-center">
+                    <div className="p-5 pt-3 pb-6 bg-white flex flex-col items-center">
                         <TicketBarcode reference={referenceCode} />
                         <p className="mt-2 text-[10px] text-gray-400 font-semibold text-center uppercase tracking-wider">
                             Show this digital pass at the venue entrance
