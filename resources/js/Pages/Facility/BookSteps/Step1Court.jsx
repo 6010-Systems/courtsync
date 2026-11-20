@@ -16,7 +16,7 @@ export default function Step1Court({ facilityName, facility = null, selectableCo
                 </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4.5 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {selectableCourts.map((court, courtIndex) => {
                     const isSelected = selectedCourtId == court.id;
 

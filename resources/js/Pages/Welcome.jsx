@@ -317,7 +317,7 @@ export default function Welcome({ auth, facilities = [] }) {
                                     </div>
 
                                     {/* Card Body */}
-                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
+                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-5 sm:pb-4 flex-1 flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center gap-2 h-6 sm:h-7">
                                                 {facility.logo_url && (

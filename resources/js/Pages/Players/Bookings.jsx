@@ -38,7 +38,7 @@ export default function Bookings({ bookings, filter, timezone }) {
         >
             <Head title="My Bookings" />
 
-            <div className="space-y-6 max-w-6xl mx-auto">
+            <div className="space-y-6 w-full">
                 {/* Filter Navigation Tabs */}
                 <nav aria-label="Booking filters" className="flex flex-wrap gap-2">
                     {filters.map((tab) => {
@@ -64,17 +64,19 @@ export default function Bookings({ bookings, filter, timezone }) {
                     Schedules use local timezone ({timezone}). Upcoming includes active games currently in progress.
                 </p>
 
-                {/* Booking Cards Grid */}
-                <div className="space-y-4">
+                {/* Booking Cards Grid — 3 or 4 cards per row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                     <AnimatePresence mode="popLayout">
                         {bookings.data.length ? (
                             bookings.data.map((booking) => (
                                 <PlayerBookingCard key={booking.id} booking={booking} />
                             ))
                         ) : (
-                            <EmptyPlayerBookings 
-                                message={`No ${filter === 'all' ? '' : `${filter} `}bookings found.`} 
-                            />
+                            <div className="col-span-full">
+                                <EmptyPlayerBookings 
+                                    message={`No ${filter === 'all' ? '' : `${filter} `}bookings found.`} 
+                                />
+                            </div>
                         )}
                     </AnimatePresence>
                 </div>

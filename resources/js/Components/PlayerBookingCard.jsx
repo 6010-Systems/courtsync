@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Dialog from '@/Components/Dialog';
+import { getCourtImage, DEFAULT_COURT_IMAGES } from '@/Utils/courtImages';
 
 const statusConfig = {
     pending: {
@@ -146,6 +147,7 @@ export default function PlayerBookingCard({ booking }) {
 
     const playerName = booking.user?.name || auth?.user?.name || 'Player';
     const referenceCode = booking.reference_number || `CS-${bookingDate.getFullYear()}-${String(booking.id).padStart(6, '0')}`;
+    const courtImage = getCourtImage(booking.court, booking.facility, booking.id);
 
     const handleConfirmCancel = () => {
         setIsCancelling(true);
@@ -164,81 +166,119 @@ export default function PlayerBookingCard({ booking }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                className="group relative rounded-2xl border border-[#101F1A]/10 bg-white p-5 shadow-card hover:shadow-lg transition-all duration-200 sm:p-6"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#101F1A]/10 bg-white shadow-card hover:shadow-xl hover:border-[#101F1A]/20 transition-all duration-300 h-full"
             >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex-1 min-w-[200px]">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black tracking-widest text-[#101F1A]/40 uppercase font-mono">
+                {/* Top Section with Court Image */}
+                <div>
+                    <div className="relative h-40 w-full overflow-hidden bg-[#101F1A]/5">
+                        <img
+                            src={courtImage}
+                            alt={booking.court?.name ?? 'Court'}
+                            loading="lazy"
+                            onError={(e) => {
+                                const fallback = DEFAULT_COURT_IMAGES[booking.id % DEFAULT_COURT_IMAGES.length];
+                                if (e.currentTarget.src !== fallback) {
+                                    e.currentTarget.src = fallback;
+                                }
+                            }}
+                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        />
+
+                        {/* Top Gradient Overlay */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none"
+                            style={{
+                                background: 'linear-gradient(to bottom, rgba(16,31,26,0.35) 0%, rgba(16,31,26,0) 40%, rgba(255,255,255,0.7) 85%, #ffffff 100%)',
+                            }}
+                        />
+
+                        {/* Floating Status Badge (Top-Left) */}
+                        <div className="absolute top-3 left-3 z-10">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-md shadow-xs border ${statusCfg.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                                {statusCfg.label}
+                            </span>
+                        </div>
+
+                        {/* Floating Reference Pill (Top-Right) */}
+                        <div className="absolute top-3 right-3 z-10">
+                            <span className="inline-flex items-center bg-[#101F1A]/85 text-[#F5F2EA] text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full backdrop-blur-md shadow-xs border border-white/10">
                                 #{referenceCode}
                             </span>
+                        </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="-mt-3.5 relative z-10 px-4 sm:px-5 pb-3">
+                        {/* Sport Category & Rate Plan */}
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
+                                {booking.court?.type || 'Sports Court'}
+                            </span>
                             {booking.rate_plan_name && (
-                                <span className="rounded-full bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A]/70 border border-[#101F1A]/5">
-                                    {booking.rate_plan_name}
-                                </span>
+                                <>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="text-[10px] font-bold text-[#101F1A]/70 truncate max-w-[130px]" title={booking.rate_plan_name}>
+                                        {booking.rate_plan_name}
+                                    </span>
+                                </>
                             )}
                         </div>
-                        <h3 className="mt-1 text-lg font-bold text-[#101F1A] group-hover:text-[#FF5A36] transition-colors">
+
+                        {/* Court Name */}
+                        <h3 className="font-display text-base sm:text-lg font-bold text-[#10221C] group-hover:text-[#FF5A36] transition-colors line-clamp-1" title={booking.court?.name}>
                             {booking.court?.name ?? 'Court unavailable'}
                         </h3>
-                        <p className="text-xs sm:text-sm font-medium text-[#101F1A]/70 flex items-center gap-1.5 mt-0.5">
+
+                        {/* Facility Name */}
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-[#101F1A]/70 truncate font-medium" title={booking.facility?.name}>
                             <Building2 className="w-3.5 h-3.5 text-[#101F1A]/40 shrink-0" />
-                            {booking.facility?.name ?? 'Facility unavailable'}
+                            <span className="truncate">{booking.facility?.name ?? 'Facility unavailable'}</span>
                         </p>
-                    </div>
 
-                    {/* Status Badge */}
-                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold ${statusCfg.badge}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                        {statusCfg.label}
-                    </span>
-                </div>
+                        {/* Schedule & Location Strip */}
+                        <div className="mt-3 p-3 rounded-xl bg-[#FAF9F5] border border-[#101F1A]/6 space-y-1.5 text-xs text-[#101F1A]/75">
+                            <p className="flex items-center gap-2 font-semibold text-[#101F1A]">
+                                <CalendarCheck size={13} className="text-[#FF5A36]/80 shrink-0" />
+                                <span>{dateFormatted}</span>
+                            </p>
+                            <p className="flex items-center gap-2 text-xs">
+                                <Clock size={13} className="text-[#101F1A]/50 shrink-0" />
+                                <span>{timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}</span>
+                            </p>
+                            <p className="flex items-center gap-2 text-xs text-[#101F1A]/60 truncate">
+                                <MapPin size={13} className="text-[#101F1A]/40 shrink-0" />
+                                <span className="truncate">{[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Location unavailable'}</span>
+                            </p>
+                        </div>
 
-                {/* Details Grid */}
-                <div className="mt-4 grid gap-2.5 text-xs sm:text-sm text-[#101F1A]/75 sm:grid-cols-2 bg-[#FAF9F5] p-3.5 rounded-xl border border-[#101F1A]/5">
-                    <p className="flex items-center gap-2">
-                        <CalendarCheck size={15} className="text-[#101F1A]/50 shrink-0" />
-                        <span className="font-semibold">{dateFormatted}</span>
-                    </p>
-                    <p className="flex items-center gap-2">
-                        <Clock size={15} className="text-[#101F1A]/50 shrink-0" />
-                        <span>{timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}</span>
-                    </p>
-                    <p className="flex items-center gap-2">
-                        <MapPin size={15} className="text-[#101F1A]/50 shrink-0" />
-                        <span className="truncate">{[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Location unavailable'}</span>
-                    </p>
-                    <div className="flex items-center justify-between sm:justify-start sm:gap-2">
-                        <span className="text-xs text-[#101F1A]/60">Total:</span>
-                        <span className="font-black text-[#101F1A] text-sm sm:text-base">{pesos(total)}</span>
+                        {/* Price & Payment Line */}
+                        <div className="mt-3.5 flex items-center justify-between text-xs pt-2.5 border-t border-[#101F1A]/6">
+                            <span className="text-[#101F1A]/60 text-[11px]">
+                                Payment: <strong className="capitalize text-[#101F1A]">{booking.payment?.status ?? 'At Facility'}</strong>
+                            </span>
+                            <span className="font-black text-sm text-[#101F1A]">{pesos(total)}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Action Bar */}
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#101F1A]/10 pt-3.5">
-                    <p className="text-xs text-[#101F1A]/60 flex items-center gap-1.5">
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>Payment: <strong className="capitalize text-[#101F1A]">{booking.payment?.status ?? 'At Facility'}</strong></span>
-                        {booking.payment?.payment_method && (
-                            <span className="text-[#101F1A]/40">({booking.payment.payment_method.replaceAll('_', ' ')})</span>
-                        )}
-                    </p>
+                {/* Card Action Buttons (Fixed Footer) */}
+                <div className="px-4 sm:px-5 py-3 bg-[#FAF9F5]/70 border-t border-[#101F1A]/6 flex items-center justify-between gap-2 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setIsDetailsOpen(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A] bg-white hover:bg-gray-100 px-3 py-1.5 rounded-lg border border-[#101F1A]/10 transition cursor-pointer shadow-2xs shrink-0"
+                    >
+                        <Ticket className="w-3.5 h-3.5 text-[#101F1A]/70" />
+                        View Ticket
+                    </button>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setIsDetailsOpen(true)}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A] bg-[#F5F2EA] hover:bg-[#eae5d8] px-3 py-1.5 rounded-lg border border-[#101F1A]/10 transition cursor-pointer"
-                        >
-                            <Ticket className="w-3.5 h-3.5 text-[#101F1A]/70" />
-                            View Ticket
-                        </button>
-
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {booking.status === 'pending' && (
                             <button
                                 type="button"
                                 onClick={() => setIsCancelOpen(true)}
-                                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -287,6 +327,7 @@ export default function PlayerBookingCard({ booking }) {
                 footer={null}
                 size="md"
                 className="!bg-transparent !border-0 !shadow-none !p-0 max-w-sm sm:max-w-md"
+                contentClassName="!bg-transparent !p-0"
             >
                 {/* Pure Physical Ticket Card */}
                 <div 

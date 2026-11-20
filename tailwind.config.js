@@ -12,6 +12,9 @@ export default {
 
     theme: {
         extend: {
+            spacing: {
+                '4.5': '1.125rem',
+            },
             colors: {
                 brand: {
                     primary: 'var(--cs-primary)',

@@ -1067,7 +1067,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                     </div>
 
                                     {/* Card Body — flex-1 flex flex-col justify-between ensures footer is pinned identically */}
-                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-4.5 sm:pb-4 flex-1 flex flex-col justify-between">
+                                    <div className="-mt-3.5 sm:-mt-4 relative z-10 px-4 pb-3.5 sm:px-5 sm:pb-4 flex-1 flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center justify-between gap-2 h-6 sm:h-7">
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">

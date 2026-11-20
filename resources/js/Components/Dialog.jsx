@@ -25,6 +25,7 @@ export default function Dialog({
     confirmVariant = 'volt',
     isLoading = false,
     className = '',
+    contentClassName = '',
     children,
 }) {
     const sizeClasses = {
@@ -152,7 +153,7 @@ export default function Dialog({
                                     </div>
                                 ) : null}
 
-                                <div className="flex-1 flex flex-col min-h-0 bg-white">
+                                <div className={`flex-1 flex flex-col min-h-0 ${contentClassName || 'bg-white'}`}>
                                     {children}
                                 </div>
 

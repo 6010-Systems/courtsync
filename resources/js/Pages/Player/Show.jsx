@@ -222,7 +222,7 @@ export default function Show({ facility }) {
                             </div>
 
                             {facility.courts && facility.courts.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                                     {facility.courts.map((court, courtIndex) => {
                                         const isBookable = courtIsBookable(court.status);
                                         const isSelected = selectedCourtId == court.id && isBookable;
