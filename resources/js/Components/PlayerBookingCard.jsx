@@ -8,6 +8,8 @@ import {
     XCircle, 
     Building2, 
     CreditCard, 
+    Printer,
+    X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Dialog from '@/Components/Dialog';
@@ -31,6 +33,106 @@ const statusConfig = {
         dot: 'bg-rose-500',
     },
 };
+
+/**
+ * Dynamic sport-specific timeline marker for boarding pass ticket
+ */
+function SportTimelineMarker({ sportType = '', size = 28, className = '' }) {
+    const norm = (sportType || '').toLowerCase().trim();
+
+    if (norm.includes('basketball')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Basketball"
+            >
+                <circle cx="16" cy="16" r="14" fill="#FF7A00" stroke="#10221C" strokeWidth="1.6" />
+                <line x1="2" y1="16" x2="30" y2="16" stroke="#10221C" strokeWidth="1.5" />
+                <line x1="16" y1="2" x2="16" y2="30" stroke="#10221C" strokeWidth="1.5" />
+                <path d="M 6.1 6.1 C 12 11 12 21 6.1 25.9" fill="none" stroke="#10221C" strokeWidth="1.5" />
+                <path d="M 25.9 6.1 C 20 11 20 21 25.9 25.9" fill="none" stroke="#10221C" strokeWidth="1.5" />
+            </svg>
+        );
+    }
+
+    if (norm.includes('badminton')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Badminton Shuttlecock"
+            >
+                <path d="M 9 9 L 23 9 L 19 23 L 13 23 Z" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.5" strokeLinejoin="round" />
+                <line x1="13" y1="9" x2="15" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
+                <line x1="16" y1="9" x2="16" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
+                <line x1="19" y1="9" x2="17" y2="23" stroke="#CBD5E1" strokeWidth="1.2" />
+                <line x1="10.5" y1="15" x2="21.5" y2="15" stroke="#10221C" strokeWidth="1.3" />
+                <path d="M 13 23 C 13 27 19 27 19 23 Z" fill="#E2E8F0" stroke="#10221C" strokeWidth="1.5" />
+            </svg>
+        );
+    }
+
+    if (norm.includes('tennis') || norm.includes('padel')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Tennis Ball"
+            >
+                <circle cx="16" cy="16" r="14" fill="#D6FF3F" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 6.1 6.1 C 13 11 13 21 6.1 25.9" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+                <path d="M 25.9 6.1 C 19 11 19 21 25.9 25.9" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+        );
+    }
+
+    if (norm.includes('volleyball')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Volleyball"
+            >
+                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.6" />
+                <path d="M 16 2 C 16 16 2 16 2 16" fill="none" stroke="#10221C" strokeWidth="1.4" />
+                <path d="M 16 30 C 16 16 30 16 30 16" fill="none" stroke="#10221C" strokeWidth="1.4" />
+                <path d="M 2 16 C 16 16 26 26 26 26" fill="none" stroke="#10221C" strokeWidth="1.4" />
+            </svg>
+        );
+    }
+
+    if (norm.includes('futsal') || norm.includes('soccer')) {
+        return (
+            <svg 
+                viewBox="0 0 32 32" 
+                width={size} 
+                height={size} 
+                className={className} 
+                aria-label="Soccer Ball"
+            >
+                <circle cx="16" cy="16" r="14" fill="#F8FAFC" stroke="#10221C" strokeWidth="1.6" />
+                <polygon points="16,11 20,14 18,19 14,19 12,14" fill="#10221C" />
+                <line x1="16" y1="11" x2="16" y2="2" stroke="#10221C" strokeWidth="1.4" />
+                <line x1="20" y1="14" x2="28" y2="10" stroke="#10221C" strokeWidth="1.4" />
+                <line x1="18" y1="19" x2="25" y2="25" stroke="#10221C" strokeWidth="1.4" />
+                <line x1="14" y1="19" x2="7" y2="25" stroke="#10221C" strokeWidth="1.4" />
+                <line x1="12" y1="14" x2="4" y2="10" stroke="#10221C" strokeWidth="1.4" />
+            </svg>
+        );
+    }
+
+    // Default to Pickleball icon
+    return <PickleballIcon size={size} className={className} />;
+}
 
 /**
  * Authentic 2D Barcode matching physical boarding passes and transit cards
@@ -342,8 +444,8 @@ export default function PlayerBookingCard({ booking }) {
                         {/* Passenger / Player Row */}
                         <div className="flex items-start justify-between gap-3 mb-5">
                             <div>
-                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                                    Player
+                                <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    Player Pass
                                 </span>
                                 <h3 className="text-xl sm:text-2xl font-black text-[#10221C] tracking-tight leading-tight mt-0.5">
                                     {playerName}
@@ -360,72 +462,93 @@ export default function PlayerBookingCard({ booking }) {
                         <div className="mb-5">
                             {/* Time row with duration in center — Highlighted Booking Time */}
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm sm:text-base font-black text-[#10221C] tracking-tight">
+                                <span className="text-base sm:text-lg font-black text-[#10221C] tracking-tight">
                                     {timeFormatted(booking.start_time)}
                                 </span>
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D6FF3F] text-[#101F1A] text-xs font-black tracking-tight shadow-xs border border-[#101F1A]/10">
                                     <Clock size={11} className="shrink-0 text-[#101F1A]" />
                                     {durationText}
                                 </span>
-                                <span className="text-sm sm:text-base font-black text-[#10221C] tracking-tight">
+                                <span className="text-base sm:text-lg font-black text-[#10221C] tracking-tight">
                                     {timeFormatted(booking.end_time)}
                                 </span>
                             </div>
 
-                            {/* Timeline Line with Moving Sport Icon */}
-                            <div className="flex items-center gap-1 my-1.5">
+                            {/* Timeline Line with Moving Dynamic Sport Icon */}
+                            <div className="flex items-center gap-1 my-2">
                                 {/* Left Filled Start Dot */}
-                                <div className="w-2 h-2 rounded-full bg-[#10221C] shrink-0" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-[#10221C] shrink-0" />
                                 {/* Solid Progress Line */}
-                                <div className="flex-1 h-[2px] bg-[#10221C]" />
-                                {/* Moving Icon Marker with Pickleball Icon */}
-                                <div className="shrink-0 flex items-center justify-center -rotate-12 transition-transform hover:rotate-0">
-                                    <PickleballIcon size={28} className="shrink-0 drop-shadow-[0_1px_2px_rgba(16,31,26,0.2)]" />
+                                <div className="flex-1 h-[2.5px] bg-[#10221C]" />
+                                {/* Moving Icon Marker with Dynamic Sport Icon */}
+                                <div className="shrink-0 flex items-center justify-center -rotate-12 transition-transform hover:rotate-0 hover:scale-110">
+                                    <SportTimelineMarker 
+                                        sportType={booking.court?.type} 
+                                        size={28} 
+                                        className="shrink-0 drop-shadow-[0_2px_4px_rgba(16,31,26,0.2)]" 
+                                    />
                                 </div>
                                 {/* Dashed Incomplete Line */}
                                 <div className="flex-1 border-t-2 border-dashed border-[#10221C]/60" />
                                 {/* Right Stroked End Dot */}
-                                <div className="w-2 h-2 rounded-full border-2 border-[#10221C] bg-white shrink-0" />
+                                <div className="w-2.5 h-2.5 rounded-full border-2 border-[#10221C] bg-white shrink-0" />
                             </div>
 
                             {/* Origin & Destination Station Details */}
-                            <div className="flex items-start justify-between gap-2 mt-2">
-                                <div className="max-w-[55%]">
-                                    <h4 className="text-sm sm:text-base font-black text-[#10221C] tracking-tight leading-snug truncate" title={booking.facility?.name}>
+                            <div className="grid grid-cols-2 gap-3 mt-3 pt-2.5 border-t border-gray-100">
+                                <div>
+                                    <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                                        Venue
+                                    </span>
+                                    <h4 className="text-sm font-black text-[#10221C] tracking-tight leading-snug line-clamp-2 mt-0.5" title={booking.facility?.name}>
                                         {booking.facility?.name ?? 'Venue'}
                                     </h4>
-                                    <p className="text-[11px] text-gray-400 font-medium truncate mt-0.5">
+                                    <p className="flex items-center gap-1 text-[11px] text-gray-500 font-medium truncate mt-0.5">
+                                        <MapPin size={10} className="shrink-0 text-gray-400" />
                                         {[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Venue Address'}
                                     </p>
                                 </div>
-                                <div className="text-right max-w-[45%]">
-                                    <h4 className="text-sm sm:text-base font-black text-[#10221C] tracking-tight leading-snug truncate" title={booking.court?.name}>
+                                <div className="text-right">
+                                    <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                                        Court & Sport
+                                    </span>
+                                    <h4 className="text-sm font-black text-[#10221C] tracking-tight leading-snug truncate mt-0.5" title={booking.court?.name}>
                                         {booking.court?.name ?? 'Court'}
                                     </h4>
-                                    <p className="text-[11px] text-gray-400 font-medium truncate mt-0.5">
-                                        {booking.court?.type || 'Sports Court'}
-                                    </p>
+                                    <div className="flex justify-end mt-1">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#101F1A]/5 text-[#101F1A] text-[10px] font-extrabold uppercase tracking-wide">
+                                            {booking.court?.type || 'Sports Court'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Booking Reference Code */}
                         <div className="mb-5">
-                            <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                                Booking Reference
-                            </span>
-                            <span className="block text-xl sm:text-2xl font-black text-[#10221C] tracking-wide font-mono mt-0.5">
-                                {referenceCode}
-                            </span>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    Booking Reference
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+                                    Verified Pass
+                                </span>
+                            </div>
+                            <div className="bg-gray-50 border border-gray-200/80 rounded-xl px-3 py-2 flex items-center justify-between">
+                                <span className="font-mono font-black text-lg sm:text-xl text-[#10221C] tracking-wider">
+                                    {referenceCode}
+                                </span>
+                                <Ticket size={16} className="text-[#10221C]/40" />
+                            </div>
                         </div>
 
-                        {/* 3-Column Info Strip (Train Car | Train | Seat equivalent) */}
-                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
-                            <div>
-                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        {/* 3-Column Info Strip with Crisp Dividers */}
+                        <div className="grid grid-cols-3 divide-x divide-gray-100 rounded-xl bg-gray-50/70 border border-gray-100 p-2.5">
+                            <div className="pr-2">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                                     Date
                                 </span>
-                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight">
+                                <span className="block text-sm sm:text-base font-black text-[#10221C] mt-0.5 leading-tight">
                                     {dateShort}
                                 </span>
                                 <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
@@ -433,11 +556,11 @@ export default function PlayerBookingCard({ booking }) {
                                 </span>
                             </div>
 
-                            <div className="text-center">
-                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <div className="px-2 text-center">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                                     Rate Plan
                                 </span>
-                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight truncate">
+                                <span className="block text-sm sm:text-base font-black text-[#10221C] mt-0.5 leading-tight truncate">
                                     {booking.rate_plan_name || (booking.court?.pricing_mode === 'SPLIT' ? 'Split' : 'Standard')}
                                 </span>
                                 <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
@@ -445,11 +568,11 @@ export default function PlayerBookingCard({ booking }) {
                                 </span>
                             </div>
 
-                            <div className="text-right">
-                                <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <div className="pl-2 text-right">
+                                <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-wider">
                                     Total
                                 </span>
-                                <span className="block text-base sm:text-lg font-black text-[#10221C] mt-0.5 leading-tight">
+                                <span className="block text-sm sm:text-base font-black text-[#10221C] mt-0.5 leading-tight">
                                     {pesos(total)}
                                 </span>
                                 <span className="block text-[10px] font-bold text-emerald-600 mt-0.5 capitalize">
@@ -461,7 +584,7 @@ export default function PlayerBookingCard({ booking }) {
 
                     {/* Perforated Notch Divider Band with Clean Transparent Grooves */}
                     <div 
-                        className="relative h-7 w-full bg-white flex items-center justify-center pointer-events-none"
+                        className="relative h-6 w-full bg-white flex items-center justify-center pointer-events-none"
                         style={{
                             WebkitMaskImage: 'radial-gradient(circle 12px at 0 50%, transparent 12px, black 12.5px), radial-gradient(circle 12px at 100% 50%, transparent 12px, black 12.5px)',
                             WebkitMaskPosition: 'left center, right center',
@@ -473,7 +596,7 @@ export default function PlayerBookingCard({ booking }) {
                             maskRepeat: 'no-repeat, no-repeat',
                         }}
                     >
-                        <div className="w-full border-t-2 border-dashed border-gray-200 mx-5" />
+                        <div className="w-full border-t-2 border-dashed border-gray-300 mx-5" />
                     </div>
 
                     {/* Lower Stub (Barcode & Entry Pass) */}
@@ -483,6 +606,26 @@ export default function PlayerBookingCard({ booking }) {
                             Show this digital pass at the venue entrance
                         </p>
                     </div>
+                </div>
+
+                {/* Ticket Action Controls (Print & Close) */}
+                <div className="mt-4 flex items-center justify-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => window.print()}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 hover:bg-white text-[#10221C] text-xs font-bold shadow-md hover:shadow-lg transition-all active:scale-95 backdrop-blur-sm border border-white/40 cursor-pointer"
+                    >
+                        <Printer size={13} className="text-[#10221C]" />
+                        Print Pass
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsDetailsOpen(false)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white text-xs font-semibold shadow-md transition-all active:scale-95 backdrop-blur-sm border border-white/10 cursor-pointer"
+                    >
+                        <X size={13} />
+                        Close
+                    </button>
                 </div>
             </Dialog>
 
