@@ -15,7 +15,7 @@ export default function PickleballIcon({
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 330 350"
+            viewBox="44 32 282 282"
             width={size}
             height={size}
             role="img"
@@ -29,8 +29,8 @@ export default function PickleballIcon({
                 </clipPath>
 
                 {/* White = visible, black = cut out (transparent) */}
-                <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="330" height="350">
-                    <rect width="330" height="350" fill="#FFFFFF" />
+                <mask id={maskId} maskUnits="userSpaceOnUse" x="44" y="32" width="282" height="282">
+                    <rect x="44" y="32" width="282" height="282" fill="#FFFFFF" />
                     <g fill="#000000">
                         <circle cx="183" cy="123" r="21" />
                         <circle cx="135" cy="172" r="21" />
