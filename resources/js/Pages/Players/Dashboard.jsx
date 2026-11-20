@@ -24,6 +24,7 @@ import RebookChips from '@/Components/Player/RebookChips';
 import RecentActivityList from '@/Components/Player/RecentActivityList';
 import ReviewPrompt from '@/Components/Player/ReviewPrompt';
 import { BookingPassDialog } from '@/Components/PlayerBookingCard';
+import FindCourtModal from '@/Components/Player/FindCourtModal';
 import Dialog from '@/Components/Dialog';
 
 // Framer motion orchestration variants
@@ -60,6 +61,7 @@ export default function Dashboard({ nextBooking: initialNextBooking, recentBooki
     const [showStats, setShowStats] = useState(true);
     const [weeklyGoal, setWeeklyGoal] = useState(4);
     const [isGoalDialogOpen, setIsGoalDialogOpen] = useState(false);
+    const [isFindCourtOpen, setIsFindCourtOpen] = useState(false);
     const [activeTicketBooking, setActiveTicketBooking] = useState(null);
     const [dismissReview, setDismissReview] = useState(false);
 
@@ -180,15 +182,16 @@ export default function Dashboard({ nextBooking: initialNextBooking, recentBooki
                             </motion.button>
 
                             {/* Single Primary CTA */}
-                            <motion.div whileTap={{ scale: 0.96 }}>
-                                <Link 
-                                    href="/" 
-                                    className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#D6FF3F] hover:bg-[#c2ea2e] px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-black text-[#10221C] transition shadow-xs border border-[#101F1A]/10 shrink-0"
-                                >
-                                    <Compass size={14} className="text-[#10221C]" />
-                                    <span>Find a Court</span>
-                                </Link>
-                            </motion.div>
+                            <motion.button 
+                                whileTap={{ scale: 0.96 }}
+                                type="button"
+                                onClick={() => setIsFindCourtOpen(true)}
+                                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-[#D6FF3F] hover:bg-[#c2ea2e] px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-black text-[#10221C] transition shadow-xs border border-[#101F1A]/10 shrink-0 cursor-pointer"
+                                title="Find courts near you"
+                            >
+                                <Compass size={14} className="text-[#10221C]" />
+                                <span>Find a Court</span>
+                            </motion.button>
                         </div>
                     } 
                     showSearch={false} 
@@ -298,13 +301,14 @@ export default function Dashboard({ nextBooking: initialNextBooking, recentBooki
                                     <p className="text-xs text-[#10221C]/60 max-w-sm mx-auto mt-1 mb-4">
                                         Ready to play? Find courts in Cebu, Mandaue, Bogo, Lapu-Lapu, and Talisay.
                                     </p>
-                                    <Link
-                                        href="/"
-                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#101F1A] text-[#D6FF3F] text-xs font-bold hover:bg-[#18342b] transition active:scale-95"
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsFindCourtOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#101F1A] text-[#D6FF3F] text-xs font-bold hover:bg-[#18342b] transition active:scale-95 cursor-pointer"
                                     >
                                         <Compass size={14} />
                                         <span>Browse Available Courts</span>
-                                    </Link>
+                                    </button>
                                 </div>
                             )}
                         </motion.section>
@@ -398,6 +402,11 @@ export default function Dashboard({ nextBooking: initialNextBooking, recentBooki
                     </div>
                 </div>
             </Dialog>
+            {/* Location-First Find Court Dialog */}
+            <FindCourtModal
+                isOpen={isFindCourtOpen}
+                onClose={() => setIsFindCourtOpen(false)}
+            />
         </AuthenticatedLayout>
     );
 }
