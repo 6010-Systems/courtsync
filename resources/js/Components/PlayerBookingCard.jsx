@@ -332,10 +332,10 @@ export default function PlayerBookingCard({ booking }) {
                 {/* Pure Physical Ticket Card */}
                 <div 
                     id="booking-ticket-card"
-                    className="relative w-full bg-white rounded-3xl overflow-hidden shadow-2xl text-[#10221C] select-none border border-gray-100"
+                    className="relative w-full select-none text-[#10221C] drop-shadow-2xl"
                 >
                     {/* Upper Ticket Section */}
-                    <div className="p-5 sm:p-6 pb-4 sm:pb-5">
+                    <div className="bg-white rounded-t-3xl p-5 sm:p-6 pb-2">
                         {/* Passenger / Player Row */}
                         <div className="flex items-start justify-between gap-3 mb-5">
                             <div>
@@ -457,13 +457,25 @@ export default function PlayerBookingCard({ booking }) {
                         </div>
                     </div>
 
-                    {/* Perforated Tear Line */}
-                    <div className="relative flex items-center justify-center my-1 px-5">
-                        <div className="w-full border-t-2 border-dashed border-gray-200" />
+                    {/* Perforated Notch Divider Band with Clean Transparent Grooves */}
+                    <div 
+                        className="relative h-7 w-full bg-white flex items-center justify-center pointer-events-none"
+                        style={{
+                            WebkitMaskImage: 'radial-gradient(circle 12px at 0 50%, transparent 12px, black 12.5px), radial-gradient(circle 12px at 100% 50%, transparent 12px, black 12.5px)',
+                            WebkitMaskPosition: 'left center, right center',
+                            WebkitMaskSize: '51% 100%, 51% 100%',
+                            WebkitMaskRepeat: 'no-repeat, no-repeat',
+                            maskImage: 'radial-gradient(circle 12px at 0 50%, transparent 12px, black 12.5px), radial-gradient(circle 12px at 100% 50%, transparent 12px, black 12.5px)',
+                            maskPosition: 'left center, right center',
+                            maskSize: '51% 100%, 51% 100%',
+                            maskRepeat: 'no-repeat, no-repeat',
+                        }}
+                    >
+                        <div className="w-full border-t-2 border-dashed border-gray-200 mx-5" />
                     </div>
 
                     {/* Lower Stub (Barcode & Entry Pass) */}
-                    <div className="p-5 pt-3 pb-6 bg-white flex flex-col items-center">
+                    <div className="bg-white rounded-b-3xl p-5 pt-2 pb-6 flex flex-col items-center">
                         <TicketBarcode reference={referenceCode} />
                         <p className="mt-2 text-[10px] text-gray-400 font-semibold text-center uppercase tracking-wider">
                             Show this digital pass at the venue entrance
