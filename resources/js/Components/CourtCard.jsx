@@ -85,6 +85,7 @@ export default function CourtCard({
                 <img
                     src={image}
                     alt={court.name}
+                    loading="lazy"
                     onError={handleImageError}
                     className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08] ${
                         isDimmed ? 'opacity-85 grayscale-[25%]' : ''

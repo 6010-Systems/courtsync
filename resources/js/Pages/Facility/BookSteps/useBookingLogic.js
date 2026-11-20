@@ -147,8 +147,15 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     const submittingRef = useRef(false);
     const [lockedSlots, setLockedSlots] = useState([]);
     
-    // Keep track of our hidden timer
+    // Active countdown timer for held slot
+    const [lockSecondsRemaining, setLockSecondsRemaining] = useState(0);
     const lockTimerRef = useRef(null);
+
+    const formatLockTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
     // This is the "Time Bomb" function that triggers when time is up
     const expireBooking = async () => {
@@ -396,28 +403,31 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         sessionStorage.setItem('book_step', step);
     }, [selectedCourtId, selectedDate, startTime, endTime, step]);
 
-    // Resilient 7-Minute Timer (Survives Page Refreshes!)
+    // Resilient 7-Minute Timer (Survives Page Refreshes & Updates Reactive Countdown)
     useEffect(() => {
         if (step >= 3) {
-            let expiresAt = sessionStorage.getItem('lock_expires_at');
-            
-            if (expiresAt) {
+            const updateTimer = () => {
+                const expiresAt = sessionStorage.getItem('lock_expires_at');
+                if (!expiresAt) {
+                    setLockSecondsRemaining(0);
+                    return;
+                }
 
-            const timeLeft = parseInt(expiresAt) - Date.now();
-            
-            if (timeLeft <= 0) {
-                expireBooking();
-            } else {
-                lockTimerRef.current = setTimeout(() => {
+                const timeLeft = parseInt(expiresAt, 10) - Date.now();
+                if (timeLeft <= 0) {
+                    setLockSecondsRemaining(0);
                     expireBooking();
-                }, timeLeft);
-            }
-            }
-        }
+                } else {
+                    setLockSecondsRemaining(Math.max(0, Math.ceil(timeLeft / 1000)));
+                }
+            };
 
-        return () => {
-            if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
-        };
+            updateTimer();
+            const interval = setInterval(updateTimer, 1000);
+            return () => clearInterval(interval);
+        } else {
+            setLockSecondsRemaining(0);
+        }
     }, [step]);
 
     // Track if this is the first render
@@ -612,6 +622,12 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
 
     const formatDateString = (dateString) => {
         if (!dateString) return '';
+        const parts = String(dateString).split('-');
+        if (parts.length === 3) {
+            const [y, m, d] = parts.map(Number);
+            const date = new Date(y, m - 1, d);
+            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        }
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     };
@@ -624,7 +640,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     };
 
     const isCustomDate = selectedDate && !dates.find(d => d.date === selectedDate);
-    const canConfirm = step === 4 && paymentMethod !== '' && proofFile !== null && startTime && endTime && durationHours > 0;
+    const requiresProof = paymentMethod === 'gcash' || paymentMethod === 'maya';
+    const canConfirm = step === 4 && paymentMethod !== '' && (!requiresProof || proofFile !== null) && startTime && endTime && durationHours > 0;
 
     return {
         selectableCourts,
@@ -650,6 +667,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         addonQuantities, setAddonQuantity,
         formatTimeString, formatDateString,
         canGoNext, isCustomDate, canConfirm,
-        proofFile, setProofFile
+        proofFile, setProofFile,
+        lockSecondsRemaining,
+        lockTimeFormatted: formatLockTime(lockSecondsRemaining),
     };
 }

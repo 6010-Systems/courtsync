@@ -1,3 +1,5 @@
+import React from 'react';
+
 export default function InputLabel({
     value,
     className = '',
@@ -8,7 +10,7 @@ export default function InputLabel({
         <label
             {...props}
             className={
-                `block text-sm font-medium text-gray-700 ` +
+                `block text-xs font-bold uppercase tracking-wider text-[#101F1A]/80 ` +
                 className
             }
         >

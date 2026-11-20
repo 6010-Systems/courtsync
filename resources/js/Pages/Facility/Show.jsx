@@ -82,7 +82,7 @@ function getCourtImage(court, facility, index = 0) {
 }
 
 export default function Show({ facility }) {
-    const currentUrl = window.location.href;
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
     const { auth } = usePage().props;
     const user = auth.user;
     const isOwner = user && (user.role === 'ADMIN' || (user.role === 'FACILITY_OWNER' && user.id === facility.user_id));

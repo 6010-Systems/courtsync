@@ -113,7 +113,7 @@ export default function Welcome({ auth, facilities = [] }) {
                             <div>
                                 {/* Eyebrow label */}
                                 <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-[#D6FF3F]/90 animate-fade-up delay-75">
-                                    Philippines #1 Court Booking Platform
+                                    The Philippines' #1 Court Booking Platform
                                 </p>
                                 <h1 className="font-display text-[3.4rem] font-black leading-[0.95] tracking-tight sm:text-[4.6rem] lg:text-[5.2rem] animate-fade-up delay-100">
                                     BOOK A

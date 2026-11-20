@@ -35,7 +35,7 @@ class PlayerBookingController extends Controller
         abort_unless($request->user()->role === 'PLAYER', 403);
 
         $validated = $request->validate([
-            'filter' => ['sometimes', 'required', Rule::in(['upcoming', 'past', 'cancelled', 'all'])],
+            'filter' => ['sometimes', 'required', Rule::in(['upcoming', 'pending', 'past', 'cancelled', 'all'])],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
         $filter = $validated['filter'] ?? 'upcoming';
@@ -43,14 +43,16 @@ class PlayerBookingController extends Controller
         $at = now();
 
         if ($filter === 'upcoming') {
-            $bookings->upcoming($at);
+            $bookings = $bookings->upcoming($at);
+        } elseif ($filter === 'pending') {
+            $bookings = $bookings->where('status', 'pending');
         } elseif ($filter === 'past') {
-            $bookings->past($at);
+            $bookings = $bookings->past($at);
         } elseif ($filter === 'cancelled') {
-            $bookings->where('status', 'cancelled');
+            $bookings = $bookings->where('status', 'cancelled');
         }
 
-        $direction = $filter === 'upcoming' ? 'asc' : 'desc';
+        $direction = $filter === 'upcoming' || $filter === 'pending' ? 'asc' : 'desc';
 
         return Inertia::render('Players/Bookings', [
             'bookings' => $bookings->orderBy('date', $direction)->orderBy('start_time', $direction)->orderBy('id', $direction)
@@ -63,11 +65,11 @@ class PlayerBookingController extends Controller
     private function bookingsFor(User $user): Builder
     {
         return $user->bookings()->getQuery()
-            ->select(['id', 'facility_id', 'court_id', 'date', 'start_time', 'end_time', 'subtotal', 'booking_fee', 'total_price', 'status'])
+            ->select(['id', 'facility_id', 'court_id', 'date', 'start_time', 'end_time', 'rate_plan_name', 'addons_total', 'subtotal', 'booking_fee', 'total_price', 'status', 'price_breakdown'])
             ->with([
-                'facility:id,name,slug,city,province',
-                'court:id,name',
-                'payment:id,booking_id,status,payment_method',
+                'facility:id,name,slug,city,province,phone_number,address',
+                'court:id,name,type',
+                'payment:id,booking_id,status,payment_method,amount',
             ]);
     }
 }

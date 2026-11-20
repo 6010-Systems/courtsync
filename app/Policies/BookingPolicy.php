@@ -37,6 +37,10 @@ class BookingPolicy
 
     public function delete(User $user, Booking $booking): bool
     {
+        if ($user->role === 'PLAYER' && (int) $booking->user_id === (int) $user->id) {
+            return in_array($booking->status, ['pending', 'cancelled'], true);
+        }
+
         return $user->managesFacility($booking->facility_id);
     }
 

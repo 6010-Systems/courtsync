@@ -48,8 +48,8 @@ function ToastItem({ toast, onDismiss }) {
 
     return (
         <div
-            role="alert"
-            aria-live="assertive"
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
             style={{ animation: 'cs-toast-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both' }}
             className="pointer-events-auto flex w-full max-w-sm items-center gap-3 overflow-hidden rounded-xl border border-[#F5F2EA]/15 bg-[#101F1A]/95 px-3.5 py-2.5 shadow-2xl backdrop-blur-md transition-all hover:border-[#F5F2EA]/25"
         >
@@ -76,7 +76,7 @@ function ToastItem({ toast, onDismiss }) {
             <button
                 type="button"
                 onClick={() => onDismiss(toast.id)}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#F5F2EA]/35 transition-colors hover:bg-[#F5F2EA]/10 hover:text-[#F5F2EA] focus:outline-none"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[#F5F2EA]/40 transition-colors hover:bg-[#F5F2EA]/10 hover:text-[#F5F2EA] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#D6FF3F]"
                 aria-label="Dismiss notification"
             >
                 <X size={12} strokeWidth={2.2} />

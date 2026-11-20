@@ -50,6 +50,14 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
 
     return (
         <div className="min-h-screen bg-[#F5F2EA] text-[#101F1A]">
+            {/* Skip to Main Content Link (Accessibility) */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:bg-[#101F1A] focus:px-4 focus:py-2.5 focus:text-xs focus:font-bold focus:text-[#D6FF3F] focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#D6FF3F]"
+            >
+                Skip to main content
+            </a>
+
             {/* Desktop Fixed Floating Sidebar */}
             <div className="hidden md:block">
                 <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
@@ -125,7 +133,7 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
                     collapsed ? 'md:ml-[80px]' : 'md:ml-[248px]'
                 }`}
             >
-                <main className={`flex-1 min-w-0 ${horizontalPad} pt-1 pb-4`}>
+                <main id="main-content" className={`flex-1 min-w-0 ${horizontalPad} pt-1 pb-4`}>
                     <div className="w-full">
                         {children}
                     </div>
