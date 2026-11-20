@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
-import { Link, router } from '@inertiajs/react';
+import React, { useState, useMemo } from 'react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { 
     CalendarCheck, 
     Clock, 
     MapPin, 
     Ticket, 
     XCircle, 
-    Phone, 
     Building2, 
     CreditCard, 
-    CheckCircle2, 
-    AlertCircle,
-    Receipt
+    Printer,
+    X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Dialog from '@/Components/Dialog';
@@ -34,30 +32,122 @@ const statusConfig = {
     },
 };
 
+/**
+ * Authentic 2D Barcode matching physical boarding passes and transit cards
+ */
+function TicketBarcode({ reference = 'CS-2026-000001' }) {
+    const grid = useMemo(() => {
+        let seed = 0;
+        for (let i = 0; i < reference.length; i++) {
+            seed = (seed * 31 + reference.charCodeAt(i)) & 0xffffffff;
+        }
+        const rng = () => {
+            seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+            return (seed >>> 0) / 4294967296;
+        };
+
+        const rows = 9;
+        const cols = 28;
+        const matrix = [];
+        for (let r = 0; r < rows; r++) {
+            const row = [];
+            for (let c = 0; c < cols; c++) {
+                const isAnchor =
+                    (r < 2 && (c < 2 || c >= cols - 2)) ||
+                    (r >= rows - 2 && (c < 2 || c >= cols - 2)) ||
+                    (r === 4 && (c >= 12 && c <= 15));
+                row.push(isAnchor ? true : rng() > 0.42);
+            }
+            matrix.push(row);
+        }
+        return matrix;
+    }, [reference]);
+
+    return (
+        <div className="w-full flex flex-col items-center">
+            <svg
+                viewBox="0 0 280 64"
+                className="w-full h-14 sm:h-16 text-[#10221C]"
+                fill="currentColor"
+                shapeRendering="crispEdges"
+                aria-label={`Barcode for ${reference}`}
+            >
+                {/* Left Standard Guard Bars */}
+                <rect x="0" y="0" width="3.5" height="64" />
+                <rect x="6" y="0" width="1.5" height="64" />
+                <rect x="10" y="0" width="4" height="64" />
+                <rect x="16" y="0" width="2" height="64" />
+                <rect x="21" y="0" width="1.5" height="64" />
+                <rect x="25" y="0" width="3.5" height="64" />
+                <rect x="31" y="0" width="1.5" height="64" />
+
+                {/* Center 2D Matrix Modules */}
+                {grid.map((row, r) =>
+                    row.map((active, c) =>
+                        active ? (
+                            <rect
+                                key={`${r}-${c}`}
+                                x={38 + c * 7.2}
+                                y={r * 7.1}
+                                width="5.8"
+                                height="5.5"
+                            />
+                        ) : null
+                    )
+                )}
+
+                {/* Right Standard Guard Bars */}
+                <rect x="246" y="0" width="1.5" height="64" />
+                <rect x="250" y="0" width="3.5" height="64" />
+                <rect x="256" y="0" width="1.5" height="64" />
+                <rect x="260" y="0" width="4" height="64" />
+                <rect x="266" y="0" width="2" height="64" />
+                <rect x="270" y="0" width="1.5" height="64" />
+                <rect x="274" y="0" width="3.5" height="64" />
+            </svg>
+        </div>
+    );
+}
+
 export default function PlayerBookingCard({ booking }) {
+    const { auth } = usePage().props;
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [isCancelOpen, setIsCancelOpen] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
 
-    const dateFormatted = new Date(`${booking.date}T12:00:00`).toLocaleDateString('en-US', {
+    const bookingDate = new Date(`${booking.date}T12:00:00`);
+    const dateFormatted = bookingDate.toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
     });
+    const dateShort = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const weekdayShort = bookingDate.toLocaleDateString('en-US', { weekday: 'short' });
     
     const timeFormatted = (value) => new Date(`2000-01-01T${value}`).toLocaleTimeString('en-US', {
         hour: 'numeric', minute: '2-digit',
     });
 
+    const durationText = (() => {
+        if (!booking.start_time || !booking.end_time) return '1h';
+        const [sH, sM] = String(booking.start_time).split(':').map(Number);
+        const [eH, eM] = String(booking.end_time).split(':').map(Number);
+        const totalMins = (eH * 60 + (eM || 0)) - (sH * 60 + (sM || 0));
+        if (totalMins <= 0) return '1h';
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    })();
+
     const pesos = (value) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
 
     const total = Number(booking.total_price);
-    const bookingFee = Number(booking.booking_fee ?? 0);
-    const addonsTotal = Number(booking.addons_total ?? 0);
-    const subtotal = booking.subtotal != null ? Number(booking.subtotal) : total - bookingFee - addonsTotal;
     const statusCfg = statusConfig[booking.status] || {
         label: booking.status,
         badge: 'bg-gray-100 text-gray-800 border-gray-200',
         dot: 'bg-gray-400',
     };
+
+    const playerName = booking.user?.name || auth?.user?.name || 'Player';
+    const referenceCode = booking.reference_number || `CS-${bookingDate.getFullYear()}-${String(booking.id).padStart(6, '0')}`;
 
     const handleConfirmCancel = () => {
         setIsCancelling(true);
@@ -68,6 +158,10 @@ export default function PlayerBookingCard({ booking }) {
                 setIsDetailsOpen(false);
             },
         });
+    };
+
+    const handlePrint = () => {
+        window.print();
     };
 
     return (
@@ -81,8 +175,8 @@ export default function PlayerBookingCard({ booking }) {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex-1 min-w-[200px]">
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black tracking-widest text-[#101F1A]/40 uppercase">
-                                Booking #{booking.id}
+                            <span className="text-[10px] font-black tracking-widest text-[#101F1A]/40 uppercase font-mono">
+                                #{referenceCode}
                             </span>
                             {booking.rate_plan_name && (
                                 <span className="rounded-full bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-bold text-[#101F1A]/70 border border-[#101F1A]/5">
@@ -140,7 +234,7 @@ export default function PlayerBookingCard({ booking }) {
                         <button
                             type="button"
                             onClick={() => setIsDetailsOpen(true)}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A] bg-[#F5F2EA] hover:bg-[#eae5d8] px-3 py-1.5 rounded-lg border border-[#101F1A]/10 transition"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#101F1A] bg-[#F5F2EA] hover:bg-[#eae5d8] px-3 py-1.5 rounded-lg border border-[#101F1A]/10 transition cursor-pointer"
                         >
                             <Ticket className="w-3.5 h-3.5 text-[#101F1A]/70" />
                             View Ticket
@@ -150,7 +244,7 @@ export default function PlayerBookingCard({ booking }) {
                             <button
                                 type="button"
                                 onClick={() => setIsCancelOpen(true)}
-                                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1.5 rounded-lg hover:bg-rose-50 transition"
+                                className="text-xs font-bold text-rose-600 hover:text-rose-800 px-2 py-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -159,7 +253,7 @@ export default function PlayerBookingCard({ booking }) {
                         {booking.facility?.slug && (
                             <Link 
                                 href={route('facility.book', { facility: booking.facility.slug, court: booking.court_id })}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-[#101F1A] bg-[#D6FF3F] hover:bg-[#c9f532] px-3 py-1.5 rounded-lg transition shadow-2xs"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[#10221C] bg-[#D6FF3F] hover:bg-[#c9f532] px-3 py-1.5 rounded-lg transition shadow-2xs"
                             >
                                 Book Again
                             </Link>
@@ -168,85 +262,200 @@ export default function PlayerBookingCard({ booking }) {
                 </div>
             </motion.article>
 
-            {/* Ticket & Details Dialog */}
+            {/* Print Stylesheet for Physical Ticket Printout */}
+            <style>{`
+                @media print {
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    #booking-ticket-card, #booking-ticket-card * {
+                        visibility: visible !important;
+                    }
+                    #booking-ticket-card {
+                        position: fixed !important;
+                        left: 50% !important;
+                        top: 50% !important;
+                        transform: translate(-50%, -50%) !important;
+                        width: 380px !important;
+                        box-shadow: none !important;
+                        border: 1px solid #e5e7eb !important;
+                        margin: 0 !important;
+                    }
+                }
+            `}</style>
+
+            {/* REALISTIC BOOKING TICKET DIALOG (Modeled after Boarding Pass Reference) */}
             <Dialog
                 isOpen={isDetailsOpen}
                 onClose={() => setIsDetailsOpen(false)}
-                title={`Reservation Ticket #${booking.id}`}
-                subtitle={`${booking.facility?.name ?? 'Venue'} · ${booking.court?.name ?? 'Court'}`}
-                icon={Ticket}
-                iconVariant="forest"
-                size="lg"
+                header={null}
+                footer={null}
+                size="md"
+                className="!bg-transparent !border-0 !shadow-none !p-0 max-w-sm sm:max-w-md"
             >
-                <div className="space-y-4">
-                    {/* Status Pill */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
-                        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Status</span>
-                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-bold ${statusCfg.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
-                            {statusCfg.label}
-                        </span>
+                <div className="bg-[#101F1A] p-3 sm:p-5 rounded-[36px] shadow-2xl border border-white/10 text-white relative">
+                    
+                    {/* The Crisp White Ticket Pass Card */}
+                    <div 
+                        id="booking-ticket-card"
+                        className="relative w-full bg-white rounded-[28px] overflow-hidden shadow-xl text-[#10221C] select-none"
+                    >
+                        {/* Upper Ticket Section */}
+                        <div className="p-6 sm:p-7 pb-4">
+                            {/* Passenger / Player Row */}
+                            <div className="flex items-start justify-between gap-3 mb-5">
+                                <div>
+                                    <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                        Player
+                                    </span>
+                                    <h3 className="text-2xl sm:text-[26px] font-black text-[#10221C] tracking-tight leading-tight mt-0.5">
+                                        {playerName}
+                                    </h3>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${statusCfg.badge}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
+                                        {statusCfg.label}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDetailsOpen(false)}
+                                        className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                                        aria-label="Close ticket"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Times & Route Timeline Graphic */}
+                            <div className="mb-6">
+                                {/* Time row with duration in center */}
+                                <div className="flex items-baseline justify-between mb-1.5">
+                                    <span className="text-sm font-bold text-[#10221C]">
+                                        {timeFormatted(booking.start_time)}
+                                    </span>
+                                    <span className="text-xs font-black text-[#10221C] tracking-tight">
+                                        {durationText}
+                                    </span>
+                                    <span className="text-sm font-bold text-[#10221C]">
+                                        {timeFormatted(booking.end_time)}
+                                    </span>
+                                </div>
+
+                                {/* Timeline Line with Moving Sport Icon */}
+                                <div className="flex items-center gap-1 my-1.5">
+                                    {/* Left Filled Start Dot */}
+                                    <div className="w-2.5 h-2.5 rounded-full bg-[#10221C] shrink-0" />
+                                    {/* Solid Progress Line */}
+                                    <div className="flex-1 h-[2px] bg-[#10221C]" />
+                                    {/* Moving Icon Marker */}
+                                    <div className="px-2 py-0.5 rounded-full bg-[#10221C] text-[#D6FF3F] shrink-0 flex items-center justify-center shadow-xs">
+                                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                        </svg>
+                                    </div>
+                                    {/* Dashed Incomplete Line */}
+                                    <div className="flex-1 border-t-2 border-dashed border-[#10221C]/60" />
+                                    {/* Right Stroked End Dot */}
+                                    <div className="w-2.5 h-2.5 rounded-full border-2 border-[#10221C] bg-white shrink-0" />
+                                </div>
+
+                                {/* Origin & Destination Station Details */}
+                                <div className="flex items-start justify-between gap-3 mt-2">
+                                    <div className="max-w-[55%]">
+                                        <h4 className="text-base sm:text-lg font-black text-[#10221C] tracking-tight leading-snug line-clamp-1" title={booking.facility?.name}>
+                                            {booking.facility?.name ?? 'Venue'}
+                                        </h4>
+                                        <p className="text-xs text-gray-400 font-medium truncate mt-0.5">
+                                            {[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Venue Address'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right max-w-[45%]">
+                                        <h4 className="text-base sm:text-lg font-black text-[#10221C] tracking-tight leading-snug line-clamp-1" title={booking.court?.name}>
+                                            {booking.court?.name ?? 'Court'}
+                                        </h4>
+                                        <p className="text-xs text-gray-400 font-medium truncate mt-0.5">
+                                            {booking.court?.type || 'Sports Court'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Booking Reference Code */}
+                            <div className="mb-5">
+                                <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                    Booking Reference
+                                </span>
+                                <span className="block text-2xl sm:text-[28px] font-black text-[#10221C] tracking-wide font-mono mt-0.5">
+                                    {referenceCode}
+                                </span>
+                            </div>
+
+                            {/* 3-Column Info Strip (Train Car | Train | Seat equivalent) */}
+                            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100">
+                                <div>
+                                    <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                        Date
+                                    </span>
+                                    <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight">
+                                        {dateShort}
+                                    </span>
+                                    <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
+                                        {weekdayShort}
+                                    </span>
+                                </div>
+
+                                <div className="text-center">
+                                    <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                        Rate Plan
+                                    </span>
+                                    <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight truncate">
+                                        {booking.rate_plan_name || (booking.court?.pricing_mode === 'SPLIT' ? 'Split' : 'Standard')}
+                                    </span>
+                                    <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">
+                                        {booking.court?.pricing_mode || 'Hourly'}
+                                    </span>
+                                </div>
+
+                                <div className="text-right">
+                                    <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                        Total
+                                    </span>
+                                    <span className="block text-lg sm:text-xl font-black text-[#10221C] mt-0.5 leading-tight">
+                                        {pesos(total)}
+                                    </span>
+                                    <span className="block text-[10px] font-bold text-emerald-600 mt-0.5 capitalize">
+                                        {booking.payment?.status || 'At Venue'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Perforated Tear Line with Left and Right Circular Punches */}
+                        <div className="relative flex items-center justify-between my-1">
+                            {/* Left Punch Notch */}
+                            <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#101F1A] shadow-inner" />
+                            
+                            {/* Dashed Horizontal Perforation */}
+                            <div className="w-full border-t-2 border-dashed border-gray-200 mx-5" />
+                            
+                            {/* Right Punch Notch */}
+                            <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#101F1A] shadow-inner" />
+                        </div>
+
+                        {/* Lower Stub (Barcode & Entry Pass) */}
+                        <div className="p-6 sm:p-7 pt-4 pb-6 bg-white flex flex-col items-center">
+                            <TicketBarcode reference={referenceCode} />
+                            <p className="mt-2 text-[10px] text-gray-400 font-semibold text-center uppercase tracking-wider">
+                                Show this digital pass at the venue entrance
+                            </p>
+                        </div>
                     </div>
 
-                    {/* Schedule Information */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-[#FAF9F5] space-y-2 text-xs sm:text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Date</span>
-                            <span className="font-bold text-[#10221C]">{dateFormatted}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Time Slot</span>
-                            <span className="font-bold text-[#10221C]">{timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-500">Court</span>
-                            <span className="font-bold text-[#10221C]">{booking.court?.name}</span>
-                        </div>
-                        {booking.rate_plan_name && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Rate Plan</span>
-                                <span className="font-bold text-[#10221C]">{booking.rate_plan_name}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Financial Summary */}
-                    <div className="p-4 rounded-xl border border-gray-100 space-y-2 text-xs sm:text-sm">
-                        <div className="flex justify-between text-gray-500">
-                            <span>Court Subtotal</span>
-                            <span className="font-semibold text-[#10221C]">{pesos(subtotal)}</span>
-                        </div>
-                        {addonsTotal > 0 && (
-                            <div className="flex justify-between text-gray-500">
-                                <span>Add-ons Total</span>
-                                <span className="font-semibold text-[#10221C]">{pesos(addonsTotal)}</span>
-                            </div>
-                        )}
-                        {bookingFee > 0 && (
-                            <div className="flex justify-between text-gray-500">
-                                <span>Platform Booking Fee</span>
-                                <span className="font-semibold text-[#10221C]">{pesos(bookingFee)}</span>
-                            </div>
-                        )}
-                        <div className="pt-2 border-t border-gray-100 flex justify-between items-baseline">
-                            <span className="font-bold text-[#10221C]">Total Paid / Due</span>
-                            <span className="font-black text-lg text-[#10221C]">{pesos(total)}</span>
-                        </div>
-                    </div>
-
-                    {/* Venue Location & Contact */}
-                    {booking.facility && (
-                        <div className="text-xs text-gray-500 p-3 rounded-xl bg-gray-50 space-y-1">
-                            <p className="font-bold text-[#10221C]">{booking.facility.name}</p>
-                            <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0" /> {[booking.facility.address, booking.facility.city, booking.facility.province].filter(Boolean).join(', ')}</p>
-                            {(booking.facility.contact_number || booking.facility.phone_number) && (
-                                <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 shrink-0" /> {booking.facility.contact_number || booking.facility.phone_number}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Dialog Footer Actions */}
-                    <div className="pt-2 flex justify-between items-center gap-3">
+                    {/* Dialog Actions Under Ticket */}
+                    <div className="mt-4 pt-1 flex items-center justify-between gap-3 px-1">
                         {booking.status === 'pending' ? (
                             <button
                                 type="button"
@@ -254,21 +463,31 @@ export default function PlayerBookingCard({ booking }) {
                                     setIsDetailsOpen(false);
                                     setIsCancelOpen(true);
                                 }}
-                                className="text-xs font-bold text-rose-600 hover:text-rose-800"
+                                className="text-xs font-bold text-rose-400 hover:text-rose-300 transition cursor-pointer"
                             >
-                                Cancel this booking
+                                Cancel booking
                             </button>
                         ) : (
                             <div />
                         )}
 
-                        <button
-                            type="button"
-                            onClick={() => setIsDetailsOpen(false)}
-                            className="px-4 py-2 rounded-xl bg-[#101F1A] text-[#D6FF3F] text-xs font-bold hover:bg-[#18342b] transition"
-                        >
-                            Close Ticket
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handlePrint}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition cursor-pointer"
+                            >
+                                <Printer size={14} />
+                                Print Ticket
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsDetailsOpen(false)}
+                                className="px-4 py-2 rounded-xl bg-[#D6FF3F] text-[#10221C] text-xs font-black hover:bg-[#cbf536] transition shadow-md shadow-[#D6FF3F]/20 cursor-pointer"
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             </Dialog>
@@ -304,9 +523,9 @@ export function EmptyPlayerBookings({ message = 'You have no bookings yet.' }) {
             className="rounded-2xl border-2 border-dashed border-[#101F1A]/15 bg-white p-10 text-center shadow-xs"
         >
             <div className="w-14 h-14 rounded-2xl bg-[#D6FF3F]/40 border border-[#D6FF3F] text-[#10221C] flex items-center justify-center mx-auto mb-3">
-                <CalendarCheck size={28} className="text-[#101F1A]" aria-hidden="true" />
+                <CalendarCheck size={28} className="text-[#10221C]" aria-hidden="true" />
             </div>
-            <p className="mt-2 text-base font-bold text-[#101F1A]">{message}</p>
+            <p className="mt-2 text-base font-bold text-[#10221C]">{message}</p>
             <p className="mt-1 text-xs text-[#101F1A]/60 max-w-sm mx-auto">
                 Ready for a match? Find a court in your area and reserve your spot in just a few clicks.
             </p>
