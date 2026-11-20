@@ -7,7 +7,7 @@ export default {
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
-        './resources/js/**/*.jsx',
+        './resources/js/**/*.{jsx,tsx,ts,js}',
     ],
 
     theme: {
@@ -40,10 +40,10 @@ export default {
                 },
             },
             fontFamily: {
-                // Body / UI text — Quicksand (rounded, friendly, great legibility at small sizes)
-                sans: ['Quicksand', ...defaultTheme.fontFamily.sans],
+                // Body / UI text — Inter with Quicksand fallback
+                sans: ['Inter', 'Quicksand', ...defaultTheme.fontFamily.sans],
 
-                // Display / Title — Poppins (geometric, bold, strong visual hierarchy)
+                // Display / Title — Poppins (geometric, bold, clean visual hierarchy)
                 display: ['Poppins', ...defaultTheme.fontFamily.sans],
 
                 // Legacy alias kept for backward compat — remapped to Poppins

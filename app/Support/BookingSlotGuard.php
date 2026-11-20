@@ -31,6 +31,7 @@ class BookingSlotGuard
             if ($this->hasConflict($court->id, $date, $startTime, $endTime)) {
                 throw ValidationException::withMessages([
                     'conflict' => 'Sorry, this court is already booked for that time.',
+                    'start_time' => 'This time slot overlaps with an existing reservation.',
                 ]);
             }
 

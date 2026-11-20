@@ -86,6 +86,35 @@ class BookingController extends Controller
         ]);
     }
 
+    public function calendar(Request $request)
+    {
+        $user = $request->user();
+
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        } elseif ($user->role === 'ADMIN') {
+            $facilityIds = Facility::pluck('id');
+        }
+
+        $facilities = Facility::whereIn('id', $facilityIds)
+            ->with(['courts:id,facility_id,name,type,hourly_rate,day_rate,night_rate,status'])
+            ->get();
+
+        $bookings = Booking::whereIn('facility_id', $facilityIds)
+            ->with(['user:id,name,email,avatar', 'court:id,name,type', 'facility:id,name', 'payment'])
+            ->orderBy('date', 'asc')
+            ->orderBy('start_time', 'asc')
+            ->get();
+
+        return inertia('Facility/Calendar', [
+            'facilities' => $facilities,
+            'bookings' => $bookings,
+        ]);
+    }
+
     public function getLockedSlots(Request $request, $courtId)
     {
         $date = $request->query('date');

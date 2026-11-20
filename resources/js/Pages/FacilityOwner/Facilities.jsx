@@ -823,88 +823,88 @@ export default function Facilities({ auth, facilities = [] }) {
             <Head title="Facilities" />
 
             <div className="w-full space-y-4 pb-2">
-                {/* ── KPI Strip ────────────────────────────────────────────── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* ── KPI Strip (Max 2 rows on mobile/tablet, 1 row on desktop; compact footprint) ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-3.5">
                     {/* Card 1: Total Facilities */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Total Venues
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
-                                <Building2 size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
+                                <Building2 size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#101F1A]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#101F1A] leading-tight">
                                 {stats.total}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#101F1A]/55">
-                            <ShieldCheck size={12} className="text-[#101F1A]/40" />
-                            <span>Owner Portfolio</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-[#101F1A]/60 truncate">
+                            <ShieldCheck size={11} className="text-[#101F1A]/40 shrink-0" />
+                            <span className="truncate">Owner Portfolio</span>
                         </div>
                     </div>
 
                     {/* Card 2: Approved / Live */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-emerald-300">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-emerald-300">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Verified & Active
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 shadow-2xs border border-emerald-100">
-                                <CheckCircle2 size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 shadow-2xs border border-emerald-100">
+                                <CheckCircle2 size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-emerald-700">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-emerald-700 leading-tight">
                                 {stats.approved}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-emerald-700">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>Public booking enabled</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-emerald-700 truncate">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                            <span className="truncate">Booking enabled</span>
                         </div>
                     </div>
 
                     {/* Card 3: Pending Review */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-amber-300">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-amber-300">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Pending / Review
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800 shadow-2xs border border-amber-100">
-                                <Clock size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800 shadow-2xs border border-amber-100">
+                                <Clock size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-amber-800">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-amber-800 leading-tight">
                                 {stats.pending}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-amber-700">
-                            <span>Awaiting verification</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-amber-700 truncate">
+                            <span className="truncate">Awaiting review</span>
                         </div>
                     </div>
 
                     {/* Card 4: Total Courts */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#D6FF3F]">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#D6FF3F]">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Managed Courts
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
-                                <Layers size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
+                                <Layers size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#101F1A]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#101F1A] leading-tight">
                                 {stats.totalCourts}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#101F1A]/55">
-                            <Sparkles size={12} className="text-[#101F1A]/40" />
-                            <span>Across all venues</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-[#101F1A]/60 truncate">
+                            <Sparkles size={11} className="text-[#101F1A]/40 shrink-0" />
+                            <span className="truncate">Across all venues</span>
                         </div>
                     </div>
                 </div>
@@ -935,27 +935,21 @@ export default function Facilities({ auth, facilities = [] }) {
                         {/* Status Filter Chips */}
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
                             {[
-                                { id: 'ALL', label: 'All Venues', count: stats.total },
-                                { id: 'APPROVED', label: 'Approved', count: stats.approved },
-                                { id: 'UNDER_REVIEW', label: 'Review', count: stats.pending },
+                                { id: 'ALL', label: 'All Venues' },
+                                { id: 'APPROVED', label: 'Approved' },
+                                { id: 'UNDER_REVIEW', label: 'Review' },
                             ].map((filter) => (
                                 <button
                                     key={filter.id}
                                     onClick={() => setStatusFilter(filter.id)}
                                     className={[
-                                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer',
+                                        'inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer',
                                         statusFilter === filter.id
-                                            ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
-                                            : 'bg-[#F5F2EA] text-[#101F1A]/70 hover:bg-[#E8E4D9] hover:text-[#101F1A]',
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                            : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50',
                                     ].join(' ')}
                                 >
-                                    <span>{filter.label}</span>
-                                    <span className={[
-                                        'rounded-full px-1.5 py-0.2 text-[10px] font-black',
-                                        statusFilter === filter.id ? 'bg-[#D6FF3F] text-[#101F1A]' : 'bg-[#101F1A]/10 text-[#101F1A]',
-                                    ].join(' ')}>
-                                        {filter.count}
-                                    </span>
+                                    {filter.label}
                                 </button>
                             ))}
                         </div>
