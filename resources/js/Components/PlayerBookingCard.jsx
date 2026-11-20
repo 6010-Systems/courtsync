@@ -244,16 +244,56 @@ export default function PlayerBookingCard({ booking }) {
     const [isCancelOpen, setIsCancelOpen] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
 
-    const bookingDate = new Date(`${booking.date}T12:00:00`);
-    const dateFormatted = bookingDate.toLocaleDateString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
-    });
-    const dateShort = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const weekdayShort = bookingDate.toLocaleDateString('en-US', { weekday: 'short' });
+    const rawDate = booking.date ? String(booking.date).split('T')[0].split(' ')[0] : '';
+    const bookingDate = (() => {
+        try {
+            const d = new Date(`${rawDate}T12:00:00`);
+            if (!isNaN(d.getTime())) return d;
+            const fallback = new Date(booking.date);
+            return !isNaN(fallback.getTime()) ? fallback : new Date();
+        } catch {
+            return new Date();
+        }
+    })();
+    const dateFormatted = (() => {
+        try {
+            return bookingDate.toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            });
+        } catch {
+            return rawDate || 'Match Date';
+        }
+    })();
+    const dateShort = (() => {
+        try {
+            return bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch {
+            return rawDate || 'Date';
+        }
+    })();
+    const weekdayShort = (() => {
+        try {
+            return bookingDate.toLocaleDateString('en-US', { weekday: 'short' });
+        } catch {
+            return '';
+        }
+    })();
     
-    const timeFormatted = (value) => new Date(`2000-01-01T${value}`).toLocaleTimeString('en-US', {
-        hour: 'numeric', minute: '2-digit',
-    });
+    const timeFormatted = (value) => {
+        if (!value) return '';
+        const str = String(value).trim();
+        if (str.includes('AM') || str.includes('PM') || str.includes('am') || str.includes('pm')) {
+            return str;
+        }
+        try {
+            const timePart = str.length === 5 ? `${str}:00` : str;
+            const d = new Date(`2000-01-01T${timePart}`);
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+        } catch {}
+        return str;
+    };
 
     const durationText = (() => {
         if (!booking.start_time || !booking.end_time) return '1h';
@@ -418,7 +458,7 @@ export default function PlayerBookingCard({ booking }) {
 
                         {booking.facility?.slug && (
                             <Link 
-                                href={route('facility.book', { facility: booking.facility.slug, court: booking.court_id })}
+                                href={route('facility.book', { facility: booking.facility.slug, court: booking.court_id, from: 'bookings' })}
                                 className="inline-flex items-center gap-1 text-xs font-bold text-[#10221C] bg-[#D6FF3F] hover:bg-[#c9f532] px-3 py-1.5 rounded-lg transition shadow-2xs"
                             >
                                 Book Again
@@ -428,6 +468,113 @@ export default function PlayerBookingCard({ booking }) {
                 </div>
             </motion.article>
 
+            {/* REALISTIC BOOKING TICKET DIALOG (Modeled after Boarding Pass Reference) */}
+            <BookingPassDialog
+                booking={booking}
+                isOpen={isDetailsOpen}
+                onClose={() => setIsDetailsOpen(false)}
+            />
+
+            {/* Cancel Confirmation Dialog */}
+            <Dialog
+                isOpen={isCancelOpen}
+                onClose={() => setIsCancelOpen(false)}
+                title="Cancel Reservation?"
+                subtitle={`Booking #${booking.id} on ${dateFormatted}`}
+                icon={XCircle}
+                iconVariant="coral"
+                confirmText={isCancelling ? 'Cancelling...' : 'Yes, Cancel Reservation'}
+                confirmVariant="coral"
+                onConfirm={handleConfirmCancel}
+                isLoading={isCancelling}
+                size="md"
+            >
+                <div className="text-sm text-gray-600 space-y-2">
+                    <p>Are you sure you want to cancel this reservation for <strong>{booking.court?.name}</strong> at <strong>{booking.facility?.name}</strong>?</p>
+                    <p className="text-xs text-gray-400">Your reserved time slot ({timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}) will be released for other players.</p>
+                </div>
+            </Dialog>
+        </>
+    );
+}
+
+/**
+ * Standalone Reusable Digital Boarding Pass Ticket Dialog
+ */
+export function BookingPassDialog({ booking, isOpen, onClose }) {
+    const { auth } = usePage().props;
+
+    if (!booking) return null;
+
+    const rawDate = booking.date ? String(booking.date).split('T')[0].split(' ')[0] : '';
+    const bookingDate = (() => {
+        try {
+            const d = new Date(`${rawDate}T12:00:00`);
+            if (!isNaN(d.getTime())) return d;
+            const fallback = new Date(booking.date);
+            return !isNaN(fallback.getTime()) ? fallback : new Date();
+        } catch {
+            return new Date();
+        }
+    })();
+    const dateShort = (() => {
+        try {
+            return bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch {
+            return rawDate || 'Date';
+        }
+    })();
+    const weekdayShort = (() => {
+        try {
+            return bookingDate.toLocaleDateString('en-US', { weekday: 'short' });
+        } catch {
+            return '';
+        }
+    })();
+    
+    const timeFormatted = (value) => {
+        if (!value) return '';
+        const str = String(value).trim();
+        if (str.includes('AM') || str.includes('PM') || str.includes('am') || str.includes('pm')) {
+            return str;
+        }
+        try {
+            const timePart = str.length === 5 ? `${str}:00` : str;
+            const d = new Date(`2000-01-01T${timePart}`);
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+        } catch {}
+        return str;
+    };
+
+    const durationText = (() => {
+        if (!booking.start_time || !booking.end_time) return '1h';
+        const [sH, sM] = String(booking.start_time).split(':').map(Number);
+        const [eH, eM] = String(booking.end_time).split(':').map(Number);
+        const totalMins = (eH * 60 + (eM || 0)) - (sH * 60 + (sM || 0));
+        if (totalMins <= 0) return '1h';
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    })();
+
+    const pesos = (amount) => `₱${Number(amount || 0).toLocaleString('en-PH', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+    })}`;
+
+    const total = Number(booking.total_price);
+    const statusCfg = statusConfig[booking.status] || {
+        label: booking.status,
+        badge: 'bg-gray-100 text-gray-800 border-gray-200',
+        dot: 'bg-gray-400',
+    };
+
+    const playerName = booking.user?.name || auth?.user?.name || 'Player';
+    const referenceCode = booking.reference_number || `CS-${bookingDate.getFullYear()}-${String(booking.id).padStart(6, '0')}`;
+
+    return (
+        <>
             {/* Print Stylesheet for Physical Ticket Printout */}
             <style>{`
                 @media print {
@@ -450,10 +597,9 @@ export default function PlayerBookingCard({ booking }) {
                 }
             `}</style>
 
-            {/* REALISTIC BOOKING TICKET DIALOG (Modeled after Boarding Pass Reference) */}
             <Dialog
-                isOpen={isDetailsOpen}
-                onClose={() => setIsDetailsOpen(false)}
+                isOpen={isOpen}
+                onClose={onClose}
                 closeOnClickOutside={true}
                 header={null}
                 footer={null}
@@ -647,32 +793,12 @@ export default function PlayerBookingCard({ booking }) {
                     </button>
                     <button
                         type="button"
-                        onClick={() => setIsDetailsOpen(false)}
+                        onClick={onClose}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white text-xs font-semibold shadow-md transition-all active:scale-95 backdrop-blur-sm border border-white/10 cursor-pointer"
                     >
                         <X size={13} />
                         Close
                     </button>
-                </div>
-            </Dialog>
-
-            {/* Cancel Confirmation Dialog */}
-            <Dialog
-                isOpen={isCancelOpen}
-                onClose={() => setIsCancelOpen(false)}
-                title="Cancel Reservation?"
-                subtitle={`Booking #${booking.id} on ${dateFormatted}`}
-                icon={XCircle}
-                iconVariant="coral"
-                confirmText={isCancelling ? 'Cancelling...' : 'Yes, Cancel Reservation'}
-                confirmVariant="coral"
-                onConfirm={handleConfirmCancel}
-                isLoading={isCancelling}
-                size="md"
-            >
-                <div className="text-sm text-gray-600 space-y-2">
-                    <p>Are you sure you want to cancel this reservation for <strong>{booking.court?.name}</strong> at <strong>{booking.facility?.name}</strong>?</p>
-                    <p className="text-xs text-gray-400">Your reserved time slot ({timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}) will be released for other players.</p>
                 </div>
             </Dialog>
         </>

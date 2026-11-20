@@ -1,9 +1,9 @@
 import React from 'react';
 import PickleballIcon from '@/Components/Icons/PickleballIcon';
+import BasketballIcon from '@/Components/Icons/BasketballIcon';
 import {
     Activity,
     CircleDot,
-    Flame,
     Disc,
     Trophy,
     Sparkles,
@@ -22,7 +22,7 @@ export default function SportIcon({
         case 'Pickleball':
             return <PickleballIcon size={size} className={className} />;
         case 'Basketball':
-            return <Flame size={size} className={className} strokeWidth={2.3} />;
+            return <BasketballIcon size={size} className={className} />;
         case 'Volleyball':
             return <Sparkles size={size} className={className} strokeWidth={2.3} />;
         case 'Table Tennis':

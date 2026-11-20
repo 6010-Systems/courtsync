@@ -11,14 +11,15 @@ import {
 const STATUS_STYLES = {
     confirmed: { label: 'Confirmed', badge: 'bg-[#D6FF3F]/25 text-[#101F1A] border-[#D6FF3F]/60', dot: 'bg-[#101F1A]' },
     pending: { label: 'Pending', badge: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
-    cancelled: { label: 'Cancelled', badge: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-500' },
+    cancelled: { label: 'Cancelled', badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
     completed: { label: 'Completed', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+    no_show: { label: 'No Show', badge: 'bg-gray-100 text-gray-700 border-gray-300', dot: 'bg-gray-500' },
 };
 
 const PAYMENT_STYLES = {
     verified: { label: 'Verified', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     pending: { label: 'Pending', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-    rejected: { label: 'Rejected', badge: 'bg-red-50 text-red-700 border-red-200' },
+    rejected: { label: 'Rejected', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
     unpaid: { label: 'Unpaid', badge: 'bg-[#101F1A]/5 text-[#101F1A]/60 border-[#101F1A]/10' },
 };
 

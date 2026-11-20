@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
 import { Head, router, useForm } from '@inertiajs/react';
-import Modal from '@/Components/Modal';
+import Dialog from '@/Components/Dialog';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
@@ -1328,24 +1328,16 @@ export default function CalendarPage({ facilities = [], bookings = [] }) {
             </div>
 
             {/* ── Add Event / Booking Modal ── */}
-            <Modal show={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} maxWidth="md">
-                <form onSubmit={submitAddBooking} className="p-5 sm:p-6 space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#101F1A]/10">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-[#101F1A] text-[#D6FF3F] flex items-center justify-center">
-                                <Plus size={16} strokeWidth={2.4} />
-                            </div>
-                            <h3 className="text-base font-bold text-[#101F1A]">Schedule Court Booking</h3>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setIsAddModalOpen(false)}
-                            className="p-1 rounded-md text-[#101F1A]/40 hover:text-[#101F1A] cursor-pointer"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-
+            <Dialog 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                size="md"
+                title="Schedule Court Booking"
+                subtitle="Reserve a slot or log a facility event"
+                icon={Plus}
+                iconVariant="forest"
+            >
+                <form onSubmit={submitAddBooking} className="space-y-4 pt-2">
                     {/* Conflict Alert Banner */}
                     {(conflictBooking || errors.conflict) && (
                         <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/95 p-3.5 text-xs text-rose-950 shadow-2xs">
@@ -1524,7 +1516,7 @@ export default function CalendarPage({ facilities = [], bookings = [] }) {
                         </PrimaryButton>
                     </div>
                 </form>
-            </Modal>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

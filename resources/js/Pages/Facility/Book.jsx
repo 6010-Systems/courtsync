@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import React, { useMemo } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, ArrowLeft, ArrowRight, Check, AlertCircle, RotateCcw, MapPin, ShieldCheck } from 'lucide-react';
 
@@ -125,6 +125,40 @@ export default function Book({ facility, preselectedCourtId = null }) {
     const currentStepData = stepsData.find(s => s.id === step) || stepsData[0];
     const progressPercent = (step / stepsData.length) * 100;
 
+    // Check if player navigated here from Dashboard or My Bookings
+    const isFromDashboard = useMemo(() => {
+        if (typeof window === 'undefined') return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('from') === 'dashboard' || (document.referrer && document.referrer.includes('/dashboard'));
+    }, []);
+
+    const isFromBookings = useMemo(() => {
+        if (typeof window === 'undefined') return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('from') === 'bookings' || params.get('from') === 'player.bookings';
+    }, []);
+
+    const handleExitBooking = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        
+        if (isFromDashboard) {
+            router.visit(route('dashboard'));
+            return;
+        }
+
+        if (isFromBookings) {
+            router.visit(route('player.bookings'));
+            return;
+        }
+
+        if (typeof window !== 'undefined' && window.history.length > 1 && document.referrer) {
+            window.history.back();
+            return;
+        }
+
+        router.visit(route('facility.show', facility.slug));
+    };
+
     return (
         <div className="min-h-screen bg-[#F5F2EA] font-sans selection:bg-[#D6FF3F] selection:text-[#10221C] flex flex-col">
             <Head title={`Book a Court - ${facility.name}`} />
@@ -133,13 +167,15 @@ export default function Book({ facility, preselectedCourtId = null }) {
             <header className="bg-[#101F1A] text-[#F5F2EA] px-4 sm:px-6 py-5 border-b border-white/10 shadow-md">
                 <div className="max-w-5xl lg:max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                        <Link 
-                            href={route('facility.show', facility.slug)}
-                            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-[#F5F2EA] transition active:scale-95 shrink-0"
-                            title="Back to Facility Details"
+                        <button 
+                            type="button"
+                            onClick={handleExitBooking}
+                            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-[#F5F2EA] transition active:scale-95 shrink-0 cursor-pointer"
+                            title={isFromDashboard ? "Back to Player Dashboard" : "Back"}
+                            aria-label="Back"
                         >
                             <ArrowLeft className="w-4 h-4" />
-                        </Link>
+                        </button>
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#D6FF3F]">
@@ -310,7 +346,7 @@ export default function Book({ facility, preselectedCourtId = null }) {
 
                                 {/* Right Action Buttons */}
                                 <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                                    {step > 1 && (
+                                    {step > 1 ? (
                                         <button
                                             type="button"
                                             onClick={goPrev}
@@ -318,6 +354,15 @@ export default function Book({ facility, preselectedCourtId = null }) {
                                         >
                                             <ArrowLeft className="w-4 h-4" />
                                             Back
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleExitBooking}
+                                            className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-[#10221C] transition px-4 py-3 rounded-xl border border-gray-200 hover:bg-white hover:shadow-2xs active:scale-[0.98] cursor-pointer"
+                                        >
+                                            <ArrowLeft className="w-4 h-4" />
+                                            <span>{isFromDashboard ? 'Back to Dashboard' : 'Back'}</span>
                                         </button>
                                     )}
 

@@ -4,6 +4,7 @@ import './bootstrap';
 import { ConfirmProvider } from '@/Components/ConfirmContext';
 import { LoadingProvider } from '@/Components/LoadingContext';
 import { ToastProvider } from '@/Components/ToastContext';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
@@ -30,13 +31,15 @@ createInertiaApp({
         const root = createRoot(el);
 
         root.render(
-            <LoadingProvider>
-                <ToastProvider>
-                    <ConfirmProvider>
-                        <App {...props} />
-                    </ConfirmProvider>
-                </ToastProvider>
-            </LoadingProvider>
+            <ErrorBoundary>
+                <LoadingProvider>
+                    <ToastProvider>
+                        <ConfirmProvider>
+                            <App {...props} />
+                        </ConfirmProvider>
+                    </ToastProvider>
+                </LoadingProvider>
+            </ErrorBoundary>
         );
     },
     progress: {

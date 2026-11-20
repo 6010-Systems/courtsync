@@ -161,7 +161,7 @@ export default function BookingDetailPopover({
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#101F1A]/10">
                     <button
                         type="button"
-                        onClick={handleCancelBooking}
+                        onClick={() => onCancel?.(booking.id)}
                         className="text-xs font-bold text-[#FF5A36] hover:underline cursor-pointer"
                     >
                         Cancel Booking

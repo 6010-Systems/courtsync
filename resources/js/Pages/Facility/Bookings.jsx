@@ -6,8 +6,21 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
-import Modal from '@/Components/Modal';
-import { Calendar, LayoutGrid, List, Plus, Search, X } from 'lucide-react';
+import Dialog from '@/Components/Dialog';
+import { 
+    Calendar, 
+    LayoutGrid, 
+    List, 
+    Plus, 
+    Search, 
+    X,
+    CalendarCheck,
+    Clock,
+    CheckCircle2,
+    Banknote,
+    Building2,
+    CalendarDays
+} from 'lucide-react';
 import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
 import { formatPeso } from '@/Components/MetricCard';
@@ -374,17 +387,65 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                 {/* Quick stats */}
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {[
-                        { label: 'Today', value: stats.today, hint: 'bookings scheduled' },
-                        { label: 'Pending', value: stats.pending, hint: 'need confirmation' },
-                        { label: 'Confirmed', value: stats.confirmed, hint: 'in this view' },
-                        { label: "Today's revenue", value: formatPeso(stats.revenue), hint: 'non-cancelled' },
-                    ].map((card) => (
-                        <div key={card.label} className="rounded-xl border border-[#101F1A]/10 bg-white p-4 shadow-card">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">{card.label}</p>
-                            <p className="mt-1.5 text-xl font-black text-[#101F1A]">{card.value}</p>
-                            <p className="text-[10px] text-[#101F1A]/50">{card.hint}</p>
-                        </div>
-                    ))}
+                        { 
+                            label: 'Today', 
+                            value: stats.today, 
+                            hint: 'bookings scheduled',
+                            filterKey: 'Today',
+                            icon: CalendarCheck,
+                            chipClass: 'bg-[#D6FF3F]/35 text-[#101F1A]',
+                        },
+                        { 
+                            label: 'Pending', 
+                            value: stats.pending, 
+                            hint: 'need confirmation',
+                            filterKey: 'Pending',
+                            icon: Clock,
+                            chipClass: 'bg-amber-100 text-amber-900',
+                        },
+                        { 
+                            label: 'Confirmed', 
+                            value: stats.confirmed, 
+                            hint: 'verified matches',
+                            filterKey: 'Upcoming',
+                            icon: CheckCircle2,
+                            chipClass: 'bg-emerald-100 text-emerald-900',
+                        },
+                        { 
+                            label: "Today's revenue", 
+                            value: formatPeso(stats.revenue), 
+                            hint: 'non-cancelled volume',
+                            filterKey: 'All',
+                            icon: Banknote,
+                            chipClass: 'bg-[#101F1A] text-[#D6FF3F]',
+                        },
+                    ].map((card) => {
+                        const Icon = card.icon;
+                        const isCardActive = activeFilter === card.filterKey;
+                        return (
+                            <button
+                                key={card.label}
+                                type="button"
+                                onClick={() => setActiveFilter(card.filterKey)}
+                                className={`rounded-xl border bg-white p-4 text-left transition-all duration-200 cursor-pointer shadow-card hover:-translate-y-0.5 hover:shadow-md ${
+                                    isCardActive 
+                                        ? 'border-[#101F1A] ring-2 ring-[#101F1A]/10' 
+                                        : 'border-[#101F1A]/10 hover:border-[#101F1A]/30'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-[#101F1A]/50">
+                                        {card.label}
+                                    </span>
+                                    <span className={`p-1.5 rounded-lg ${card.chipClass}`}>
+                                        <Icon size={14} strokeWidth={2.4} />
+                                    </span>
+                                </div>
+                                <p className="text-xl sm:text-2xl font-black text-[#101F1A] tracking-tight">{card.value}</p>
+                                <p className="mt-0.5 text-[10px] font-medium text-[#101F1A]/50">{card.hint}</p>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 <FacilityBookingsBoard
@@ -414,21 +475,16 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                 onClose={() => setSelectedBooking(null)}
             />
 
-            <Modal show={isAdding} onClose={closeModal} maxWidth="2xl">
-                <div className="p-6 sm:p-8">
-                    <div className="mb-6 border-b border-gray-100 pb-4 flex justify-between items-center">
-                        <div>
-                            <h3 className="text-lg font-black text-[#10221C] uppercase tracking-wide">Manual Booking</h3>
-                            <p className="text-sm text-gray-500 mt-1">Block off a court or log a walk-in player.</p>
-                        </div>
-                        <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleAdd} className="flex flex-col gap-6">
+            <Dialog 
+                isOpen={isAdding} 
+                onClose={closeModal} 
+                size="2xl"
+                title="Manual Booking"
+                subtitle="Block off a court or log a walk-in player"
+                icon={Plus}
+                iconVariant="forest"
+            >
+                <form onSubmit={handleAdd} className="flex flex-col gap-6 pt-2">
                         {selectedFacilityBanner && (
                             <div className={`rounded-xl border px-3 py-2.5 text-xs ${
                                 selectedFacilityBanner.tone === 'rose'
@@ -592,24 +648,23 @@ export default function Bookings({ bookings, facilities, filters, counts = {} })
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-100">
                             <button
                                 type="button"
                                 onClick={closeModal}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md font-bold text-sm hover:bg-gray-200 transition"
+                                className="px-4 py-2 bg-gray-100 text-[#10221C] rounded-xl font-bold text-xs hover:bg-gray-200 transition cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <PrimaryButton
                                 disabled={processing || !selectedFacilityAccepting || selectedDateClosed}
-                                className="!bg-[#10221C] hover:!bg-[#1a382d]"
+                                className="!bg-[#10221C] text-[#D6FF3F] hover:!bg-[#1a382d] cursor-pointer"
                             >
                                 Confirm Manual Booking
                             </PrimaryButton>
                         </div>
                     </form>
-                </div>
-            </Modal>
+            </Dialog>
 
             {/* Payment Receipt Preview */}
             {receiptPreview && (
