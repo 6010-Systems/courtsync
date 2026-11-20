@@ -1,87 +1,56 @@
 import React from 'react';
-
-import CourtRatePlans from '@/Components/CourtRatePlans';
-import { formatCourtTime } from '@/Components/CourtCard';
-import { formatPeso } from '@/Components/MetricCard';
-import { offeredCourtPlans } from '@/Utils/rateQuote';
+import CourtCard from '@/Components/CourtCard';
+import { getCourtImage, DEFAULT_COURT_IMAGES } from '@/Utils/courtImages';
+import { Check } from 'lucide-react';
 
 export default function Step1Court({ facilityName, facility = null, selectableCourts, selectedCourtId, setSelectedCourtId }) {
     return (
         <div className="p-6 sm:p-8">
-            <div className="mb-6">
-                <h2 className="text-2xl font-black text-[#10221C] mb-1">Choose a Court</h2>
-                <p className="text-sm text-gray-500">Select the court you'd like to book at {facilityName}.</p>
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <div>
+                    <h2 className="text-2xl font-black text-[#10221C] tracking-tight mb-1">Choose a Court</h2>
+                    <p className="text-sm text-gray-500">Select the court you'd like to book at {facilityName}.</p>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-[#10221C]/5 text-[#10221C]/70 self-start sm:self-auto">
+                    {selectableCourts.length} {selectableCourts.length === 1 ? 'Court' : 'Courts'} Available
+                </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {selectableCourts.map(court => (
-                    <div 
-                        key={court.id}
-                        onClick={() => setSelectedCourtId(court.id)}
-                        className={`relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer group ${
-                            selectedCourtId == court.id 
-                                ? 'border-[#10221C] bg-[#10221C] text-white shadow-lg shadow-[#10221C]/10' 
-                                : 'border-gray-100 hover:border-gray-300 hover:shadow-md bg-white'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start mb-3">
-                            <div>
-                                <h4 className={`font-bold text-base ${selectedCourtId == court.id ? 'text-white' : 'text-[#10221C]'}`}>{court.name}</h4>
-                                <p className={`text-xs ${selectedCourtId == court.id ? 'text-gray-300' : 'text-gray-500'}`}>{court.type || 'Standard Court'}</p>
-                            </div>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                selectedCourtId == court.id 
-                                    ? 'border-[#D6FF3F] bg-[#D6FF3F]' 
-                                    : 'border-gray-300 group-hover:border-gray-400'
-                            }`}>
-                                {selectedCourtId == court.id && (
-                                    <svg className="w-3 h-3 text-[#10221C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                )}
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            {(court.operating_schedules_label || court.time_range) && (
-                                <div className="flex justify-end">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                        selectedCourtId == court.id
-                                            ? 'bg-white/15 text-gray-200'
-                                            : 'bg-gray-100 text-gray-500'
-                                    }`} title={court.operating_schedules_label || court.time_range}>
-                                        {court.operating_schedules_label || court.time_range}
-                                    </span>
-                                </div>
-                            )}
 
-                            {(() => {
-                                const plans = offeredCourtPlans(court, facility);
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4.5 sm:gap-5">
+                {selectableCourts.map((court, courtIndex) => {
+                    const isSelected = selectedCourtId == court.id;
 
-                                if (plans.length > 0) {
-                                    return <CourtRatePlans plans={plans} />;
-                                }
-
-                                return court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
-                                    <div>
-                                        <div className={`font-black text-sm sm:text-base flex items-center gap-1.5 ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
-                                            <span>☀️ {formatPeso(court.day_rate)}</span>
-                                            <span className="opacity-50">/</span>
-                                            <span>🌙 {formatPeso(court.night_rate)}</span>
-                                            <span className="text-[10px] font-normal opacity-70">/hr</span>
-                                        </div>
-                                        <span className={`text-[10px] block font-medium ${selectedCourtId == court.id ? 'text-gray-300' : 'text-gray-500'}`}>
-                                            Night starts {formatCourtTime(court.night_start_time || '18:00')}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span className={`font-black text-lg ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
-                                        {formatPeso(court.hourly_rate)}
-                                        <span className="text-xs font-medium text-gray-400">/hr</span>
-                                    </span>
-                                );
-                            })()}
-                        </div>
-                    </div>
-                ))}
+                    return (
+                        <CourtCard
+                            key={court.id}
+                            court={court}
+                            facility={facility}
+                            image={getCourtImage(court, facility, courtIndex)}
+                            fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
+                            onClick={() => setSelectedCourtId(court.id)}
+                            isSelected={isSelected}
+                            hint={isSelected ? 'Court selected' : 'Click to select'}
+                            actions={
+                                <span
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                                        isSelected
+                                            ? 'bg-[#D6FF3F] text-[#10221C] shadow-xs ring-1 ring-[#10221C]/10'
+                                            : 'bg-[#10221C] text-[#D6FF3F] group-hover:bg-[#18342b]'
+                                    }`}
+                                >
+                                    {isSelected ? (
+                                        <>
+                                            <Check size={13} strokeWidth={3} />
+                                            Selected
+                                        </>
+                                    ) : (
+                                        'Select'
+                                    )}
+                                </span>
+                            }
+                        />
+                    );
+                })}
             </div>
         </div>
     );

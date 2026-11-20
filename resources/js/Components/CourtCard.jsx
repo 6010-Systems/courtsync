@@ -1,5 +1,6 @@
 import CourtRatePlans from '@/Components/CourtRatePlans';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES, STATUS_CONFIG } from '@/Utils/courtStatus';
+import { offeredCourtPlans } from '@/Utils/rateQuote';
 import { Clock, Sun, Moon } from 'lucide-react';
 
 /**
@@ -42,14 +43,11 @@ export default function CourtCard({
     actions = null,
     className = '',
     style = undefined,
+    facility = null,
 }) {
     const statusCfg = STATUS_CONFIG[court.status] || STATUS_CONFIG.AVAILABLE;
     const isSplitPriced = court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate;
-    const offeredPlans = (court.rate_plans || []).filter(
-        (plan) => plan.kind !== 'ADDON'
-            && plan.is_active !== false
-            && (!plan.pivot || Boolean(Number(plan.pivot.is_enabled))),
-    );
+    const offeredPlans = offeredCourtPlans(court, facility);
     const isBookable = court.status === 'AVAILABLE';
     const isInteractive = typeof onClick === 'function';
 

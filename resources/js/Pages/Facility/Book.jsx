@@ -161,7 +161,7 @@ export default function Book({ facility, preselectedCourtId = null }) {
 
             {/* Progress Stepper */}
             <div className="bg-[#F5F2EA] px-4 sm:px-6 pt-5 pb-3 border-b border-gray-200/40">
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-5xl lg:max-w-6xl mx-auto">
                     <div className="flex items-center justify-between mb-2.5">
                         {stepsData.map((s) => (
                             <div key={s.id} className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export default function Book({ facility, preselectedCourtId = null }) {
 
             {/* Main Content Area */}
             <main className="flex-1 flex items-start justify-center px-4 sm:px-6 py-6 sm:py-8">
-                <div className="w-full max-w-4xl space-y-4">
+                <div className="w-full max-w-5xl lg:max-w-6xl space-y-4">
                     {availabilityBanner && (
                         <div className={`rounded-2xl border px-4 py-3 ${
                             availabilityBanner.tone === 'rose'
