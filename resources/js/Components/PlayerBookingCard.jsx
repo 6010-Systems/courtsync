@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Dialog from '@/Components/Dialog';
+import PickleballIcon from '@/Components/Icons/PickleballIcon';
 import { getCourtImage, DEFAULT_COURT_IMAGES } from '@/Utils/courtImages';
 
 const statusConfig = {
@@ -242,9 +243,11 @@ export default function PlayerBookingCard({ booking }) {
                                 <CalendarCheck size={13} className="text-[#FF5A36]/80 shrink-0" />
                                 <span>{dateFormatted}</span>
                             </p>
-                            <p className="flex items-center gap-2 text-xs">
-                                <Clock size={13} className="text-[#101F1A]/50 shrink-0" />
-                                <span>{timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}</span>
+                            <p className="flex items-center gap-2 text-xs font-semibold text-[#101F1A]">
+                                <Clock size={13} className="text-[#101F1A]/60 shrink-0" />
+                                <span className="bg-[#D6FF3F]/35 px-1.5 py-0.5 rounded-md font-bold text-[#101F1A]">
+                                    {timeFormatted(booking.start_time)} – {timeFormatted(booking.end_time)}
+                                </span>
                             </p>
                             <p className="flex items-center gap-2 text-xs text-[#101F1A]/60 truncate">
                                 <MapPin size={13} className="text-[#101F1A]/40 shrink-0" />
@@ -355,15 +358,16 @@ export default function PlayerBookingCard({ booking }) {
 
                         {/* Times & Route Timeline Graphic */}
                         <div className="mb-5">
-                            {/* Time row with duration in center */}
-                            <div className="flex items-baseline justify-between mb-1.5">
-                                <span className="text-xs sm:text-sm font-bold text-[#10221C]">
+                            {/* Time row with duration in center — Highlighted Booking Time */}
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm sm:text-base font-black text-[#10221C] tracking-tight">
                                     {timeFormatted(booking.start_time)}
                                 </span>
-                                <span className="text-[11px] font-black text-[#10221C] tracking-tight">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#D6FF3F] text-[#101F1A] text-xs font-black tracking-tight shadow-xs border border-[#101F1A]/10">
+                                    <Clock size={11} className="shrink-0 text-[#101F1A]" />
                                     {durationText}
                                 </span>
-                                <span className="text-xs sm:text-sm font-bold text-[#10221C]">
+                                <span className="text-sm sm:text-base font-black text-[#10221C] tracking-tight">
                                     {timeFormatted(booking.end_time)}
                                 </span>
                             </div>
@@ -374,11 +378,9 @@ export default function PlayerBookingCard({ booking }) {
                                 <div className="w-2 h-2 rounded-full bg-[#10221C] shrink-0" />
                                 {/* Solid Progress Line */}
                                 <div className="flex-1 h-[2px] bg-[#10221C]" />
-                                {/* Moving Icon Marker */}
-                                <div className="px-1.5 py-0.5 rounded-full bg-[#10221C] text-[#D6FF3F] shrink-0 flex items-center justify-center shadow-xs">
-                                    <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                                    </svg>
+                                {/* Moving Icon Marker with Pickleball Icon */}
+                                <div className="px-1.5 py-0.5 rounded-full bg-[#101F1A] shrink-0 flex items-center justify-center shadow-xs border border-[#101F1A]/20">
+                                    <PickleballIcon size={16} className="shrink-0" />
                                 </div>
                                 {/* Dashed Incomplete Line */}
                                 <div className="flex-1 border-t-2 border-dashed border-[#10221C]/60" />
