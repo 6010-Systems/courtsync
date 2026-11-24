@@ -9,6 +9,7 @@ use App\Models\RatePlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class RatePlanController extends Controller
@@ -69,6 +70,8 @@ class RatePlanController extends Controller
 
         $validated = $request->validate($this->rules());
 
+        $this->validateSchedule($validated);
+
         if (! $this->allowedFacilityIds($request)->contains((int) $validated['facility_id'])) {
             abort(403, 'Unauthorized action.');
         }
@@ -103,6 +106,8 @@ class RatePlanController extends Controller
 
         $validated = $request->validate($this->rules($ratePlan));
 
+        $this->validateSchedule($validated);
+
         $ratePlan->update($this->payload($validated));
 
         if ($request->has('court_ids') || $request->has('assign_to_all_courts')) {
@@ -125,6 +130,29 @@ class RatePlanController extends Controller
         $ratePlan->delete();
 
         return redirect()->back()->with('success', 'Rate removed successfully.');
+    }
+
+    /**
+     * Reject a COURT plan whose day and night periods start at the same time.
+     *
+     * @param  array<string, mixed>  $validated
+     *
+     * @throws ValidationException
+     */
+    private function validateSchedule(array $validated): void
+    {
+        if ($validated['kind'] !== 'COURT' || ! isset($validated['night_rate'])) {
+            return;
+        }
+
+        $dayStart = $validated['day_start_time'] ?? '05:00';
+        $nightStart = $validated['night_start_time'] ?? '17:00';
+
+        if ($dayStart === $nightStart) {
+            throw ValidationException::withMessages([
+                'night_start_time' => 'Night period must start at a different time than the day period.',
+            ]);
+        }
     }
 
     /**

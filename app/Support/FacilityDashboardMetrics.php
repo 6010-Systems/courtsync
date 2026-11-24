@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\Booking;
-use App\Models\Payment;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,6 +10,16 @@ use Illuminate\Support\Carbon;
 
 class FacilityDashboardMetrics
 {
+    /**
+     * Payment statuses a caller may filter by, besides "all". "unpaid" means
+     * the booking has no payment record at all (e.g. a facility-side manual
+     * booking logged before cash is collected), matching the convention used
+     * on the Bookings/Payments pages (`booking.payment?.status ?? 'unpaid'`).
+     */
+    private const PAYMENT_STATUSES = ['verified', 'pending', 'rejected', 'unpaid'];
+
+    private ?string $paymentStatus = null;
+
     /**
      * @param  array<int, int>  $facilityIds
      * @return array{
@@ -24,8 +33,10 @@ class FacilityDashboardMetrics
      *     revenue_trend: array<int, array{time: string, v: float, label: string}>
      * }
      */
-    public function summarize(array $facilityIds, int $playerTotal): array
+    public function summarize(array $facilityIds, int $playerTotal, ?string $paymentStatus = null): array
     {
+        $this->paymentStatus = in_array($paymentStatus, self::PAYMENT_STATUSES, true) ? $paymentStatus : null;
+
         $today = now()->startOfDay();
         $currentStart = $today->copy()->subDays(29);
         $previousStart = $today->copy()->subDays(59);
@@ -63,7 +74,15 @@ class FacilityDashboardMetrics
      */
     private function bookings(array $facilityIds): Builder
     {
-        return Booking::query()->whereIn('facility_id', $facilityIds);
+        $query = Booking::query()->whereIn('facility_id', $facilityIds);
+
+        if ($this->paymentStatus === 'unpaid') {
+            $query->whereDoesntHave('payment');
+        } elseif ($this->paymentStatus !== null) {
+            $query->whereHas('payment', fn (Builder $payment) => $payment->where('status', $this->paymentStatus));
+        }
+
+        return $query;
     }
 
     /**
@@ -78,17 +97,20 @@ class FacilityDashboardMetrics
     }
 
     /**
+     * Revenue for the period — the same "confirmed booking value, excluding
+     * cancellations" definition used by the Bookings and Calendar pages, so the
+     * headline figure never disagrees with the rest of the app. It is not
+     * limited to bookings whose payment has been separately verified, since
+     * cash/walk-in payments are rarely marked verified even once collected.
+     *
      * @param  array<int, int>  $facilityIds
      */
     private function collected(array $facilityIds, CarbonInterface $start, CarbonInterface $end): string
     {
-        $amount = Payment::query()
-            ->where('status', 'verified')
-            ->whereBetween('created_at', [$start, $end])
-            ->whereHas('booking', function (Builder $query) use ($facilityIds): void {
-                $query->whereIn('facility_id', $facilityIds);
-            })
-            ->sum('amount');
+        $amount = $this->bookings($facilityIds)
+            ->where('status', '!=', 'cancelled')
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->sum('total_price');
 
         return number_format((float) $amount, 2, '.', '');
     }
@@ -175,16 +197,13 @@ class FacilityDashboardMetrics
         $walkIn = 0;
         $staff = 0;
 
-        // In a real app we might load the user relation to check their role if user_id is present.
-        // For efficiency without N+1, we can do a quick check:
-        // Actually, let's load users if we have them to check roles.
         $userIds = $bookings->pluck('user_id')->filter()->unique();
         $userRoles = User::whereIn('id', $userIds)->pluck('role', 'id');
 
         foreach ($bookings as $booking) {
             if ($booking->user_id) {
-                $role = $userRoles[$booking->user_id] ?? 'player';
-                if (in_array($role, ['staff', 'owner'])) {
+                $role = $userRoles[$booking->user_id] ?? 'PLAYER';
+                if (in_array($role, ['FACILITY_STAFF', 'FACILITY_OWNER'])) {
                     $staff++;
                 } else {
                     $online++;
@@ -202,26 +221,23 @@ class FacilityDashboardMetrics
     }
 
     /**
+     * Daily revenue for the trend chart — same booking-value basis as collected().
+     *
      * @param  array<int, int>  $facilityIds
      * @return array<int, array{time: string, v: float, label: string}>
      */
     private function revenueTrend(array $facilityIds, CarbonInterface $start, CarbonInterface $end): array
     {
-        $payments = Payment::query()
-            ->where('status', 'verified')
-            ->whereBetween('created_at', [$start, $end])
-            ->whereHas('booking', function (Builder $query) use ($facilityIds): void {
-                $query->whereIn('facility_id', $facilityIds);
-            })
-            ->get(['amount', 'created_at']);
+        $totals = $this->bookings($facilityIds)
+            ->where('status', '!=', 'cancelled')
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->selectRaw('date, SUM(total_price) as aggregate')
+            ->groupBy('date')
+            ->pluck('aggregate', 'date');
 
         $byDate = [];
-        foreach ($payments as $payment) {
-            $dateStr = $payment->created_at->toDateString();
-            if (! isset($byDate[$dateStr])) {
-                $byDate[$dateStr] = 0;
-            }
-            $byDate[$dateStr] += (float) $payment->amount;
+        foreach ($totals as $date => $aggregate) {
+            $byDate[Carbon::parse($date)->toDateString()] = (float) $aggregate;
         }
 
         $trend = [];
