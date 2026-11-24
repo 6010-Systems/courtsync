@@ -8,6 +8,7 @@ use App\Models\RatePlan;
 use App\Support\RateQuote;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class RateQuoteTest extends TestCase
@@ -171,5 +172,76 @@ class RateQuoteTest extends TestCase
         $this->assertNull($quote['rate_plan_id']);
         $this->assertSame(600.0, $quote['subtotal']);
         $this->assertSame(0.0, $quote['addons_total']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Boundary cases: half-open interval [dayStart, nightStart) → day,
+    //                                    [nightStart, dayStart) → night.
+    // All tests use day_start_time=05:00, night_start_time=17:00 (factory defaults).
+    // -------------------------------------------------------------------------
+
+    #[DataProvider('dayNightBoundaryProvider')]
+    public function test_day_night_boundary_hour_splitting(
+        string $start,
+        string $end,
+        int $expectedDayHours,
+        int $expectedNightHours,
+    ): void {
+        [$day, $night] = RateQuote::splitHours($start, $end, '05:00', '17:00');
+
+        $this->assertSame($expectedDayHours, $day, "day hours for {$start}–{$end}");
+        $this->assertSame($expectedNightHours, $night, "night hours for {$start}–{$end}");
+    }
+
+    /**
+     * @return array<string, array{string, string, int, int}>
+     */
+    public static function dayNightBoundaryProvider(): array
+    {
+        return [
+            '4 PM – 5 PM is 100% day' => ['16:00', '17:00', 1, 0],
+            '5 PM – 6 PM is 100% night' => ['17:00', '18:00', 0, 1],
+            '4 PM – 6 PM is day + night' => ['16:00', '18:00', 1, 1],
+            '3 PM – 5 PM is 100% day' => ['15:00', '17:00', 2, 0],
+            '3 PM – 7 PM is day + night' => ['15:00', '19:00', 2, 2],
+            '5 PM – 7 PM is 100% night' => ['17:00', '19:00', 0, 2],
+            '2 PM – 4 PM is 100% day' => ['14:00', '16:00', 2, 0],
+            '10 PM – 11 PM is 100% night' => ['22:00', '23:00', 0, 1],
+        ];
+    }
+
+    public function test_custom_night_start_time_is_used_when_configured(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '06:00:00',
+            'night_start_time' => '18:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        // 17:00–19:00 with nightStart=18:00 → 1 day hour (17:00–18:00), 1 night hour (18:00–19:00)
+        $quote = (new RateQuote)->forBooking($court, '17:00', '19:00', $plan);
+
+        $this->assertSame(1, $quote['court']['day_hours']);
+        $this->assertSame(1, $quote['court']['night_hours']);
+        $this->assertSame(700.0, $quote['subtotal']); // 300 + 400
+    }
+
+    public function test_booking_ending_exactly_at_night_start_is_100_percent_day(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 500)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '05:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '16:00', '17:00', $plan);
+
+        $this->assertSame(1, $quote['court']['day_hours']);
+        $this->assertSame(0, $quote['court']['night_hours']);
+        $this->assertSame(300.0, $quote['subtotal']);
     }
 }

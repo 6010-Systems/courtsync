@@ -128,7 +128,7 @@ class RateQuote
             ];
         }
 
-        [$dayHours, $nightHours] = $this->splitHours(
+        [$dayHours, $nightHours] = self::splitHours(
             $startTime,
             $endTime,
             Carbon::parse($plan->day_start_time ?: '05:00:00')->format('H:i'),
@@ -204,9 +204,16 @@ class RateQuote
     }
 
     /**
+     * Split a booking time range into day and night hour counts.
+     *
+     * Each hour slot is classified by its start time using half-open intervals:
+     * [dayStart, nightStart) → day, [nightStart, dayStart) → night.
+     * This prevents double-charging at boundary times (e.g. a booking that ends
+     * exactly at nightStart is 100% day rate).
+     *
      * @return array{0: int, 1: int}
      */
-    private function splitHours(string $startTime, string $endTime, string $dayStart, string $nightStart): array
+    public static function splitHours(string $startTime, string $endTime, string $dayStart, string $nightStart): array
     {
         $dayHours = 0;
         $nightHours = 0;

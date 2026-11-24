@@ -259,6 +259,23 @@ export function offeredAddons(court, facility = null) {
 }
 
 /**
+ * Preview of Facility::calculateBookingFee() — the server has the final say.
+ */
+export function estimateBookingFee(facility, subtotal) {
+    const value = Number(facility?.booking_fee_value || 0);
+
+    if (value <= 0) {
+        return 0;
+    }
+
+    if (facility?.booking_fee_type === 'PERCENT') {
+        return Math.round(subtotal * Math.min(value, 100)) / 100;
+    }
+
+    return Math.round(value * 100) / 100;
+}
+
+/**
  * Lowest effective hourly price, used for "from ₱X/hr" labels.
  */
 export function startingRate(court, facility = null) {

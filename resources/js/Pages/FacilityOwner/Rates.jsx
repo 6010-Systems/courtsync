@@ -29,6 +29,18 @@ function timeValue(value, fallback) {
     return String(value || fallback).slice(0, 5);
 }
 
+function formatTime12h(timeStr) {
+    if (!timeStr) {
+        return '';
+    }
+
+    const [hour, minute] = String(timeStr).split(':').map(Number);
+    const suffix = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+
+    return `${h}:${String(minute ?? 0).padStart(2, '0')} ${suffix}`;
+}
+
 export default function Rates({ facilities = [], can = {} }) {
     const [facilityId, setFacilityId] = useState(() => facilities[0]?.id ?? null);
     const [draft, setDraft] = useState(blankPlan);
@@ -400,7 +412,9 @@ export default function Rates({ facilities = [], can = {} }) {
                                                 <p className="text-[11px] font-medium text-[#101F1A]/60">
                                                     {plan.kind === 'ADDON'
                                                         ? `${formatPeso(plan.day_rate)}/hr per item`
-                                                        : `☀️ ${formatPeso(plan.day_rate)} · 🌙 ${night === null ? 'same rate' : formatPeso(night)}`}
+                                                        : night === null
+                                                            ? `${formatPeso(plan.day_rate)}/hr (flat)`
+                                                            : `☀️ ${formatPeso(plan.day_rate)} until ${formatTime12h(plan.night_start_time || '17:00')} · 🌙 ${formatPeso(night)}`}
                                                 </p>
                                             </div>
                                             <div className="flex shrink-0 items-center gap-1.5">

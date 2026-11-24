@@ -23,7 +23,7 @@ import { PopularDaysCard } from '@/Components/Dashboard/PopularDaysCard';
 import { RevenueHeroCard } from '@/Components/Dashboard/RevenueHeroCard';
 import StatCard from '@/Components/Dashboard/StatCard';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
     Banknote,
@@ -33,6 +33,34 @@ import {
     Plus,
     Users,
 } from 'lucide-react';
+
+const PAYMENT_STATUS_FILTERS = [
+    { value: 'all', label: 'All payments' },
+    { value: 'verified', label: 'Verified' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'unpaid', label: 'Unpaid' },
+    { value: 'rejected', label: 'Rejected' },
+];
+
+function PaymentStatusFilter({ value }) {
+    return (
+        <select
+            value={value}
+            onChange={(event) => {
+                router.get(route('dashboard'), { payment_status: event.target.value }, {
+                    preserveState: true,
+                    preserveScroll: true,
+                    replace: true,
+                });
+            }}
+            className="h-10 rounded-lg border border-[#101F1A]/15 bg-white px-3 text-xs font-bold text-[#101F1A] focus:border-[#D6FF3F] focus:ring-1 focus:ring-[#D6FF3F]"
+        >
+            {PAYMENT_STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+        </select>
+    );
+}
 
 function Card({ className = '', children }) {
     return (
@@ -190,21 +218,30 @@ function PeriodSummaryCard({ bookings, bookingsDelta, revenue, revenueDelta, pla
 
 const BOOKING_SOURCES = { online: 2884, walkIn: 1432, staff: 562 };
 
+// Percentage change from `previous` to `current`. With no prior-period activity,
+// any current activity reads as a full "+100%" increase, and none as flat "0%" —
+// never a fallback percentage unrelated to the real numbers.
+function percentDelta(current, previous) {
+    if (previous > 0) {
+        return Math.round(((current - previous) / previous) * 100);
+    }
+
+    return current > 0 ? 100 : 0;
+}
+
 function MetricsSummary({ metrics, playerHint }) {
     const revenueRange = MOCK_REVENUE_BY_RANGE['This Week'];
+    const hasMetrics = Boolean(metrics);
 
-    // Derive KPI values from real metrics props where available
+    // Derive KPI values from real metrics props where available; the mock
+    // numbers only ever back-fill the demo view when there are no metrics at all.
     const bookingsCount   = metrics?.bookings?.current ?? 247;
-    const bookingsDelta   = metrics?.bookings?.current && metrics?.bookings?.previous
-        ? Math.round(((metrics.bookings.current - metrics.bookings.previous) / Math.max(metrics.bookings.previous, 1)) * 100)
-        : 15;
     const bookingsPrev    = metrics?.bookings?.previous ?? 214;
+    const bookingsDelta   = hasMetrics ? percentDelta(bookingsCount, bookingsPrev) : 15;
 
     const collectedCurrent  = Number(metrics?.collected?.current ?? 82450);
     const collectedPrevious = Number(metrics?.collected?.previous ?? 73600);
-    const collectedDelta    = collectedPrevious > 0
-        ? Math.round(((collectedCurrent - collectedPrevious) / collectedPrevious) * 100)
-        : 12;
+    const collectedDelta    = hasMetrics ? percentDelta(collectedCurrent, collectedPrevious) : 12;
 
     const playersTotal  = metrics?.players?.total ?? 1432;
     const pendingTotal  = Number(metrics?.pending?.total ?? 18);
@@ -344,7 +381,7 @@ function MetricsSummary({ metrics, playerHint }) {
     );
 }
 
-export default function FacilityOwnerDashboard({ user, metrics = null }) {
+export default function FacilityOwnerDashboard({ user, metrics = null, filters = null }) {
     // ── Facility owner: no verified account yet ────────────────────────
     if (user.role === 'FACILITY_OWNER' && user.status !== 'VERIFIED') {
         return (
@@ -396,7 +433,7 @@ export default function FacilityOwnerDashboard({ user, metrics = null }) {
                             ? `Staff portal for ${user.work_facility?.name ?? 'your assigned facility'}`
                             : 'Here’s what’s happening across your facilities'
                     }
-                    actions={null}
+                    actions={metrics && <PaymentStatusFilter value={filters?.payment_status ?? 'all'} />}
                     showSearch={false}
                     liveNotifications
                     notificationsFooterHref={route('facility.bookings')}

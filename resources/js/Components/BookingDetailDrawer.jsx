@@ -1,61 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X,
-    Calendar,
-    Clock,
-    MapPin,
-    User,
-    Banknote,
-    ShieldCheck,
-    Check,
-    CheckCircle2,
-    XCircle,
-    Sparkles,
-    Building2,
-    ExternalLink,
-    ZoomIn,
-    Phone,
-    Mail,
-    FileText,
-    Loader2,
-} from 'lucide-react';
+import { X, Calendar, CalendarClock, CheckCircle2, ClipboardList, Clock, MapPin, Maximize2, ReceiptText, User, Banknote, ShieldCheck, Check, Sparkles, XCircle } from 'lucide-react';
+import PrimaryButton from '@/Components/PrimaryButton';
 import { formatPeso } from '@/Components/MetricCard';
 import { receiptUrl } from '@/Utils/receiptUrl';
 
-export default function BookingDetailDrawer({
-    isOpen,
-    onClose,
-    booking,
-    mode = 'view',
-    onVerify,
-    onReject,
-    isProcessing = false,
-}) {
-    const [isZoomed, setIsZoomed] = useState(false);
+export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onVerify, onReject, booking, mode = 'view' }) {
+    const [activeTab, setActiveTab] = useState('details');
+    const [showReceiptPreview, setShowReceiptPreview] = useState(false);
 
-    // Close on Escape key
     useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && isOpen) {
-                if (isZoomed) {
-                    setIsZoomed(false);
-                } else {
-                    onClose?.();
-                }
+        setActiveTab('details');
+        setShowReceiptPreview(false);
+    }, [isOpen, booking?.id]);
+
+    useEffect(() => {
+        if (!showReceiptPreview) return;
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setShowReceiptPreview(false);
             }
         };
 
-        if (isOpen) {
-            window.addEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = 'hidden';
-        }
+        window.addEventListener('keydown', handleKeyDown);
 
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            document.body.style.overflow = '';
-        };
-    }, [isOpen, isZoomed, onClose]);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showReceiptPreview]);
 
     if (!booking) return null;
 
@@ -150,225 +121,260 @@ export default function BookingDetailDrawer({
                                     <X size={16} />
                                 </button>
 
-                                <div className="flex items-center gap-3 pr-8">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-[#D6FF3F] shadow-inner shrink-0">
-                                        {isSuccess ? (
-                                            <Check size={22} strokeWidth={3} />
-                                        ) : (
-                                            <ShieldCheck size={22} strokeWidth={2.5} />
-                                        )}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h2 id="booking-detail-title" className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
-                                            {isSuccess ? 'Booking Created' : 'Booking & Payment Details'}
-                                        </h2>
-                                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                                            <span className="text-xs text-white/60 truncate">
-                                                ID: #{booking.id} · {facilityName}
-                                            </span>
-                                            {/* Status Badge */}
-                                            {isPending && (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                                                    Pending Verification
-                                                </span>
-                                            )}
-                                            {isVerified && (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-[#D6FF3F] px-2 py-0.5 text-[10px] font-black text-[#101F1A]">
-                                                    <Check size={10} strokeWidth={3} />
-                                                    Verified & Secured
-                                                </span>
-                                            )}
-                                            {isRejected && (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-500/30">
-                                                    <X size={10} />
-                                                    Cancelled / Rejected
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
+                                {/* Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    aria-label="Close booking details"
+                                    className="absolute top-3 right-3 z-10 rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+                                >
+                                    <X size={18} />
+                                </button>
+
+                                <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center mb-3 text-[#D6FF3F] shadow-inner">
+                                    {isSuccess ? (
+                                        <Check size={28} strokeWidth={3} />
+                                    ) : (
+                                        <ShieldCheck size={28} strokeWidth={2.5} />
+                                    )}
                                 </div>
                             </div>
 
-                            {/* ── Scrollable Dialog Body ── */}
-                            <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 bg-[#FAF9F5]">
-                                
-                                {/* 1. Player Info Card */}
-                                <div className="bg-white p-3.5 rounded-2xl border border-[#101F1A]/10 shadow-card">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                            <User size={12} /> Player Information
-                                        </span>
-                                        {isRegistered ? (
-                                            <span className="text-[10px] bg-[#D6FF3F] text-[#101F1A] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                                                Registered Member
-                                            </span>
-                                        ) : (
-                                            <span className="text-[10px] bg-[#101F1A]/5 text-[#101F1A]/70 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                                                Guest Walk-in
-                                            </span>
-                                        )}
+                            {/* Bottom Section (Details) */}
+                            <div className="max-h-[72vh] overflow-y-auto bg-[#F8F9FA] p-4">
+
+                                {/* Tabs (view mode only) */}
+                                {!isSuccess && (
+                                    <div className="mb-3 flex items-center gap-1 rounded-xl border border-[#101F1A]/10 bg-white p-1 shadow-sm">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('details')}
+                                            aria-pressed={activeTab === 'details'}
+                                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+                                                activeTab === 'details'
+                                                    ? 'bg-[#101F1A] text-[#D6FF3F] shadow-sm'
+                                                    : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                            }`}
+                                        >
+                                            <ClipboardList size={13} />
+                                            Booking
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('receipt')}
+                                            aria-pressed={activeTab === 'receipt'}
+                                            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer ${
+                                                activeTab === 'receipt'
+                                                    ? 'bg-[#101F1A] text-[#D6FF3F] shadow-sm'
+                                                    : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                            }`}
+                                        >
+                                            <ReceiptText size={13} />
+                                            Proof of Payment
+                                        </button>
                                     </div>
+                                )}
+
+                                {/* Booking details panel */}
+                                <div className={isSuccess || activeTab === 'details' ? 'space-y-2 mb-4' : 'hidden'}>
                                     
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-xs font-bold text-[#D6FF3F] shadow-2xs">
                                             {getInitials(playerName)}
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="font-bold text-sm text-[#101F1A] truncate">
-                                                {playerName}
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[#101F1A]/60 mt-0.5">
-                                                {playerEmail && (
-                                                    <span className="inline-flex items-center gap-1 truncate">
-                                                        <Mail size={11} className="text-[#101F1A]/40" />
-                                                        {playerEmail}
-                                                    </span>
-                                                )}
-                                                {playerPhone && (
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <Phone size={11} className="text-[#101F1A]/40" />
-                                                        {playerPhone}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 2. Venue & Schedule Matrix */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                    {/* Court & Venue */}
-                                    <div className="bg-white p-3 rounded-2xl border border-[#101F1A]/10 shadow-2xs">
-                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1">
-                                            <Building2 size={12} /> Venue & Court
-                                        </span>
-                                        <div className="font-bold text-sm text-[#101F1A] truncate">
-                                            {courtName}
-                                        </div>
-                                        {booking.rate_plan_name && (
-                                            <span className="inline-block mt-0.5 rounded bg-[#F5F2EA] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/70">
-                                                {booking.rate_plan_name}
-                                            </span>
-                                        )}
-                                        <div className="text-xs text-[#101F1A]/60 truncate mt-0.5">
-                                            {facilityName}
-                                        </div>
-                                    </div>
-
-                                    {/* Schedule */}
-                                    <div className="bg-white p-3 rounded-2xl border border-[#101F1A]/10 shadow-2xs">
-                                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50 mb-1">
-                                            <Clock size={12} /> Reserved Time
-                                        </span>
-                                        <div className="font-bold text-sm text-[#101F1A] truncate">
-                                            {formatDate(booking.date)}
-                                        </div>
-                                        <div className="text-xs text-[#101F1A]/60 truncate mt-0.5">
-                                            {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 3. Financial Breakdown Card */}
-                                {!isSuccess && (
-                                    <div className="rounded-2xl border border-[#101F1A]/10 bg-white p-3.5 shadow-2xs">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/50">
-                                                <Banknote size={12} /> Payment Summary
-                                            </span>
-                                            <span className="rounded-md bg-[#F5F2EA] px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#101F1A]">
-                                                {payment?.payment_method || 'Manual'}
-                                            </span>
-                                        </div>
-
-                                        <div className="space-y-1.5 text-xs text-[#101F1A]/70">
-                                            <div className="flex items-center justify-between">
-                                                <span>{booking.rate_plan_name || 'Court rental subtotal'}</span>
-                                                <span className="font-bold text-[#101F1A]">{formatPeso(courtRate)}</span>
-                                            </div>
-                                            {addonsTotal > 0 && (
-                                                <div className="flex items-center justify-between">
-                                                    <span>Add-ons</span>
-                                                    <span className="font-bold text-[#101F1A]">{formatPeso(addonsTotal)}</span>
-                                                </div>
+                                        <div className="text-[15px] font-black text-[#10221C] truncate">
+                                            {booking.user?.name || booking.guest_name || 'Walk-in'}
+                                            {booking.user?.email && (
+                                                <span className="text-gray-400 font-medium text-[12px] ml-1.5">
+                                                    • {booking.user.email}
+                                                </span>
                                             )}
-                                            <div className="flex items-center justify-between">
-                                                <span>Facility booking fee</span>
-                                                <span className="font-bold text-[#101F1A]">
-                                                    {bookingFee > 0 ? formatPeso(bookingFee) : '₱0.00 (Free)'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center justify-between border-t border-dashed border-[#101F1A]/15 pt-2 mt-2">
-                                                <span className="text-xs font-bold uppercase tracking-wide text-[#101F1A]/70">
-                                                    Total Charged
-                                                </span>
-                                                <span className="text-base font-black text-[#101F1A]">
-                                                    {formatPeso(totalPrice)}
-                                                </span>
-                                            </div>
                                         </div>
                                     </div>
-                                )}
 
-                                {/* 4. Payment Receipt Section */}
-                                {!isSuccess && proofUrl && (
-                                    <div className="overflow-hidden rounded-2xl border border-[#101F1A]/10 bg-white shadow-card">
-                                        <div className="flex items-center justify-between border-b border-[#101F1A]/10 bg-[#F5F2EA]/40 px-3.5 py-2">
-                                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                                <FileText size={12} /> Uploaded Proof Receipt
+                                    {/* 2-Column Details: Date & Time */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
+                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
+                                                <Calendar size={12} /> Date
                                             </span>
-                                            <div className="flex items-center gap-2">
+                                            <span className="text-[14px] font-bold text-[#10221C] truncate">
+                                                {formatDate(booking.date)}
+                                            </span>
+                                        </div>
+                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
+                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
+                                                <Clock size={12} /> Time
+                                            </span>
+                                            <span className="text-[13px] font-bold text-[#10221C] truncate">
+                                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Court and Price */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center overflow-hidden">
+                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide mb-0.5">
+                                                <MapPin size={12} /> Court
+                                            </span>
+                                            <span className="text-[14px] font-black text-[#10221C] truncate">
+                                                {booking.court?.name || 'Unknown'}
+                                            </span>
+                                            {booking.rate_plan_name && (
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-[#10221C]/50 truncate">
+                                                    {booking.rate_plan_name}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="bg-[#D6FF3F] p-2 rounded-xl shadow-md flex flex-col justify-center relative overflow-hidden group">
+                                            <Banknote size={48} className="absolute -right-3 -bottom-3 text-[#10221C]/10 group-hover:scale-110 transition-transform duration-300" />
+                                            <span className="flex items-center gap-1.5 text-[11px] text-[#10221C]/60 font-bold uppercase tracking-wide mb-0.5 relative z-10">
+                                                Total Price
+                                            </span>
+                                            <span className="text-lg font-black text-[#10221C] leading-tight truncate relative z-10">
+                                                {formatPeso(totalPrice)}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {!isSuccess && (
+                                        <div className="rounded-xl border border-[#10221C]/10 bg-[#FAFAF8] p-3 text-xs">
+                                            <div className="mb-1.5 flex items-center justify-between">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
+                                                    Payment breakdown
+                                                </span>
+                                                {booking.payment?.status && (
+                                                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                                                        booking.payment.status === 'verified'
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : booking.payment.status === 'rejected'
+                                                                ? 'bg-rose-100 text-rose-700'
+                                                                : 'bg-amber-100 text-amber-700'
+                                                    }`}>
+                                                        {booking.payment.status}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                </div>
+
+                                {/* Proof of Payment tab */}
+                                {!isSuccess && activeTab === 'receipt' && (
+                                    <div className="space-y-2">
+                                        {booking.payment && (
+                                            <div className="flex items-center justify-between rounded-xl border border-[#10221C]/10 bg-white px-3 py-2 shadow-sm">
+                                                <div>
+                                                    <span className="block text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
+                                                        {booking.payment.payment_method || 'Payment'}
+                                                    </span>
+                                                    <span className="text-sm font-black text-[#10221C]">
+                                                        {formatPeso(booking.payment.amount ?? totalPrice)}
+                                                    </span>
+                                                </div>
+                                                {booking.payment.status && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#10221C]/60">
+                                                        {booking.payment.status}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {booking.payment?.proof_path ? (
+                                            <div className="overflow-hidden rounded-xl border border-[#10221C]/10 bg-white shadow-sm">
+                                                <div className="flex items-center justify-between border-b border-[#10221C]/10 px-3 py-1.5">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">
+                                                        Proof of payment
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowReceiptPreview(true)}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-[#10221C]/60 transition-colors hover:text-[#10221C] cursor-pointer"
+                                                    >
+                                                        <Maximize2 size={11} />
+                                                        View full size
+                                                    </button>
+                                                </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => setIsZoomed(true)}
-                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#101F1A] hover:text-[#101F1A]/70 cursor-pointer transition-colors"
+                                                    onClick={() => setShowReceiptPreview(true)}
+                                                    aria-label="View payment receipt full size"
+                                                    className="block w-full bg-gray-50 p-2 cursor-zoom-in"
                                                 >
-                                                    <ZoomIn size={12} />
-                                                    <span>Enlarge</span>
+                                                    <img
+                                                        src={receiptUrl(booking.payment.proof_path)}
+                                                        alt="Payment receipt"
+                                                        className="mx-auto max-h-[48vh] w-full rounded-lg object-contain"
+                                                    />
                                                 </button>
-                                                <span className="text-[#101F1A]/30">·</span>
-                                                <a
-                                                    href={proofUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#101F1A] hover:underline"
-                                                >
-                                                    <ExternalLink size={12} />
-                                                    <span>New Tab</span>
-                                                </a>
+                                                <p className="border-t border-[#10221C]/10 px-3 py-2 text-center text-[10px] text-[#10221C]/50">
+                                                    Tap the receipt to enlarge it.
+                                                </p>
                                             </div>
-                                        </div>
-                                        <div
-                                            onClick={() => setIsZoomed(true)}
-                                            className="relative block bg-[#101F1A]/5 p-2 cursor-zoom-in group"
-                                            title="Click to zoom receipt"
-                                        >
-                                            <img
-                                                src={proofUrl}
-                                                alt="Payment receipt proof"
-                                                className="max-h-56 sm:max-h-64 w-full rounded-xl object-contain transition-transform duration-200 group-hover:scale-[1.01]"
-                                            />
-                                            <div className="absolute inset-0 bg-[#101F1A]/0 group-hover:bg-[#101F1A]/10 transition-colors flex items-center justify-center">
-                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-[#101F1A]/80 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-lg">
-                                                    <ZoomIn size={12} /> Click to enlarge
-                                                </span>
-                                            </div>
-                                        </div>
+                                        ) : (
+                                            <p className="rounded-xl border border-dashed border-[#10221C]/15 bg-white/60 px-3 py-8 text-center text-[11px] text-[#10221C]/50">
+                                                No payment receipt uploaded for this booking.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
 
-                                {!isSuccess && !proofUrl && (
-                                    <div className="rounded-2xl border border-dashed border-[#101F1A]/15 bg-white/60 p-4 text-center">
-                                        <FileText size={24} className="mx-auto text-[#101F1A]/30 mb-1" />
-                                        <p className="text-xs font-semibold text-[#101F1A]/70">No payment receipt attached</p>
-                                        <p className="text-[10px] text-[#101F1A]/40 mt-0.5">
-                                            This reservation was recorded without an uploaded receipt proof.
-                                        </p>
+                                {/* Facility-side actions */}
+                                {!isSuccess && booking.status !== 'cancelled' && (
+                                    <div className="space-y-2">
+                                        {/* Verify payment — shown when payment isn't verified yet */}
+                                        {onVerify && (booking.payment?.status ?? 'unpaid') !== 'verified' && (
+                                            booking.status === 'pending'
+                                                ? (
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onVerify(booking)}
+                                                            className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                                                        >
+                                                            <CheckCircle2 size={14} />
+                                                            Verify
+                                                        </button>
+                                                        {onReject && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onReject(booking)}
+                                                                className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-rose-600 transition-colors hover:bg-rose-50 cursor-pointer"
+                                                            >
+                                                                <XCircle size={14} />
+                                                                Reject
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onVerify(booking)}
+                                                        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                                                    >
+                                                        <CheckCircle2 size={14} />
+                                                        Verify payment
+                                                    </button>
+                                                )
+                                        )}
+
+                                        {/* Edit booking */}
+                                        {onReschedule && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onReschedule(booking)}
+                                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#101F1A] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-[#D6FF3F] transition-colors hover:bg-[#162923] cursor-pointer"
+                                            >
+                                                <CalendarClock size={14} />
+                                                Edit booking
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
-                                {/* Success Mode Message */}
+                                {/* Footer / Actions */}
                                 {isSuccess && (
                                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-center gap-3">
                                         <Sparkles size={18} className="text-emerald-600 shrink-0" />
@@ -421,31 +427,37 @@ export default function BookingDetailDrawer({
                         </div>
                     </motion.div>
 
-                    {/* ── High-Res Receipt Lightbox Modal ── */}
-                    {isZoomed && proofUrl && (
-                        <div
-                            onClick={() => setIsZoomed(false)}
-                            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#101F1A]/90 backdrop-blur-md cursor-zoom-out"
+                    {/* Full-size receipt preview (opens in place, never a new tab) */}
+                    {showReceiptPreview && booking.payment?.proof_path && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowReceiptPreview(false)}
+                            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Payment receipt preview"
                         >
-                            <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="relative max-h-[90vh] max-w-3xl overflow-auto rounded-2xl bg-white p-2 shadow-2xl"
+                            <button
+                                type="button"
+                                onClick={() => setShowReceiptPreview(false)}
+                                aria-label="Close receipt preview"
+                                className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20 cursor-pointer"
                             >
-                                <button
-                                    type="button"
-                                    onClick={() => setIsZoomed(false)}
-                                    className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#101F1A]/80 text-white hover:bg-[#101F1A] transition-colors cursor-pointer"
-                                    aria-label="Close enlarged receipt"
-                                >
-                                    <X size={16} />
-                                </button>
-                                <img
-                                    src={proofUrl}
-                                    alt="Enlarged payment receipt proof"
-                                    className="max-h-[85vh] w-auto mx-auto object-contain rounded-xl"
-                                />
-                            </div>
-                        </div>
+                                <X size={20} />
+                            </button>
+
+                            <motion.img
+                                initial={{ opacity: 0, scale: 0.96 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.96 }}
+                                src={receiptUrl(booking.payment.proof_path)}
+                                alt="Payment receipt"
+                                onClick={(event) => event.stopPropagation()}
+                                className="max-h-[88vh] w-auto max-w-full rounded-lg object-contain shadow-2xl"
+                            />
+                        </motion.div>
                     )}
                 </>
             )}
