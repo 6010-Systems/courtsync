@@ -31,7 +31,15 @@ export function hoursBetween(startTime, endTime) {
         return 0;
     }
 
-    return Math.max(0, (endHour * 60 + (endMinute || 0) - startHour * 60 - (startMinute || 0)) / 60);
+    let startMinutes = startHour * 60 + (startMinute || 0);
+    let endMinutes = endHour * 60 + (endMinute || 0);
+
+    // Cross-midnight booking: end time is earlier in the day than start time.
+    if (endMinutes <= startMinutes) {
+        endMinutes += 24 * 60;
+    }
+
+    return Math.max(0, (endMinutes - startMinutes) / 60);
 }
 
 export function splitHours(startTime, endTime, dayStartTime, nightStartTime) {
@@ -40,10 +48,15 @@ export function splitHours(startTime, endTime, dayStartTime, nightStartTime) {
     const dayStart = dayStartTime ? parseInt(String(dayStartTime).split(':')[0], 10) : 5;
     const nightStart = nightStartTime ? parseInt(String(nightStartTime).split(':')[0], 10) : 17;
 
+    // For cross-midnight bookings the end hour is numerically less than start hour.
+    // Normalise by adding 24 to bring the end past midnight in a linear scale (0–47).
+    const normalEnd = endHour <= startHour ? endHour + 24 : endHour;
+
     let dayHours = 0;
     let nightHours = 0;
 
-    for (let hour = startHour; hour < endHour; hour++) {
+    for (let h = startHour; h < normalEnd; h++) {
+        const hour = h % 24; // wrap back to 0-23 for period classification
         if (hour >= nightStart || hour < dayStart) {
             nightHours++;
         } else {

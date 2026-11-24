@@ -16,7 +16,7 @@ const blankPlan = {
     description: '',
     day_rate: '',
     night_rate: '',
-    day_start_time: '05:00',
+    day_start_time: '02:00',
     night_start_time: '17:00',
     includes_ball: true,
     included_paddles: 0,
@@ -39,6 +39,49 @@ function formatTime12h(timeStr) {
     const h = hour % 12 || 12;
 
     return `${h}:${String(minute ?? 0).padStart(2, '0')} ${suffix}`;
+}
+
+function timeSelectOptions() {
+    const opts = [];
+    for (let h = 0; h < 24; h++) {
+        for (const m of [0, 30]) {
+            const hh = h.toString().padStart(2, '0');
+            const mm = m.toString().padStart(2, '0');
+            const value = `${hh}:${mm}`;
+            const suffix = h >= 12 ? 'PM' : 'AM';
+            const display = `${h % 12 || 12}:${mm} ${suffix}`;
+            opts.push({ value, label: display });
+        }
+    }
+    return opts;
+}
+
+/** Night "To" options: same-evening times first, then after-midnight labeled "(next day)".
+ *  nightStartHour is the integer hour when night begins (e.g. 17 for 5 PM).
+ */
+function nightEndOptions(nightStartHour = 17) {
+    const makeLabel = (h, m, suffix) =>
+        `${(h % 12 || 12)}:${String(m).padStart(2, '0')} ${suffix}`;
+
+    const evening = [];
+    const nextDay = [];
+
+    for (let h = 0; h < 24; h++) {
+        for (const m of [0, 30]) {
+            const hh = String(h).padStart(2, '0');
+            const mm = String(m).padStart(2, '0');
+            const value = `${hh}:${mm}`;
+            const suffix = h >= 12 ? 'PM' : 'AM';
+
+            if (h >= nightStartHour) {
+                evening.push({ value, label: makeLabel(h, m, suffix) });
+            } else {
+                nextDay.push({ value, label: `${makeLabel(h, m, suffix)} (next day)` });
+            }
+        }
+    }
+
+    return { evening, nextDay };
 }
 
 export default function Rates({ facilities = [], can = {} }) {
@@ -74,7 +117,7 @@ export default function Rates({ facilities = [], can = {} }) {
             ...plan,
             day_rate: Number(plan.day_rate ?? 0),
             night_rate: plan.night_rate === null || plan.night_rate === undefined ? '' : Number(plan.night_rate),
-            day_start_time: timeValue(plan.day_start_time, '05:00'),
+            day_start_time: timeValue(plan.day_start_time, '02:00'),
             night_start_time: timeValue(plan.night_start_time, '17:00'),
             included_paddles: Number(plan.included_paddles ?? 0),
             max_quantity: Number(plan.max_quantity ?? 4),
@@ -247,27 +290,111 @@ export default function Rates({ facilities = [], can = {} }) {
                         </div>
                     </div>
                     {draft.kind === 'COURT' && (
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <InputLabel htmlFor="rate-day-start" value="Day starts" />
-                                <TextInput
-                                    id="rate-day-start"
-                                    type="time"
-                                    value={draft.day_start_time}
-                                    onChange={(event) => setField('day_start_time', event.target.value)}
-                                    className="mt-1 block w-full text-xs font-bold"
-                                />
+                        <div className="space-y-3">
+                            <div className="rounded-xl border border-amber-200/70 bg-amber-50 p-3">
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-amber-800">
+                                    ☀️ Day rate hours
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                        <p className="mb-1 text-[10px] font-medium text-amber-700">From</p>
+                                        <select
+                                            id="rate-day-start"
+                                            value={draft.day_start_time}
+                                            onChange={(event) => setField('day_start_time', event.target.value)}
+                                            className="block w-full rounded-lg border border-amber-200 bg-white py-1.5 text-xs font-bold text-[#101F1A] focus:border-amber-400 focus:ring-amber-400"
+                                        >
+                                            {timeSelectOptions().map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <span className="mt-4 text-xs text-amber-700">–</span>
+                                    <div className="flex-1">
+                                        <p className="mb-1 text-[10px] font-medium text-amber-700">To</p>
+                                        <select
+                                            value={draft.night_start_time}
+                                            onChange={(event) => setField('night_start_time', event.target.value)}
+                                            className="block w-full rounded-lg border border-amber-200 bg-white py-1.5 text-xs font-bold text-[#101F1A] focus:border-amber-400 focus:ring-amber-400"
+                                        >
+                                            {timeSelectOptions().map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                                 <InputError message={errors.day_start_time} className="mt-1" />
                             </div>
-                            <div>
-                                <InputLabel htmlFor="rate-night-start" value="Night starts" />
-                                <TextInput
-                                    id="rate-night-start"
-                                    type="time"
-                                    value={draft.night_start_time}
-                                    onChange={(event) => setField('night_start_time', event.target.value)}
-                                    className="mt-1 block w-full text-xs font-bold"
-                                />
+
+                            <div className="rounded-xl border border-indigo-200/70 bg-indigo-50 p-3">
+                                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-indigo-800">
+                                    🌙 Night rate hours
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                        <p className="mb-1 text-[10px] font-medium text-indigo-700">From</p>
+                                        <select
+                                            id="rate-night-start"
+                                            value={draft.night_start_time}
+                                            onChange={(event) => setField('night_start_time', event.target.value)}
+                                            className="block w-full rounded-lg border border-indigo-200 bg-white py-1.5 text-xs font-bold text-[#101F1A] focus:border-indigo-400 focus:ring-indigo-400"
+                                        >
+                                            {timeSelectOptions().map((opt) => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <span className="mt-4 text-xs text-indigo-700">–</span>
+                                    <div className="flex-1">
+                                        <p className="mb-1 text-[10px] font-medium text-indigo-700">To</p>
+                                        <select
+                                            value={draft.day_start_time}
+                                            onChange={(event) => setField('day_start_time', event.target.value)}
+                                            className="block w-full rounded-lg border border-indigo-200 bg-white py-1.5 text-xs font-bold text-[#101F1A] focus:border-indigo-400 focus:ring-indigo-400"
+                                        >
+                                            {(() => {
+                                                const nightHour = parseInt((draft.night_start_time || '17:00').split(':')[0], 10);
+                                                const { evening, nextDay } = nightEndOptions(nightHour);
+                                                return (
+                                                    <>
+                                                        {evening.length > 0 && (
+                                                            <optgroup label="Same evening">
+                                                                {evening.map((opt) => (
+                                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                ))}
+                                                            </optgroup>
+                                                        )}
+                                                                        <optgroup label="After midnight (next day)">
+                                                            {nextDay.map((opt) => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    </>
+                                                );
+                                            })()}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-700/70">Night ends</span>
+                                    {['00:00', '02:00', '05:00'].map((value) => (
+                                        <button
+                                            key={value}
+                                            type="button"
+                                            onClick={() => setField('day_start_time', value)}
+                                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition ${
+                                                draft.day_start_time === value
+                                                    ? 'bg-indigo-700 text-white'
+                                                    : 'border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50'
+                                            }`}
+                                        >
+                                            {formatTime12h(value)}{value === '02:00' ? ' (recommended)' : ''}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="mt-1.5 text-[10px] font-medium text-indigo-700/80">
+                                    🌙 Night rate applies from {formatTime12h(draft.night_start_time || '17:00')} until {formatTime12h(draft.day_start_time || '02:00')} (next day). Bookings can always run until 12:00 AM, and until 2:00 AM when the court's schedule closes later.
+                                </p>
                                 <InputError message={errors.night_start_time} className="mt-1" />
                             </div>
                         </div>
@@ -414,7 +541,7 @@ export default function Rates({ facilities = [], can = {} }) {
                                                         ? `${formatPeso(plan.day_rate)}/hr per item`
                                                         : night === null
                                                             ? `${formatPeso(plan.day_rate)}/hr (flat)`
-                                                            : `☀️ ${formatPeso(plan.day_rate)} until ${formatTime12h(plan.night_start_time || '17:00')} · 🌙 ${formatPeso(night)}`}
+                                                            : `☀️ ${formatPeso(plan.day_rate)} until ${formatTime12h(plan.night_start_time || '17:00')} · 🌙 ${formatPeso(night)} until ${formatTime12h(plan.day_start_time || '02:00')} (next day)`}
                                                 </p>
                                             </div>
                                             <div className="flex shrink-0 items-center gap-1.5">

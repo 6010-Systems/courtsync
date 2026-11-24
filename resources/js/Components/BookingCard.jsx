@@ -39,7 +39,7 @@ export default function BookingCard({ booking, onClick }) {
                         <span>{formatDate(booking.date)}</span>
                         <span className="mx-1">•</span>
                         <Clock size={12} />
-                        <span>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}</span>
+                        <span>{formatTime(booking.start_time)} - {formatTime(booking.end_time)}{booking.end_date || String(booking.end_time) <= String(booking.start_time) ? ' (next day)' : ''}</span>
                     </div>
                 </div>
                 <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-md border ${statusColors[booking.status] || statusColors.pending}`}>

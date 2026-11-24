@@ -46,11 +46,24 @@ export function PaymentStatusBadge({ status }) {
 function durationLabel(startTime, endTime) {
     if (!startTime || !endTime) return null;
 
-    const [startHour] = startTime.split(':').map(Number);
-    const [endHour] = endTime.split(':').map(Number);
-    const hours = Math.max(0, endHour - startHour);
+    const [startHour, startMinute] = String(startTime).split(':').map(Number);
+    const [endHour, endMinute] = String(endTime).split(':').map(Number);
+
+    const start = (startHour || 0) * 60 + (startMinute || 0);
+    let end = (endHour || 0) * 60 + (endMinute || 0);
+
+    // A session ending at or before its start time runs past midnight.
+    if (end <= start) end += 24 * 60;
+
+    const hours = Math.max(0, (end - start) / 60);
 
     return hours > 0 ? `${hours} hr${hours === 1 ? '' : 's'}` : null;
+}
+
+function endsNextDay(booking) {
+    if (!booking) return false;
+
+    return Boolean(booking.end_date) || String(booking.end_time) <= String(booking.start_time);
 }
 
 function initials(name) {
@@ -122,7 +135,7 @@ export default function FacilityBookingsBoard({
                                         {group.label} · {formatDate(booking.date)}
                                     </p>
                                     <p className="mt-1 text-sm font-black text-[#101F1A]">
-                                        {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+                                        {formatTime(booking.start_time)} – {formatTime(booking.end_time)}{endsNextDay(booking) ? ' (next day)' : ''}
                                     </p>
                                 </div>
                                 <BookingStatusBadge status={booking.status} />
@@ -238,7 +251,7 @@ export default function FacilityBookingsBoard({
                                         >
                                             <td className="whitespace-nowrap px-4 py-3">
                                                 <p className="text-xs font-black text-[#101F1A]">
-                                                    {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+                                                    {formatTime(booking.start_time)} – {formatTime(booking.end_time)}{endsNextDay(booking) ? ' (next day)' : ''}
                                                 </p>
                                                 <p className="text-[10px] text-[#101F1A]/50">
                                                     {durationLabel(booking.start_time, booking.end_time) ?? '—'}

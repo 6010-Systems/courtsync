@@ -331,7 +331,10 @@ class FacilityController extends Controller
         RateCardLoader::load($facility);
         $facility->load(['bookings' => function ($q) {
             $q->whereIn('status', ['pending', 'confirmed'])
-                ->whereDate('date', '>=', now()->toDateString());
+                ->where(function ($query) {
+                    $query->whereDate('date', '>=', now()->toDateString())
+                        ->orWhereDate('end_date', '>=', now()->toDateString());
+                });
         }]);
 
         return Inertia::render('Facility/Show', [
@@ -352,7 +355,10 @@ class FacilityController extends Controller
         RateCardLoader::load($facility);
         $facility->load(['bookings' => function ($q) {
             $q->whereIn('status', ['pending', 'confirmed'])
-                ->whereDate('date', '>=', now()->toDateString());
+                ->where(function ($query) {
+                    $query->whereDate('date', '>=', now()->toDateString())
+                        ->orWhereDate('end_date', '>=', now()->toDateString());
+                });
         }]);
 
         // "Book court" on a venue court card deep-links here with ?court={id}.

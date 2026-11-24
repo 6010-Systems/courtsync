@@ -13,6 +13,7 @@ import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
 import { useState, useMemo } from 'react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
+import { clockToMinutes, formatClockLabel, formatWindowLabel, parseOperatingWindow } from '@/Utils/operatingHours';
 import CourtCard from '@/Components/CourtCard';
 import {
     Plus,
@@ -47,8 +48,10 @@ const SPORT_PRESETS = [
 ];
 
 const TIME_PRESETS = [
-    '6:00 AM - 10:00 PM',
+    '6:00 AM - 12:00 AM',
+    '6:00 AM - 2:00 AM',
     '7:00 AM - 11:00 PM',
+    '10:00 AM - 2:00 AM',
     '8:00 AM - 9:00 PM',
     '24 Hours / Open Daily',
 ];
@@ -56,126 +59,62 @@ const TIME_PRESETS = [
 const MINUTES_PER_DAY = 24 * 60;
 
 /**
- * 12-hour label for a minute offset from midnight, e.g. 420 -> "07:00 AM".
+ * A schedule is any "open - close" pair (close may be 12:00 AM or 2:00 AM) or
+ * a 24-hour marker. Anything else would silently fall back to the default.
  */
-function formatMinutesLabel(totalMinutes) {
-    const hour24 = Math.floor((totalMinutes % MINUTES_PER_DAY) / 60);
-    const minutes = totalMinutes % 60;
-    const suffix = hour24 >= 12 ? 'PM' : 'AM';
-    const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+function isReadableSchedule(value) {
+    const text = String(value || '').trim();
 
-    return `${String(hour12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${suffix}`;
+    if (!text) {
+        return false;
+    }
+
+    if (/(24\s*(?:hrs|hours)|open\s*(?:all\s*)?daily|open\s*24)/i.test(text)) {
+        return true;
+    }
+
+    return /^\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[-–—]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*$/i.test(text);
 }
 
 /**
- * 24-hour value for a minute offset from midnight, e.g. 420 -> "07:00".
- */
-function formatMinutesValue(totalMinutes) {
-    const hour24 = Math.floor((totalMinutes % MINUTES_PER_DAY) / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${String(hour24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
-/**
- * Read either "7:00 AM" or "19:00" into minutes from midnight.
- */
-function parseClockToMinutes(rawValue) {
-    if (!rawValue) {
-        return null;
-    }
-
-    const meridiem = String(rawValue).trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i);
-    if (meridiem) {
-        const hour = (Number(meridiem[1]) % 12) + (meridiem[3].toLowerCase() === 'pm' ? 12 : 0);
-
-        return hour * 60 + Number(meridiem[2] ?? 0);
-    }
-
-    const twentyFourHour = String(rawValue).trim().match(/^(\d{1,2}):(\d{2})$/);
-    if (twentyFourHour) {
-        return Number(twentyFourHour[1]) * 60 + Number(twentyFourHour[2]);
-    }
-
-    return null;
-}
-
-/**
- * Bounds of the free-text operating schedule, or null when it cannot be read.
+ * Hourly options for a day/night rate boundary.
  *
- * @return {{startMinutes: number, endMinutes: number}|null}
- */
-function parseScheduleBounds(schedule) {
-    const normalized = (schedule || '').trim();
-
-    if (!normalized) {
-        return null;
-    }
-
-    if (/(24\s*(?:hrs|hours)|open\s*(?:all\s*)?daily|open\s*24)/i.test(normalized)) {
-        return { startMinutes: 0, endMinutes: MINUTES_PER_DAY };
-    }
-
-    const [startRaw, endRaw] = normalized.split(/\s*[-–—]\s*/);
-    const startMinutes = parseClockToMinutes(startRaw);
-    const endMinutes = parseClockToMinutes(endRaw);
-
-    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-        return null;
-    }
-
-    return { startMinutes, endMinutes };
-}
-
-/**
- * Hourly start-time options inside the schedule bounds, so an owner can only
- * pick hours the court is actually open.
+ * Day and night boundaries are compared by clock hour, so both "2:00 AM"
+ * offsets (early morning of the same date or of the next date) are the same
+ * boundary. Offering 00:00 – 23:00 keeps the select unambiguous while still
+ * allowing a night rate that runs until 2:00 AM.
  *
  * @return {Array<{value: string, label: string, minutes: number}>}
  */
-function buildStartTimeOptions(bounds) {
-    const rangeStart = bounds?.startMinutes ?? 0;
-    const rangeEnd = bounds?.endMinutes ?? MINUTES_PER_DAY;
+function buildRateBoundaryOptions() {
     const options = [];
 
-    for (let minutes = rangeStart; minutes < rangeEnd; minutes += 60) {
+    for (let minutes = 0; minutes < MINUTES_PER_DAY; minutes += 60) {
         options.push({
-            value: formatMinutesValue(minutes),
-            label: formatMinutesLabel(minutes),
+            value: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:00`,
+            label: formatClockLabel(minutes),
             minutes,
         });
     }
 
-    return options.length > 0 ? options : buildStartTimeOptions(null);
-}
-
-function describeScheduleBounds(bounds) {
-    if (!bounds) {
-        return null;
-    }
-
-    if (bounds.endMinutes - bounds.startMinutes >= MINUTES_PER_DAY) {
-        return '24 hours';
-    }
-
-    return `${formatMinutesLabel(bounds.startMinutes)} – ${formatMinutesLabel(bounds.endMinutes)}`;
+    return options;
 }
 
 /**
- * Keep a saved start time selectable even when it sits outside the schedule.
+ * Keep a saved boundary selectable even when it is not on the hour.
  */
 function withCurrentTimeOption(options, currentValue) {
     if (!currentValue || options.some((option) => option.value === currentValue)) {
         return options;
     }
 
-    const minutes = parseClockToMinutes(currentValue);
+    const minutes = clockToMinutes(currentValue);
 
     return [
         ...options,
         {
             value: currentValue,
-            label: minutes === null ? String(currentValue) : formatMinutesLabel(minutes),
+            label: minutes === null ? String(currentValue) : formatClockLabel(minutes),
             minutes: minutes ?? 0,
         },
     ].sort((a, b) => a.minutes - b.minutes);
@@ -268,17 +207,21 @@ export default function Courts({ facilities = [], can = {} }) {
         hourly_rate: '',
         day_rate: '',
         night_rate: '',
-        day_start_time: '06:00',
+        day_start_time: '02:00',
         night_start_time: '18:00',
         status: 'AVAILABLE',
         rate_plans: [],
     });
 
     const hasOperatingSchedule = useMemo(() => Boolean((data.time_range || '').trim()), [data.time_range]);
-    const scheduleBounds = useMemo(() => parseScheduleBounds(data.time_range), [data.time_range]);
-    const startTimeOptions = useMemo(() => buildStartTimeOptions(scheduleBounds), [scheduleBounds]);
+    const scheduleWindow = useMemo(() => parseOperatingWindow(data.time_range), [data.time_range]);
+    const startTimeOptions = useMemo(() => buildRateBoundaryOptions(), []);
     const dayStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.day_start_time), [startTimeOptions, data.day_start_time]);
     const nightStartOptions = useMemo(() => withCurrentTimeOption(startTimeOptions, data.night_start_time), [startTimeOptions, data.night_start_time]);
+    const scheduleSummary = useMemo(
+        () => (hasOperatingSchedule ? formatWindowLabel(scheduleWindow) : null),
+        [hasOperatingSchedule, scheduleWindow],
+    );
 
     /**
      * Rate-card packages available at the selected facility (owner can assign them to this court).
@@ -321,25 +264,12 @@ export default function Courts({ facilities = [], can = {} }) {
     };
 
     /**
-     * Update the schedule and re-clamp the day/night start times to the new range.
+     * Update the schedule. Day/night rate boundaries are independent of it, so
+     * they are left untouched (a boundary can be 2:00 AM even when the court
+     * closes at 2:00 AM).
      */
     const applyOperatingSchedule = (value) => {
-        const options = buildStartTimeOptions(parseScheduleBounds(value));
-        const eveningOption = options.reduce(
-            (closest, option) => (Math.abs(option.minutes - 18 * 60) < Math.abs(closest.minutes - 18 * 60) ? option : closest),
-            options[0],
-        );
-
-        setData({
-            ...data,
-            time_range: value,
-            day_start_time: options.some((option) => option.value === data.day_start_time)
-                ? data.day_start_time
-                : (options[0]?.value ?? '06:00'),
-            night_start_time: options.some((option) => option.value === data.night_start_time)
-                ? data.night_start_time
-                : (eveningOption?.value ?? '18:00'),
-        });
+        setData({ ...data, time_range: value });
 
         if (clientErrors.time_range) {
             setClientErrors(prev => ({ ...prev, time_range: undefined }));
@@ -393,6 +323,8 @@ export default function Courts({ facilities = [], can = {} }) {
         }
         if (!hasOperatingSchedule) {
             errs.time_range = 'Set the operating schedule before choosing a pricing mode.';
+        } else if (!isReadableSchedule(data.time_range)) {
+            errs.time_range = 'Use a range like 6:00 AM - 12:00 AM (closes as late as 2:00 AM).';
         } else if (assignedPlanCount === 0 && data.pricing_mode === 'FLAT') {
             if (data.hourly_rate !== '' && data.hourly_rate !== null && (isNaN(Number(data.hourly_rate)) || Number(data.hourly_rate) < 0)) {
                 errs.hourly_rate = 'Hourly rate must be a positive number.';
@@ -430,6 +362,8 @@ export default function Courts({ facilities = [], can = {} }) {
         }
         if (!hasOperatingSchedule) {
             errs.time_range = 'Set the operating schedule to continue.';
+        } else if (!isReadableSchedule(data.time_range)) {
+            errs.time_range = 'Use a range like 6:00 AM - 12:00 AM (closes as late as 2:00 AM).';
         }
 
         setClientErrors(errs);
@@ -471,7 +405,7 @@ export default function Courts({ facilities = [], can = {} }) {
             hourly_rate: '',
             day_rate: '',
             night_rate: '',
-            day_start_time: '06:00',
+            day_start_time: '02:00',
             night_start_time: '18:00',
             status: 'AVAILABLE',
             rate_plans: (
@@ -1151,7 +1085,7 @@ export default function Courts({ facilities = [], can = {} }) {
                         />
                         <InputError message={activeErrors.time_range} className="mt-1" />
                         <p className="text-[10px] font-medium text-[#101F1A]/50">
-                            Pricing time options follow this range{describeScheduleBounds(scheduleBounds) ? ` — ${describeScheduleBounds(scheduleBounds)}.` : '.'}
+                            Pricing time options follow this range{scheduleSummary ? ` — ${scheduleSummary}.` : '.'} Bookings can always run until 12:00 AM, and until 2:00 AM when the schedule closes later.
                         </p>
 
                         {/* Quick Schedule Preset Pills */}
@@ -1351,6 +1285,9 @@ export default function Courts({ facilities = [], can = {} }) {
                                                 </select>
                                             </div>
                                         </div>
+                                        <p className="text-[10px] font-medium text-indigo-700/80">
+                                            🌙 Night rate applies from {formatClockLabel(clockToMinutes(data.night_start_time) ?? 0)} until {formatClockLabel(clockToMinutes(data.day_start_time) ?? 360)} (next day).
+                                        </p>
                                     </div>
                                 </div>
                             </div>

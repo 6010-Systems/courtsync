@@ -70,6 +70,9 @@ class BookingRescheduled extends Notification implements ShouldQueueAfterCommit
         $date = Carbon::parse($this->booking->date)->format('l, F j, Y');
         $start = Carbon::parse($this->booking->start_time)->format('g:i A');
         $end = Carbon::parse($this->booking->end_time)->format('g:i A');
+        if ($this->booking->endsNextDay()) {
+            $end .= ' (next day)';
+        }
         $venue = $this->booking->facility->name;
         $court = $this->booking->court->name;
 

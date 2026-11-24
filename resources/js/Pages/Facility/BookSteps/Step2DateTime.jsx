@@ -14,10 +14,15 @@ export default function Step2DateTime({
     setSelectedDate, 
     isCustomDate, 
     startTime, 
-    setStartTime, 
     endTime, 
-    setEndTime, 
-    timeOptions, 
+    startKey,
+    setStartKey,
+    endKey,
+    setEndKey,
+    startOptions = [],
+    endOptions = [],
+    startOption = null,
+    endOption = null,
     durationHours, 
     formatDateString, 
     formatTimeString,
@@ -212,16 +217,13 @@ export default function Step2DateTime({
                             <label className="block text-xs font-medium text-gray-500 mb-2">Start Time</label>
                             <div className="relative">
                                 <select
-                                    value={startTime}
-                                    onChange={(e) => {
-                                        setStartTime(e.target.value);
-                                        if (endTime && e.target.value >= endTime) setEndTime('');
-                                    }}
+                                    value={startKey}
+                                    onChange={(e) => setStartKey(e.target.value)}
                                     className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none bg-none transition hover:border-gray-300 cursor-pointer"
                                 >
                                     <option value="">Select start</option>
-                                    {timeOptions.slice(0, -1).map((opt) => (
-                                        <option key={opt.value} value={opt.value} disabled={opt.isBooked}>
+                                    {startOptions.map((opt) => (
+                                        <option key={opt.key} value={opt.key} disabled={opt.isBooked}>
                                             {opt.label} {opt.rateTag ? `(${opt.rateTag})` : ''} {opt.labelSuffix}
                                         </option>
                                     ))}
@@ -235,21 +237,15 @@ export default function Step2DateTime({
                             <label className="block text-xs font-medium text-gray-500 mb-2">End Time</label>
                             <div className="relative">
                                 <select
-                                    value={endTime}
-                                    onChange={(e) => setEndTime(e.target.value)}
-                                    disabled={!startTime}
+                                    value={endKey}
+                                    onChange={(e) => setEndKey(e.target.value)}
+                                    disabled={!startKey}
                                     className="block w-full pl-4 pr-10 py-3.5 text-sm font-bold text-[#10221C] border-2 border-gray-200 bg-gray-50 focus:outline-none focus:border-[#10221C] focus:bg-white rounded-xl appearance-none bg-none transition hover:border-gray-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Select end</option>
-                                    {(() => {
-                                        const startIndex = timeOptions.findIndex(o => o.value === startTime);
-                                        let firstBookedAfterStart = timeOptions.findIndex((o, index) => index >= startIndex && o.isBooked);
-                                        if (firstBookedAfterStart === -1) firstBookedAfterStart = timeOptions.length - 1;
-                                        
-                                        return timeOptions.filter((opt, index) => startTime && index > startIndex && index <= firstBookedAfterStart).map((opt) => (
-                                            <option key={opt.value} value={opt.value}>{opt.label} {opt.rateTag ? `(${opt.rateTag})` : ''}</option>
-                                        ));
-                                    })()}
+                                    {endOptions.map((opt) => (
+                                        <option key={opt.key} value={opt.key}>{opt.label} {opt.rateTag ? `(${opt.rateTag})` : ''}</option>
+                                    ))}
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
                                     <Clock className="w-4 h-4" />
@@ -261,7 +257,12 @@ export default function Step2DateTime({
                         <div className="mt-4 space-y-2">
                             <div className="flex items-center gap-2.5 bg-[#D6FF3F]/20 rounded-xl px-4 py-3">
                                 <svg className="w-5 h-5 text-[#10221C]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <span className="text-sm font-bold text-[#10221C]">{formatTimeString(startTime)} – {formatTimeString(endTime)}</span>
+                                <span className="text-sm font-bold text-[#10221C]">
+                                    {formatTimeString(startTime)} – {formatTimeString(endTime)}
+                                    {endOption?.isNextDay && (
+                                        <span className="ml-1 text-[10px] font-semibold text-indigo-500">(next day)</span>
+                                    )}
+                                </span>
                                 <span className="ml-auto text-xs font-bold bg-[#10221C] text-white px-2 py-0.5 rounded-full">{durationHours} hr{durationHours > 1 ? 's' : ''}</span>
                             </div>
 

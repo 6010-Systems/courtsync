@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Facility;
 use App\Models\RatePlan;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -62,6 +64,39 @@ class FacilityControllerTest extends TestCase
         $response = $this->actingAs($player)->get(route('facility.book', $facility->slug));
 
         $response->assertInertia(fn (Assert $page) => $page->component('Facility/Book'));
+    }
+
+    public function test_book_page_includes_last_nights_session_that_runs_into_today(): void
+    {
+        Carbon::setTestNow('2026-11-26 01:00:00');
+
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->flatPricing(400)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+        ]);
+
+        Booking::create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'date' => '2026-11-25',
+            'end_date' => '2026-11-26',
+            'start_time' => '22:00:00',
+            'end_time' => '02:00:00',
+            'total_price' => 1600,
+            'status' => 'confirmed',
+        ]);
+
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->get(route('facility.book', $facility->slug))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Facility/Book')
+                ->has('facility.bookings', 1)
+                ->where('facility.bookings.0.end_date', '2026-11-26'));
+
+        Carbon::setTestNow();
     }
 
     public function test_book_page_preselects_the_court_passed_in_the_query_string(): void

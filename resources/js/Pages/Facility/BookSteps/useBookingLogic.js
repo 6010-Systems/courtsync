@@ -2,6 +2,13 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { courtIsBookable } from '@/Utils/courtStatus';
 import { offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
+import {
+    addDays,
+    buildHourOptions,
+    normalizeSelection,
+    occupiedHourKeys,
+    parseOperatingWindow,
+} from '@/Utils/operatingHours';
 
 export function useBookingLogic(facility, preselectedCourtId = null) {
     const courts = facility.courts || [];
@@ -43,8 +50,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     });
 
     const resetDateTimeSelection = () => {
-        setStartTime('');
-        setEndTime('');
+        setStartKey('');
+        setEndKey('');
         setSelectedDate(null);
         setRatePlanId(null);
         setAddonQuantities({});
@@ -61,7 +68,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             try {
                 await window.axios.post('/bookings/unlock', {
                     court_id: selectedCourtId,
-                    date: selectedDate,
+                    date: sessionStartDate,
                     start_time: startTime,
                     end_time: endTime,
                     idempotency_key: idempotencyKey
@@ -74,8 +81,10 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     };
 
     const [selectedDate, setSelectedDate] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_date') || null : null));
-    const [startTime, setStartTime] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_start') || '' : ''));
-    const [endTime, setEndTime] = useState(() => (canRestoreDraft ? sessionStorage.getItem('book_end') || '' : ''));
+    // Selections are stored as option keys ("0-22:00", "1-00:00") because the
+    // clock value alone is ambiguous for courts closing at midnight.
+    const [startKey, setStartKey] = useState('');
+    const [endKey, setEndKey] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('pay_at_facility');
     const [step, setStep] = useState(() => {
         const storedStep = parseInt(sessionStorage.getItem('book_step')) || 1;
@@ -132,6 +141,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     const [processing, setProcessing] = useState(false);
     const submittingRef = useRef(false);
     const [lockedSlots, setLockedSlots] = useState([]);
+    const [nextDayLockedSlots, setNextDayLockedSlots] = useState([]);
     
     // Keep track of our hidden timer
     const lockTimerRef = useRef(null);
@@ -143,7 +153,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             try {
                 await window.axios.post('/bookings/unlock', {
                     court_id: selectedCourtId,
-                    date: selectedDate,
+                    date: sessionStartDate,
                     start_time: startTime,
                     end_time: endTime,
                     idempotency_key: idempotencyKey
@@ -154,8 +164,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         showModal('timer', 'Oops! You took a little too long. Please select your court again.', 'Session Expired');
         
         // Wipe everything out
-        setStartTime('');
-        setEndTime('');
+        setStartKey('');
+        setEndKey('');
         setSelectedCourtId(null);
         setSelectedDate(null);
         setStep(1);
@@ -215,6 +225,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
     useEffect(() => {
         if (!selectedCourtId || !selectedDate) {
             setLockedSlots([]);
+            setNextDayLockedSlots([]);
             return;
         }
 
@@ -222,9 +233,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             fetch(`/api/courts/${selectedCourtId}/locked-slots?date=${selectedDate}&idempotency_key=${idempotencyKey}`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data.locked_slots) {
-                        setLockedSlots(data.locked_slots);
-                    }
+                    setLockedSlots(data.locked_slots || []);
+                    setNextDayLockedSlots(data.next_day_locked_slots || []);
                 })
                 .catch(err => console.error("Error fetching locked slots", err));
         };
@@ -234,87 +244,95 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         
     }, [selectedCourtId, selectedDate, idempotencyKey]);
 
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = [], currentLockedSlots = []) => {
-        let startHour = 6;
-        let endHour = 22;
+    // Operating window + hourly slots come from one shared model, so a court can
+    // always be booked until at least midnight (and until 2:00 AM when its
+    // schedule closes after midnight).
+    const operatingWindow = useMemo(
+        () => parseOperatingWindow(selectedCourt?.time_range),
+        [selectedCourt?.time_range],
+    );
+    const hourOptions = useMemo(() => buildHourOptions(operatingWindow), [operatingWindow]);
+    const occupiedHours = useMemo(
+        () => occupiedHourKeys(facility.bookings || [], selectedCourtId),
+        [facility.bookings, selectedCourtId],
+    );
 
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
+    const timeOptions = useMemo(() => {
+        if (!selectedCourt || !selectedDate) {
+            return [];
         }
 
-        const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
-        
-        const bookedHours = new Set();
-        courtBookings.forEach(b => {
-            const bStart = parseInt(b.start_time.split(':')[0]);
-            const bEnd = parseInt(b.end_time.split(':')[0]);
-            for (let i = bStart; i < bEnd; i++) {
-                bookedHours.add(i);
-            }
-        });
-        const lockedHours = new Set();
-        currentLockedSlots.forEach(slot => {
-            lockedHours.add(parseInt(slot.split(':')[0]));
-        });
+        return hourOptions.map((option) => {
+            const optionDate = addDays(selectedDate, option.dayOffset);
+            const hour = parseInt(option.value.slice(0, 2), 10);
+            const booked = occupiedHours.has(`${optionDate}-${hour}`);
 
-        const options = [];
-        for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
-            const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            
-            const isUnavailable = bookedHours.has(i) || lockedHours.has(i);
-            const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
+            // Slot holds are per calendar date, so next-day hours use the next
+            // date's hold list.
+            const heldHours = option.dayOffset === 0 ? lockedSlots : nextDayLockedSlots;
+            const locked = heldHours.includes(option.value);
+            const isUnavailable = booked || locked;
+            const labelSuffix = booked ? '(Booked)' : locked ? '(Held)' : option.isNextDay ? '(next day)' : '';
 
             let rateTag = '';
-            const slotPlan = selectedRatePlan;
-            const planRateSet = slotPlan ? planRates(slotPlan) : null;
+            const planRateSet = selectedRatePlan ? planRates(selectedRatePlan) : null;
 
-            if (slotPlan && planRateSet) {
-                const dayStartH = slotPlan.day_start_time ? parseInt(String(slotPlan.day_start_time).split(':')[0], 10) : 5;
-                const nightStartH = slotPlan.night_start_time ? parseInt(String(slotPlan.night_start_time).split(':')[0], 10) : 17;
-                const isNight = planRateSet.night !== null && (i >= nightStartH || i < dayStartH);
+            if (selectedRatePlan && planRateSet) {
+                const dayStartH = selectedRatePlan.day_start_time ? parseInt(String(selectedRatePlan.day_start_time).split(':')[0], 10) : 2;
+                const nightStartH = selectedRatePlan.night_start_time ? parseInt(String(selectedRatePlan.night_start_time).split(':')[0], 10) : 17;
+                const isNight = planRateSet.night !== null && (hour >= nightStartH || hour < dayStartH);
                 const rate = isNight ? planRateSet.night : planRateSet.day;
                 rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
             } else if (selectedCourt?.pricing_mode === 'SPLIT' && selectedCourt.day_rate && selectedCourt.night_rate) {
                 const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
                 const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
-                const isNight = i >= nightStartH || i < dayStartH;
+                const isNight = hour >= nightStartH || hour < dayStartH;
                 const rate = isNight ? Number(selectedCourt.night_rate) : Number(selectedCourt.day_rate);
                 rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
             }
-            
-            options.push({ 
-                value: timeValue, 
-                label: formatted, 
-                isBooked: isUnavailable, 
-                labelSuffix: labelSuffix,
-                rateTag: rateTag
-            });
+
+            return { ...option, isBooked: isUnavailable, labelSuffix, rateTag };
+        });
+    }, [hourOptions, selectedCourt, selectedDate, occupiedHours, lockedSlots, nextDayLockedSlots, selectedRatePlan]);
+
+    // Slots that can open a session: the closing boundary is end-only.
+    const startOptions = useMemo(
+        () => timeOptions.filter((option) => !option.isClosing),
+        [timeOptions],
+    );
+
+    const startOption = useMemo(
+        () => timeOptions.find((option) => option.key === startKey) || null,
+        [timeOptions, startKey],
+    );
+
+    const endOption = useMemo(
+        () => timeOptions.find((option) => option.key === endKey) || null,
+        [timeOptions, endKey],
+    );
+
+    // End times run from the chosen start to the first booked hour (or closing).
+    const endOptions = useMemo(() => {
+        const startIndex = timeOptions.findIndex((option) => option.key === startKey);
+
+        if (startIndex === -1) {
+            return [];
         }
-        return options;
-    };
-    
-    const timeOptions = useMemo(() => {
-        if (!selectedCourt || !selectedDate) return [];
-        return generateTimeOptions(selectedCourt?.time_range, selectedDate, selectedCourt?.id, facility.bookings || [], lockedSlots);
-    }, [selectedCourt, selectedDate, facility.bookings, lockedSlots, selectedRatePlan]);
+
+        const firstBooked = timeOptions.findIndex((option, index) => index > startIndex && option.isBooked);
+        const lastIndex = firstBooked === -1 ? timeOptions.length - 1 : firstBooked;
+
+        return timeOptions.slice(startIndex + 1, lastIndex + 1);
+    }, [timeOptions, startKey]);
+
+    const startTime = startOption?.value || '';
+    const endTime = endOption?.value || '';
+
+    // A session can start on the next calendar day when it is picked from the
+    // overnight tail (e.g. 12:00 AM), so locks and bookings use that date.
+    const sessionStartDate = selectedDate && startOption
+        ? addDays(selectedDate, startOption.dayOffset)
+        : selectedDate;
 
     // Generate next 14 days
     const dates = useMemo(() => {
@@ -397,9 +415,42 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             isFirstRender.current = false;
             return;
         }
-        setStartTime('');
-        setEndTime('');
+        setStartKey('');
+        setEndKey('');
     }, [selectedDate, selectedCourtId]);
+
+    // Keep the end time valid whenever the start (or availability) changes.
+    useEffect(() => {
+        if (endKey && !endOptions.some((option) => option.key === endKey)) {
+            setEndKey('');
+        }
+    }, [endOptions, endKey]);
+
+    // Restore a saved draft's hours by clock value once the court's window is known.
+    useEffect(() => {
+        if (startKey || timeOptions.length === 0) {
+            return;
+        }
+
+        const storedStart = (sessionStorage.getItem('book_start') || '').slice(0, 5);
+        if (!storedStart) {
+            return;
+        }
+
+        const restoredStart = timeOptions.find((option) => option.value === storedStart && !option.isBooked && !option.isClosing);
+        if (!restoredStart) {
+            return;
+        }
+
+        setStartKey(restoredStart.key);
+
+        const storedEnd = (sessionStorage.getItem('book_end') || '').slice(0, 5);
+        const restoredEnd = timeOptions.find((option) => option.value === storedEnd && option.minutes > restoredStart.minutes && !option.isBooked);
+
+        if (restoredEnd) {
+            setEndKey(restoredEnd.key);
+        }
+    }, [timeOptions, startKey]);
 
        const goNext = async () => {
         // If we are leaving the Date & Time step (Step 2), try to lock it!
@@ -408,7 +459,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             try {
                 await window.axios.post('/bookings/lock', {
                     court_id: selectedCourtId,
-                    date: selectedDate,
+                    date: sessionStartDate,
                     start_time: startTime,
                     end_time: endTime,
                     idempotency_key: idempotencyKey
@@ -441,7 +492,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
                 try {
                     await window.axios.post('/bookings/unlock', {
                         court_id: selectedCourtId,
-                        date: selectedDate,
+                        date: sessionStartDate,
                         start_time: startTime,
                         end_time: endTime,
                         idempotency_key: idempotencyKey
@@ -508,7 +559,9 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         router.post(route('bookings.store'), {
             facility_id: facility.id,
             court_id: selectedCourtId,
-            date: selectedDate,
+            date: sessionStartDate,
+            // Informational: the server derives end_date from the start/end times.
+            end_date: normalizeSelection(selectedDate, startOption, endOption)?.end_date ?? null,
             start_time: startTime,
             end_time: endTime,
             // Preview only: the server recalculates the package, add-ons and fee.
@@ -544,8 +597,8 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
                 sessionStorage.removeItem('book_addons');
                 sessionStorage.removeItem('lock_expires_at');
                 
-                setStartTime('');
-                setEndTime('');
+                setStartKey('');
+                setEndKey('');
                 setSelectedCourtId(null);
                 setSelectedDate(null);
                 setRatePlanId(null);
@@ -556,7 +609,7 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             },
             onError: (errors) => {
                 console.error(errors);
-                const errorMsg = errors.idempotency || errors.conflict || errors.rate_plan_id || 'Failed to process booking. Please try again.';
+                const errorMsg = errors.idempotency || errors.conflict || errors.start_time || errors.end_time || errors.rate_plan_id || 'Failed to process booking. Please try again.';
                 showModal('error', errorMsg);
                 setIdempotencyKey(crypto.randomUUID());
             }
@@ -591,8 +644,12 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         selectableCourts,
         selectedCourtId, setSelectedCourtId: handleCourtChange,
         selectedDate, setSelectedDate,
-        startTime, setStartTime,
-        endTime, setEndTime,
+        startKey, setStartKey,
+        endKey, setEndKey,
+        startOptions, endOptions,
+        startOption, endOption,
+        startTime, endTime,
+        operatingWindow, sessionStartDate,
         paymentMethod, setPaymentMethod,
         step, setStep,
         modal, closeModal,
@@ -611,3 +668,4 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
         proofFile, setProofFile
     };
 }
+

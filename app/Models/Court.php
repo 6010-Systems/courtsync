@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OperatingHours;
 use App\Support\RateQuote;
 use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -132,7 +133,19 @@ class Court extends Model
     }
 
     /**
+     * The court's free-text opening hours parsed into a bookable window.
+     */
+    public function operatingHours(): OperatingHours
+    {
+        return OperatingHours::parse($this->time_range);
+    }
+
+    /**
      * Calculate price and itemized breakdown for a time range.
+     *
+     * An end time that is not after the start time means the session runs past
+     * midnight, so the end is moved to the next day before the duration is
+     * counted (e.g. 10:00 PM → 12:00 AM is 2 hours, not 0 or 22).
      *
      * @return array{pricing_mode: string, total: float, duration_hours: int, breakdown: array<int, array<string, mixed>>}
      */
@@ -140,7 +153,12 @@ class Court extends Model
     {
         $start = Carbon::parse($startTime);
         $end = Carbon::parse($endTime);
-        $durationHours = max(0, $start->diffInHours($end));
+
+        if ($end->lte($start)) {
+            $end->addDay();
+        }
+
+        $durationHours = max(0, (int) $start->diffInHours($end));
 
         if ($this->pricing_mode !== 'SPLIT' || empty($this->day_rate) || empty($this->night_rate) || $durationHours === 0) {
             $rate = (float) ($this->hourly_rate ?? 0);

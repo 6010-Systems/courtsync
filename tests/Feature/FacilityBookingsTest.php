@@ -277,6 +277,225 @@ class FacilityBookingsTest extends TestCase
         $this->assertSame('rejected', $booking->payment->fresh()->status);
     }
 
+    public function test_overnight_booking_is_accepted_and_stores_end_date(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->flatPricing(400)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+        ]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-12-01',
+                'start_time' => '23:00',
+                'end_time' => '01:00',
+                'total_price' => 800,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertRedirect();
+
+        $booking = Booking::where('court_id', $court->id)->first();
+
+        $this->assertNotNull($booking, 'Booking was not created.');
+        $this->assertSame('2026-12-01', $booking->date);
+        $this->assertSame('2026-12-02', $booking->end_date);
+    }
+
+    public function test_overnight_booking_conflict_across_midnight_is_rejected(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->flatPricing(400)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+        ]);
+        $player = User::factory()->player()->create();
+
+        // Existing booking: Nov 25 11 PM → Nov 26 1 AM.
+        Booking::create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'date' => '2026-11-25',
+            'end_date' => '2026-11-26',
+            'start_time' => '23:00:00',
+            'end_time' => '01:00:00',
+            'total_price' => 800,
+            'status' => 'confirmed',
+        ]);
+
+        // Attempt: Nov 26 12 AM → 2 AM overlaps the existing booking.
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-11-26',
+                'start_time' => '00:00',
+                'end_time' => '02:00',
+                'total_price' => 800,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertSessionHasErrors('conflict');
+    }
+
+    public function test_booking_starting_exactly_when_overnight_booking_ends_is_allowed(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->flatPricing(400)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+        ]);
+        $player = User::factory()->player()->create();
+
+        // Existing booking ends exactly at Nov 26 01:00.
+        Booking::create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'date' => '2026-11-25',
+            'end_date' => '2026-11-26',
+            'start_time' => '23:00:00',
+            'end_time' => '01:00:00',
+            'total_price' => 800,
+            'status' => 'confirmed',
+        ]);
+
+        // New booking starts at exactly 01:00 — no overlap.
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-11-26',
+                'start_time' => '01:00',
+                'end_time' => '02:00',
+                'total_price' => 400,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_booking_can_end_at_midnight(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->splitPricing(300, 400, '17:00:00')->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 10:00 PM',
+            'day_start_time' => '02:00:00',
+        ]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-12-01',
+                'start_time' => '22:00',
+                'end_time' => '00:00',
+                'total_price' => 800,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $booking = Booking::where('court_id', $court->id)->firstOrFail();
+
+        $this->assertSame('2026-12-01', $booking->date);
+        $this->assertSame('2026-12-02', $booking->end_date);
+        $this->assertSame('00:00:00', $booking->end_time);
+        // 10:00 PM – 12:00 AM is two night hours (₱400 each).
+        $this->assertSame('800.00', (string) $booking->subtotal);
+    }
+
+    public function test_booking_can_end_at_two_am_when_the_court_closes_then(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->splitPricing(300, 400, '17:00:00')->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+            'day_start_time' => '02:00:00',
+        ]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-12-01',
+                'start_time' => '22:00',
+                'end_time' => '02:00',
+                'total_price' => 1600,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $booking = Booking::where('court_id', $court->id)->firstOrFail();
+
+        $this->assertSame('2026-12-02', $booking->end_date);
+        $this->assertSame('1600.00', (string) $booking->subtotal);
+        // 10:00 PM – 2:00 AM is four night hours (night rate until 2 AM).
+        $this->assertSame(4, $booking->price_breakdown['court']['night_hours']);
+    }
+
+    public function test_booking_ending_after_two_am_is_rejected(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->flatPricing(400)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 10:00 PM',
+        ]);
+        $player = User::factory()->player()->create();
+
+        $this->actingAs($player)
+            ->post(route('bookings.store'), [
+                'facility_id' => $facility->id,
+                'court_id' => $court->id,
+                'date' => '2026-12-01',
+                'start_time' => '22:00',
+                'end_time' => '03:00',
+                'total_price' => 800,
+                'payment_method' => 'pay_at_facility',
+            ])
+            ->assertSessionHasErrors('start_time');
+
+        $this->assertSame(0, Booking::where('court_id', $court->id)->count());
+    }
+
+    public function test_upcoming_scope_keeps_a_booking_that_ends_at_midnight(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->flatPricing(400)->create(['facility_id' => $facility->id]);
+
+        Booking::create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'date' => '2026-11-25',
+            'end_date' => '2026-11-26',
+            'start_time' => '22:00:00',
+            'end_time' => '00:00:00',
+            'total_price' => 800,
+            'status' => 'confirmed',
+        ]);
+
+        Carbon::setTestNow('2026-11-25 23:30:00');
+        $this->assertSame(1, Booking::query()->upcoming(now())->count());
+        $this->assertSame(0, Booking::query()->past(now())->count());
+
+        Carbon::setTestNow('2026-11-26 00:30:00');
+        $this->assertSame(0, Booking::query()->upcoming(now())->count());
+        $this->assertSame(1, Booking::query()->past(now())->count());
+
+        Carbon::setTestNow();
+    }
+
     public function test_owner_cannot_verify_a_booking_from_another_facility(): void
     {
         $owner = User::factory()->facilityOwner()->create();

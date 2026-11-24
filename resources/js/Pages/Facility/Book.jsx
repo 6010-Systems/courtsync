@@ -14,14 +14,16 @@ export default function Book({ facility, preselectedCourtId = null }) {
         selectableCourts,
         selectedCourtId, setSelectedCourtId,
         selectedDate, setSelectedDate,
-        startTime, setStartTime,
-        endTime, setEndTime,
+        startKey, setStartKey,
+        endKey, setEndKey,
+        startOptions, endOptions,
+        startOption, endOption,
+        startTime, endTime,
         paymentMethod, setPaymentMethod,
         step, setStep,
         modal, closeModal,
         processing,
         selectedCourt,
-        timeOptions,
         dates,
         goNext, goPrev,
         handleBooking,
@@ -59,11 +61,16 @@ export default function Book({ facility, preselectedCourtId = null }) {
                 selectedDate={selectedDate}
                 setSelectedDate={setSelectedDate}
                 isCustomDate={isCustomDate}
+                startKey={startKey}
+                setStartKey={setStartKey}
+                endKey={endKey}
+                setEndKey={setEndKey}
+                startOptions={startOptions}
+                endOptions={endOptions}
+                startOption={startOption}
+                endOption={endOption}
                 startTime={startTime}
-                setStartTime={setStartTime}
                 endTime={endTime}
-                setEndTime={setEndTime}
-                timeOptions={timeOptions}
                 durationHours={durationHours}
                 bookingFee={bookingFee}
                 formatDateString={formatDateString}

@@ -86,4 +86,55 @@ class CourtTest extends TestCase
         $this->assertEquals(600.00, $res['breakdown'][0]['subtotal']);
         $this->assertEquals(900.00, $res['breakdown'][1]['subtotal']);
     }
+
+    public function test_split_pricing_counts_hours_up_to_midnight(): void
+    {
+        $court = new Court([
+            'pricing_mode' => 'SPLIT',
+            'day_rate' => 250.00,
+            'night_rate' => 400.00,
+            'day_start_time' => '02:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+
+        // 10:00 PM → 12:00 AM is 2 night hours, not 0 and not 22.
+        $res = $court->calculatePriceForRange('22:00', '00:00');
+
+        $this->assertEquals(2, $res['duration_hours']);
+        $this->assertEquals(0, $res['day_hours']);
+        $this->assertEquals(2, $res['night_hours']);
+        $this->assertEquals(800.00, $res['total']);
+    }
+
+    public function test_split_pricing_counts_hours_until_two_am(): void
+    {
+        $court = new Court([
+            'pricing_mode' => 'SPLIT',
+            'day_rate' => 250.00,
+            'night_rate' => 400.00,
+            'day_start_time' => '02:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+
+        // 10:00 PM → 2:00 AM is 4 night hours (night rate until 2 AM).
+        $res = $court->calculatePriceForRange('22:00', '02:00');
+
+        $this->assertEquals(4, $res['duration_hours']);
+        $this->assertEquals(0, $res['day_hours']);
+        $this->assertEquals(4, $res['night_hours']);
+        $this->assertEquals(1600.00, $res['total']);
+    }
+
+    public function test_flat_rate_counts_hours_across_midnight(): void
+    {
+        $court = new Court([
+            'pricing_mode' => 'FLAT',
+            'hourly_rate' => 300.00,
+        ]);
+
+        $res = $court->calculatePriceForRange('23:00', '01:00');
+
+        $this->assertEquals(2, $res['duration_hours']);
+        $this->assertEquals(600.00, $res['total']);
+    }
 }

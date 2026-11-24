@@ -51,7 +51,7 @@ export default function RateCard({ plans = [], courts = null, className = '' }) 
                 </div>
                 {courtPlans[0]?.night_start_time && (
                     <span className="rounded-full bg-[#F5F2EA] px-3 py-1 text-[11px] font-bold text-[#10221C]/70">
-                        Night rate from {formatCourtTime(courtPlans[0].night_start_time)}
+                        Night rate {formatCourtTime(courtPlans[0].night_start_time)} – {formatCourtTime(courtPlans[0].day_start_time || '05:00')}
                     </span>
                 )}
             </div>
@@ -89,7 +89,7 @@ export default function RateCard({ plans = [], courts = null, className = '' }) 
                                         <span className="text-[11px] font-medium text-[#10221C]/60">/hr</span>
                                     </p>
                                     <p className="text-[10px] font-medium text-amber-800/80">
-                                        from {formatCourtTime(plan.day_start_time || '05:00')}
+                                        {formatCourtTime(plan.day_start_time || '05:00')} – {formatCourtTime(plan.night_start_time || '17:00')}
                                     </p>
                                 </div>
 
@@ -108,7 +108,7 @@ export default function RateCard({ plans = [], courts = null, className = '' }) 
                                         )}
                                     </p>
                                     <p className="text-[10px] font-medium text-indigo-800/80">
-                                        from {formatCourtTime(plan.night_start_time || '17:00')}
+                                        {formatCourtTime(plan.night_start_time || '17:00')} – {formatCourtTime(plan.day_start_time || '02:00')} (next day)
                                     </p>
                                 </div>
                             </div>

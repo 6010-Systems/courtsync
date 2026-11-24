@@ -63,7 +63,7 @@ class PlayerBookingController extends Controller
     private function bookingsFor(User $user): Builder
     {
         return $user->bookings()->getQuery()
-            ->select(['id', 'facility_id', 'court_id', 'date', 'start_time', 'end_time', 'subtotal', 'booking_fee', 'total_price', 'status'])
+            ->select(['id', 'facility_id', 'court_id', 'date', 'end_date', 'start_time', 'end_time', 'subtotal', 'booking_fee', 'total_price', 'status'])
             ->with([
                 'facility:id,name,slug,city,province',
                 'court:id,name',

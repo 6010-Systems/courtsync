@@ -39,7 +39,7 @@ export default function PlayerBookingCard({ booking }) {
             </div>
             <div className="mt-4 grid gap-2 text-sm text-[#101F1A]/70 sm:grid-cols-2">
                 <p className="flex items-center gap-2"><CalendarCheck size={16} aria-hidden="true" />{date}</p>
-                <p className="flex items-center gap-2"><Clock size={16} aria-hidden="true" />{time(booking.start_time)} – {time(booking.end_time)}</p>
+                <p className="flex items-center gap-2"><Clock size={16} aria-hidden="true" />{time(booking.start_time)} – {time(booking.end_time)}{booking.end_date || String(booking.end_time) <= String(booking.start_time) ? ' (next day)' : ''}</p>
                 <p className="flex items-center gap-2"><MapPin size={16} aria-hidden="true" />{[booking.facility?.city, booking.facility?.province].filter(Boolean).join(', ') || 'Location unavailable'}</p>
                 <div>
                     <p className="font-bold text-[#101F1A]">{pesos(total)}</p>

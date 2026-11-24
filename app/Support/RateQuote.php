@@ -34,7 +34,15 @@ class RateQuote
      */
     public function forBooking(Court $court, string $startTime, string $endTime, ?RatePlan $plan = null, array $addons = []): array
     {
-        $durationHours = max(0, Carbon::parse($startTime)->diffInHours(Carbon::parse($endTime)));
+        $start = Carbon::parse($startTime);
+        $end = Carbon::parse($endTime);
+
+        // Cross-midnight booking: end time is earlier than start time (e.g. 23:00 → 01:00).
+        if ($end->lte($start)) {
+            $end->addDay();
+        }
+
+        $durationHours = max(0, (int) $start->diffInHours($end));
 
         $courtQuote = $plan
             ? $this->quoteWithPlan($court, $plan, $startTime, $endTime, $durationHours)
@@ -219,6 +227,11 @@ class RateQuote
         $nightHours = 0;
         $cursor = Carbon::parse($startTime)->copy();
         $end = Carbon::parse($endTime);
+
+        // Cross-midnight booking: advance end to the next calendar day.
+        if ($end->lte($cursor)) {
+            $end->addDay();
+        }
 
         while ($cursor->lt($end)) {
             $slotTime = $cursor->format('H:i');

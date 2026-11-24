@@ -181,7 +181,7 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
                                                 <Clock size={12} /> Time
                                             </span>
                                             <span className="text-[13px] font-bold text-[#10221C] truncate">
-                                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}{booking.end_date || String(booking.end_time) <= String(booking.start_time) ? ' (next day)' : ''}
                                             </span>
                                         </div>
                                     </div>

@@ -41,6 +41,64 @@ class BookingRescheduleTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_reschedule_a_booking_to_end_at_midnight(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->splitPricing(300, 400, '17:00:00')->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+            'day_start_time' => '02:00:00',
+        ]);
+
+        $booking = $this->bookingFor($facility, $court);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-02',
+                'start_time' => '22:00',
+                'end_time' => '00:00',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $booking->refresh();
+
+        $this->assertSame('2026-12-02', $booking->date);
+        $this->assertSame('2026-12-03', $booking->end_date);
+        $this->assertSame(800.0, (float) $booking->subtotal);
+    }
+
+    public function test_rescheduling_back_to_the_same_day_clears_the_end_date(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->splitPricing(300, 400, '17:00:00')->create([
+            'facility_id' => $facility->id,
+            'time_range' => '6:00 AM - 2:00 AM',
+            'day_start_time' => '02:00:00',
+        ]);
+
+        $booking = $this->bookingFor($facility, $court);
+        $booking->update([
+            'date' => '2026-12-02',
+            'end_date' => '2026-12-03',
+            'start_time' => '22:00:00',
+            'end_time' => '02:00:00',
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-02',
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($booking->fresh()->end_date);
+    }
+
     public function test_owner_can_reschedule_a_booking_and_the_price_is_requoted(): void
     {
         $owner = User::factory()->facilityOwner()->create();
@@ -119,18 +177,20 @@ class BookingRescheduleTest extends TestCase
         $this->assertSame('2026-12-01', $booking->fresh()->date);
     }
 
-    public function test_reschedule_requires_the_end_time_to_be_after_the_start_time(): void
+    public function test_reschedule_rejects_identical_start_and_end_times(): void
     {
         $owner = User::factory()->facilityOwner()->create();
         $facility = Facility::factory()->create(['user_id' => $owner->id]);
         $court = Court::factory()->flatPricing(300)->create(['facility_id' => $facility->id]);
         $booking = $this->bookingFor($facility, $court);
 
+        // start_time === end_time is always invalid (zero-duration booking).
+        // Note: end_time < start_time is now accepted as a cross-midnight booking.
         $this->actingAs($owner)
             ->post(route('bookings.reschedule', $booking), [
                 'date' => '2026-12-02',
                 'start_time' => '15:00',
-                'end_time' => '14:00',
+                'end_time' => '15:00',
             ])
             ->assertSessionHasErrors('end_time');
     }

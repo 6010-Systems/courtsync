@@ -92,8 +92,8 @@ class CourtController extends Controller
             'hourly_rate' => 'nullable|numeric|min:0',
             'day_rate' => 'nullable|numeric|min:0',
             'night_rate' => 'nullable|numeric|min:0',
-            'day_start_time' => 'nullable|string|max:20',
-            'night_start_time' => 'nullable|string|max:20',
+            'day_start_time' => ['nullable', 'regex:/^\\d{1,2}:\\d{2}(:\\d{2})?$/'],
+            'night_start_time' => ['nullable', 'regex:/^\\d{1,2}:\\d{2}(:\\d{2})?$/'],
             'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
             ...$this->ratePlanRules(),
@@ -117,7 +117,7 @@ class CourtController extends Controller
             'hourly_rate' => $hourlyRate,
             'day_rate' => $pricingMode === 'SPLIT' ? $request->day_rate : null,
             'night_rate' => $pricingMode === 'SPLIT' ? $request->night_rate : null,
-            'day_start_time' => $pricingMode === 'SPLIT' ? ($request->day_start_time ?: '06:00:00') : '06:00:00',
+            'day_start_time' => $pricingMode === 'SPLIT' ? ($request->day_start_time ?: '02:00:00') : '06:00:00',
             'night_start_time' => $pricingMode === 'SPLIT' ? ($request->night_start_time ?: '18:00:00') : '18:00:00',
             'status' => $request->status ?? 'AVAILABLE',
         ]);
@@ -146,8 +146,8 @@ class CourtController extends Controller
             'hourly_rate' => 'nullable|numeric|min:0',
             'day_rate' => 'nullable|numeric|min:0',
             'night_rate' => 'nullable|numeric|min:0',
-            'day_start_time' => 'nullable|string|max:20',
-            'night_start_time' => 'nullable|string|max:20',
+            'day_start_time' => ['nullable', 'regex:/^\\d{1,2}:\\d{2}(:\\d{2})?$/'],
+            'night_start_time' => ['nullable', 'regex:/^\\d{1,2}:\\d{2}(:\\d{2})?$/'],
             'image_url' => 'nullable|string|max:2048',
             'status' => 'nullable|string|in:'.implode(',', Court::STATUSES),
             ...$this->ratePlanRules(),
@@ -169,7 +169,7 @@ class CourtController extends Controller
             'day_rate' => $pricingMode === 'SPLIT' ? $request->day_rate : $court->day_rate,
             'night_rate' => $pricingMode === 'SPLIT' ? $request->night_rate : $court->night_rate,
             'day_start_time' => $pricingMode === 'SPLIT'
-                ? ($request->day_start_time ?: $court->day_start_time ?: '06:00:00')
+                ? ($request->day_start_time ?: $court->day_start_time ?: '02:00:00')
                 : $court->day_start_time,
             'night_start_time' => $pricingMode === 'SPLIT'
                 ? ($request->night_start_time ?: $court->night_start_time ?: '18:00:00')

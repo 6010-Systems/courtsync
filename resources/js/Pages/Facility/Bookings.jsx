@@ -16,6 +16,13 @@ import { formatPeso } from '@/Components/MetricCard';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { receiptUrl } from '@/Utils/receiptUrl';
 import { estimateBookingFee, offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
+import {
+    addDays,
+    buildHourOptions,
+    normalizeSelection,
+    occupiedHourKeys,
+    parseOperatingWindow,
+} from '@/Utils/operatingHours';
 
 const FILTERS = [
     { key: 'All', label: 'All' },
@@ -69,6 +76,8 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
     });
 
     const [addonQuantities, setAddonQuantities] = useState({});
+    const [startKey, setStartKey] = useState('');
+    const [endKey, setEndKey] = useState('');
 
     const formatTime = (timeString) => {
         if (!timeString) return '';
@@ -254,15 +263,18 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                     status: 'pending',
                     user: null,
                     guest_name: data.guest_name || 'Walk-in',
-                    date: data.date,
-                    start_time: data.start_time,
-                    end_time: data.end_time,
+                    date: manualSelection?.date || data.date,
+                    end_date: manualSelection?.end_date || null,
+                    start_time: manualSelection?.start_time || '',
+                    end_time: manualSelection?.end_time || '',
                     total_price: pricingQuote.total,
                     court: court
                 });
                 setModalMode('success');
                 reset();
                 setAddonQuantities({});
+                setStartKey('');
+                setEndKey('');
                 setIsAdding(false);
                 setAddStep(1);
             }
@@ -274,59 +286,81 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
         setAddStep(1);
         reset();
         setAddonQuantities({});
-    };
-
-    const generateTimeOptions = (timeRange, selectedDate, courtId, allBookings = []) => {
-        let startHour = 6;
-        let endHour = 22;
-
-        if (timeRange) {
-            const match = timeRange.match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-            if (match) {
-                let sH = parseInt(match[1]);
-                const sM = match[2];
-                let eH = parseInt(match[3]);
-                const eM = match[4];
-
-                if (sM && sM.toUpperCase() === 'PM' && sH < 12) sH += 12;
-                if (sM && sM.toUpperCase() === 'AM' && sH === 12) sH = 0;
-                
-                if (eM && eM.toUpperCase() === 'PM' && eH < 12) eH += 12;
-                if (eM && eM.toUpperCase() === 'AM' && eH === 12) eH = 0;
-
-                startHour = sH;
-                endHour = eH;
-            }
-        }
-
-        const courtBookings = allBookings.filter(b => b.court_id == courtId && b.date === selectedDate && ['pending', 'confirmed'].includes(b.status.toLowerCase()));
-        
-        const bookedHours = new Set();
-        courtBookings.forEach(b => {
-            const bStart = parseInt(b.start_time.split(':')[0]);
-            const bEnd = parseInt(b.end_time.split(':')[0]);
-            for (let i = bStart; i < bEnd; i++) {
-                bookedHours.add(i);
-            }
-        });
-
-        const options = [];
-        for (let i = startHour; i <= endHour; i++) {
-            const timeValue = `${i.toString().padStart(2, '0')}:00`;
-            const date = new Date();
-            date.setHours(i, 0);
-            const formatted = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            options.push({ value: timeValue, label: formatted, isBooked: bookedHours.has(i) });
-        }
-        return options;
+        setStartKey('');
+        setEndKey('');
     };
 
     const selectedFacility = facilities.find(f => f.id == data.facility_id);
     const availableCourts = selectedFacility?.courts || [];
     const selectedCourt = availableCourts.find(c => c.id == data.court_id);
+
+    // Shared operating-hours engine: courts are bookable until at least midnight
+    // (and until 2:00 AM when their schedule closes after midnight).
+    const operatingWindow = useMemo(
+        () => parseOperatingWindow(selectedCourt?.time_range),
+        [selectedCourt?.time_range],
+    );
+    const hourOptions = useMemo(() => buildHourOptions(operatingWindow), [operatingWindow]);
+    const occupiedHours = useMemo(
+        () => occupiedHourKeys(courtBookings || [], selectedCourt?.id ?? null),
+        [courtBookings, selectedCourt?.id],
+    );
+
     const timeOptions = useMemo(() => {
-        return generateTimeOptions(selectedCourt?.time_range, data.date, selectedCourt?.id, bookings || []);
-    }, [selectedCourt, data.date, bookings]);
+        if (!selectedCourt || !data.date) {
+            return [];
+        }
+
+        return hourOptions.map((option) => {
+            const optionDate = addDays(data.date, option.dayOffset);
+            const hour = parseInt(option.value.slice(0, 2), 10);
+
+            return {
+                ...option,
+                isBooked: occupiedHours.has(`${optionDate}-${hour}`),
+            };
+        });
+    }, [hourOptions, selectedCourt, data.date, occupiedHours]);
+
+    const startOptions = useMemo(
+        () => timeOptions.filter((option) => !option.isClosing),
+        [timeOptions],
+    );
+
+    const startOption = useMemo(
+        () => timeOptions.find((option) => option.key === startKey) || null,
+        [timeOptions, startKey],
+    );
+
+    const endOption = useMemo(
+        () => timeOptions.find((option) => option.key === endKey) || null,
+        [timeOptions, endKey],
+    );
+
+    const endOptions = useMemo(() => {
+        const startIndex = timeOptions.findIndex((option) => option.key === startKey);
+
+        if (startIndex === -1) {
+            return [];
+        }
+
+        const firstBooked = timeOptions.findIndex((option, index) => index > startIndex && option.isBooked);
+        const lastIndex = firstBooked === -1 ? timeOptions.length - 1 : firstBooked;
+
+        return timeOptions.slice(startIndex + 1, lastIndex + 1);
+    }, [timeOptions, startKey]);
+
+    const manualSelection = useMemo(
+        () => normalizeSelection(data.date, startOption, endOption),
+        [data.date, startOption, endOption],
+    );
+
+    // Drop an end time that no longer follows the chosen start.
+    useEffect(() => {
+        if (endKey && !endOptions.some((option) => option.key === endKey)) {
+            setEndKey('');
+        }
+    }, [endOptions, endKey]);
 
     // Rate card for the selected court — the facility owner picks a package
     // instead of typing a raw amount; legacy courts fall back to their own rate.
@@ -360,9 +394,9 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
         court: selectedCourt,
         ratePlan: selectedRatePlan,
         addons: addonSelection,
-        startTime: data.start_time,
-        endTime: data.end_time,
-    }), [selectedCourt, selectedRatePlan, addonSelection, data.start_time, data.end_time]);
+        startTime: manualSelection?.start_time || '',
+        endTime: manualSelection?.end_time || '',
+    }), [selectedCourt, selectedRatePlan, addonSelection, manualSelection]);
 
     const bookingFeeEstimate = useMemo(
         () => estimateBookingFee(selectedFacility, pricingQuote.total),
@@ -371,11 +405,15 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
     const grandTotal = pricingQuote.total + bookingFeeEstimate;
 
     const canReviewManualBooking = Boolean(
-        data.facility_id && data.court_id && data.date && data.start_time && data.end_time,
+        data.facility_id && data.court_id && data.date && manualSelection,
     );
 
     transform((formData) => ({
         ...formData,
+        date: manualSelection?.date || formData.date,
+        end_date: manualSelection?.end_date || null,
+        start_time: manualSelection?.start_time || '',
+        end_time: manualSelection?.end_time || '',
         rate_plan_id: selectedRatePlan?.id || '',
         total_price: pricingQuote.total,
         addons: addonSelection.map(({ plan, quantity }) => ({ rate_plan_id: plan.id, quantity })),
@@ -591,6 +629,8 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                             start_time: '',
                                             end_time: '',
                                         });
+                                        setStartKey('');
+                                        setEndKey('');
                                     }}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm"
                                 >
@@ -614,6 +654,8 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                             start_time: '',
                                             end_time: '',
                                         });
+                                        setStartKey('');
+                                        setEndKey('');
                                     }}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm disabled:bg-gray-100"
                                     disabled={!data.facility_id}
@@ -628,7 +670,7 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
 
                             <div>
                                 <InputLabel htmlFor="date" value="Date" />
-                                <TextInput id="date" type="date" value={data.date} onChange={(e) => setData('date', e.target.value)} className="mt-1 block w-full" />
+                                <TextInput id="date" type="date" value={data.date} onChange={(e) => { setData('date', e.target.value); setStartKey(''); setEndKey(''); }} className="mt-1 block w-full" />
                                 <InputError message={errors.date} className="mt-2" />
                             </div>
 
@@ -643,21 +685,15 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                 <div className="relative">
                                     <select
                                         id="start_time"
-                                        value={data.start_time}
-                                        onChange={(e) => {
-                                            setData({
-                                                ...data,
-                                                start_time: e.target.value,
-                                                ...(data.end_time && e.target.value >= data.end_time ? { end_time: '' } : {})
-                                            });
-                                        }}
+                                        value={startKey}
+                                        onChange={(e) => setStartKey(e.target.value)}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm appearance-none !bg-none pr-10 cursor-pointer disabled:bg-gray-100 disabled:opacity-50"
                                         disabled={!data.court_id || !data.date}
                                     >
                                         <option value="">--:--</option>
-                                        {timeOptions.slice(0, -1).map((opt) => (
-                                            <option key={opt.value} value={opt.value} disabled={opt.isBooked} className={opt.isBooked ? 'text-gray-400 bg-gray-100' : 'text-gray-900'}>
-                                                {opt.label} {opt.isBooked ? '(Booked)' : ''}
+                                        {startOptions.map((opt) => (
+                                            <option key={opt.key} value={opt.key} disabled={opt.isBooked} className={opt.isBooked ? 'text-gray-400 bg-gray-100' : 'text-gray-900'}>
+                                                {opt.label} {opt.isNextDay ? '(next day)' : ''} {opt.isBooked ? '(Booked)' : ''}
                                             </option>
                                         ))}
                                     </select>
@@ -675,21 +711,15 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                 <div className="relative">
                                     <select
                                         id="end_time"
-                                        value={data.end_time}
-                                        onChange={(e) => setData('end_time', e.target.value)}
+                                        value={endKey}
+                                        onChange={(e) => setEndKey(e.target.value)}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm appearance-none !bg-none pr-10 cursor-pointer disabled:bg-gray-100 disabled:opacity-50"
-                                        disabled={!data.start_time}
+                                        disabled={!startKey}
                                     >
                                         <option value="">--:--</option>
-                                        {(() => {
-                                            const startIndex = timeOptions.findIndex(o => o.value === data.start_time);
-                                            let firstBookedAfterStart = timeOptions.findIndex((o, index) => index >= startIndex && o.isBooked);
-                                            if (firstBookedAfterStart === -1) firstBookedAfterStart = timeOptions.length - 1;
-                                            
-                                            return timeOptions.filter((opt, index) => data.start_time && index > startIndex && index <= firstBookedAfterStart).map((opt) => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ));
-                                        })()}
+                                        {endOptions.map((opt) => (
+                                            <option key={opt.key} value={opt.key}>{opt.label}</option>
+                                        ))}
                                     </select>
                                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 top-1">
                                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -802,7 +832,7 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                             dayRate={pricingQuote.dayRate}
                             nightRate={pricingQuote.nightRate}
                             dateLabel={formatDate(data.date)}
-                            timeLabel={`${formatTime(data.start_time)} – ${formatTime(data.end_time)}`}
+                            timeLabel={`${formatTime(manualSelection?.start_time)} – ${formatTime(manualSelection?.end_time)}${manualSelection?.end_date ? ' (next day)' : ''}`}
                             durationHours={pricingQuote.durationHours}
                             breakdown={pricingQuote.breakdown}
                             addonLines={pricingQuote.addonLines}

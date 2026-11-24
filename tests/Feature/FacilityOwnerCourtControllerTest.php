@@ -54,6 +54,32 @@ class FacilityOwnerCourtControllerTest extends TestCase
         $this->assertSame('19:00', substr((string) $court->night_start_time, 0, 5));
     }
 
+    public function test_owner_can_save_a_court_that_closes_at_two_am_and_ends_night_rate_then(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = $this->facilityFor($owner);
+
+        $this->actingAs($owner)->post(route('facility.courts.store'), [
+            'facility_id' => $facility->id,
+            'name' => 'Late Court',
+            'type' => 'Pickleball',
+            'time_range' => '6:00 AM - 2:00 AM',
+            'pricing_mode' => 'SPLIT',
+            'day_rate' => 250,
+            'night_rate' => 400,
+            'day_start_time' => '02:00',
+            'night_start_time' => '17:00',
+            'status' => 'AVAILABLE',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $court = Court::where('name', 'Late Court')->firstOrFail();
+
+        $this->assertSame('6:00 AM - 2:00 AM', $court->time_range);
+        $this->assertSame('02:00', substr((string) $court->day_start_time, 0, 5));
+        $this->assertSame('17:00', substr((string) $court->night_start_time, 0, 5));
+        $this->assertSame(4, $court->calculatePriceForRange('22:00', '02:00')['night_hours']);
+    }
+
     public function test_operating_schedule_is_required_before_a_court_can_be_saved(): void
     {
         $owner = User::factory()->facilityOwner()->create();

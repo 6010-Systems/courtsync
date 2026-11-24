@@ -145,7 +145,7 @@ class RatePlanController extends Controller
             return;
         }
 
-        $dayStart = $validated['day_start_time'] ?? '05:00';
+        $dayStart = $validated['day_start_time'] ?? '02:00';
         $nightStart = $validated['night_start_time'] ?? '17:00';
 
         if ($dayStart === $nightStart) {
@@ -202,7 +202,7 @@ class RatePlanController extends Controller
             'description' => $validated['description'] ?? null,
             'day_rate' => $validated['day_rate'],
             'night_rate' => $isCourtPlan && isset($validated['night_rate']) ? $validated['night_rate'] : null,
-            'day_start_time' => $validated['day_start_time'] ?? '05:00',
+            'day_start_time' => $validated['day_start_time'] ?? '02:00',
             'night_start_time' => $validated['night_start_time'] ?? '17:00',
             'includes_ball' => $isCourtPlan ? (bool) ($validated['includes_ball'] ?? true) : false,
             'included_paddles' => $isCourtPlan ? (int) ($validated['included_paddles'] ?? 0) : 0,

@@ -87,7 +87,7 @@ export default function CourtRatePlans({ plans = [], className = '' }) {
                                     <span className="text-[8px] font-medium text-[#10221C]/60">/hr</span>
                                 </p>
                                 <p className="text-[8px] font-medium text-amber-800/70">
-                                    from {formatHour(plan.day_start_time || '05:00')}
+                                    from {formatHour(plan.day_start_time || '02:00')}
                                 </p>
                             </div>
 
@@ -106,7 +106,7 @@ export default function CourtRatePlans({ plans = [], className = '' }) {
                                     )}
                                 </p>
                                 <p className="text-[8px] font-medium text-indigo-800/70">
-                                    from {formatHour(plan.night_start_time || '17:00')}
+                                    until {formatHour(plan.day_start_time || '02:00')} (next day)
                                 </p>
                             </div>
                         </div>

@@ -244,4 +244,117 @@ class RateQuoteTest extends TestCase
         $this->assertSame(0, $quote['court']['night_hours']);
         $this->assertSame(300.0, $quote['subtotal']);
     }
+
+    // -------------------------------------------------------------------------
+    // Overnight booking tests (booking crosses midnight).
+    // Schedule: day 05:00–17:00 (₱300), night 17:00–05:00 (₱400).
+    // -------------------------------------------------------------------------
+
+    public function test_overnight_booking_11pm_to_1am_is_100_percent_night(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '05:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        // 23:00 → 01:00 crosses midnight — both hours are in the night period.
+        $quote = (new RateQuote)->forBooking($court, '23:00', '01:00', $plan);
+
+        $this->assertSame(0, $quote['court']['day_hours']);
+        $this->assertSame(2, $quote['court']['night_hours']);
+        $this->assertSame(800.0, $quote['subtotal']);
+    }
+
+    public function test_overnight_booking_11pm_to_2am_is_100_percent_night(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '05:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '23:00', '02:00', $plan);
+
+        $this->assertSame(0, $quote['court']['day_hours']);
+        $this->assertSame(3, $quote['court']['night_hours']);
+        $this->assertSame(1200.0, $quote['subtotal']);
+    }
+
+    public function test_overnight_split_hours_midnight_slot_is_night(): void
+    {
+        // 00:00–01:00 is in the night period [17:00, 05:00).
+        [$day, $night] = RateQuote::splitHours('00:00', '01:00', '05:00', '17:00');
+
+        $this->assertSame(0, $day);
+        $this->assertSame(1, $night);
+    }
+
+    public function test_overnight_duration_is_calculated_correctly(): void
+    {
+        // 23:00 → 01:00 must equal 2 hours, not 0 (which a naive subtraction would give).
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create(['facility_id' => $facility->id]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '23:00', '01:00', $plan);
+
+        $this->assertSame(2, $quote['court']['duration_hours']);
+    }
+
+    public function test_ten_pm_until_midnight_is_two_night_hours(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '02:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '22:00', '00:00', $plan);
+
+        $this->assertSame(2, $quote['court']['duration_hours']);
+        $this->assertSame(0, $quote['court']['day_hours']);
+        $this->assertSame(2, $quote['court']['night_hours']);
+        $this->assertSame(800.0, $quote['subtotal']);
+    }
+
+    public function test_ten_pm_until_two_am_is_four_night_hours(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '02:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '22:00', '02:00', $plan);
+
+        $this->assertSame(4, $quote['court']['duration_hours']);
+        $this->assertSame(4, $quote['court']['night_hours']);
+        $this->assertSame(1600.0, $quote['subtotal']);
+    }
+
+    public function test_midnight_until_two_am_is_charged_at_the_night_rate(): void
+    {
+        $facility = Facility::factory()->create();
+        $plan = RatePlan::factory()->courtRental(300, 400)->create([
+            'facility_id' => $facility->id,
+            'day_start_time' => '02:00:00',
+            'night_start_time' => '17:00:00',
+        ]);
+        $court = $this->courtFor($facility, $plan);
+
+        $quote = (new RateQuote)->forBooking($court, '00:00', '02:00', $plan);
+
+        $this->assertSame(2, $quote['court']['night_hours']);
+        $this->assertSame(0, $quote['court']['day_hours']);
+        $this->assertSame(800.0, $quote['subtotal']);
+    }
 }

@@ -8,6 +8,14 @@ import InputError from '@/Components/InputError';
 import BookingReviewCard from '@/Components/BookingReviewCard';
 import { formatPeso } from '@/Components/MetricCard';
 import { estimateBookingFee, offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
+import {
+    addDays,
+    buildHourOptions,
+    clockToMinutes,
+    normalizeSelection,
+    occupiedHourKeys,
+    parseOperatingWindow,
+} from '@/Utils/operatingHours';
 
 const PAYMENT_METHODS = [
     { value: '', label: 'Unchanged' },
@@ -22,9 +30,6 @@ const PAYMENT_STATUSES = [
     { value: 'verified', label: 'Verified' },
     { value: 'rejected', label: 'Rejected' },
 ];
-
-const FALLBACK_OPEN_HOUR = 6;
-const FALLBACK_CLOSE_HOUR = 22;
 
 const dateOnly = (value) => (value ? String(value).slice(0, 10) : '');
 
@@ -55,37 +60,15 @@ const formatBookingDate = (value) => {
 
 /**
  * Courts keep their opening hours as free text, e.g. "6:00 AM - 10:00 PM".
- * Falls back to a 6 AM – 10 PM window when the text cannot be parsed.
- *
- * @returns {[number, number]}
+ * Scheduling now goes through the shared operating-hours engine
+ * (@/Utils/operatingHours), which supports midnight and 2:00 AM closes.
  */
-const parseHourRange = (timeRange) => {
-    if (!timeRange) return [FALLBACK_OPEN_HOUR, FALLBACK_CLOSE_HOUR];
-
-    if (/24\s*hours/i.test(timeRange)) return [0, 23];
-
-    const match = String(timeRange).match(/(\d{1,2})(?::\d{2})?\s*(AM|PM)?\s*-\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)?/i);
-    if (!match) return [FALLBACK_OPEN_HOUR, FALLBACK_CLOSE_HOUR];
-
-    const to24Hour = (hour, meridiem) => {
-        let parsed = parseInt(hour, 10);
-        const period = meridiem ? meridiem.toUpperCase() : null;
-        if (period === 'PM' && parsed < 12) parsed += 12;
-        if (period === 'AM' && parsed === 12) parsed = 0;
-
-        return parsed;
-    };
-
-    const open = to24Hour(match[1], match[2]);
-    const close = to24Hour(match[3], match[4]);
-
-    return close > open ? [open, close] : [FALLBACK_OPEN_HOUR, FALLBACK_CLOSE_HOUR];
-};
-
 export default function RescheduleBookingModal({ show, booking, courtBookings = [], facilities = [], onClose }) {
     const [step, setStep] = useState(1);
     const [addonQuantities, setAddonQuantities] = useState({});
     const [amountTouched, setAmountTouched] = useState(false);
+    const [startKey, setStartKey] = useState('');
+    const [endKey, setEndKey] = useState('');
 
     const { data, setData, post, processing, errors, clearErrors, transform } = useForm({
         date: '',
@@ -117,13 +100,24 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
 
         setStep(1);
 
+        // An early-morning session (12:00 AM – 2:00 AM) belongs to the previous
+        // night, so anchor the slot list on that evening to keep it selectable.
+        const window = parseOperatingWindow(fullCourt.court?.time_range || booking?.court?.time_range);
+        const startMinutes = clockToMinutes(timeOnly(booking.start_time)) ?? 0;
+        const endMinutes = clockToMinutes(timeOnly(booking.end_time)) ?? 0;
+        const normalisedEnd = endMinutes <= startMinutes ? endMinutes + 1440 : endMinutes;
+        const isEarlyTail = startMinutes < window.openMinutes && normalisedEnd <= window.earlyCloseMinutes;
+        const bookingDate = isEarlyTail
+            ? addDays(dateOnly(booking.date), -1)
+            : dateOnly(booking.date);
+
         const offeredIds = courtPlans.map((plan) => plan.id);
         const initialRatePlanId = offeredIds.includes(booking.rate_plan_id)
             ? booking.rate_plan_id
             : (courtPlans[0]?.id ?? '');
 
         setData({
-            date: dateOnly(booking.date),
+            date: bookingDate,
             start_time: timeOnly(booking.start_time),
             end_time: timeOnly(booking.end_time),
             rate_plan_id: initialRatePlanId,
@@ -133,6 +127,8 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
         });
         clearErrors();
         setAmountTouched(false);
+        setStartKey('');
+        setEndKey('');
 
         const initialAddons = {};
         (booking.price_breakdown?.addons || []).forEach((line) => {
@@ -181,63 +177,112 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
     }, [grandTotal, amountTouched]);
 
     // "Unchanged" selections (empty string) should not overwrite the stored payment.
-    transform((formData) => ({
-        ...formData,
-        rate_plan_id: selectedRatePlan?.id || '',
-        addons: addonSelection.map(({ plan, quantity }) => ({ rate_plan_id: plan.id, quantity })),
-        payment_method: formData.payment_method || undefined,
-        payment_status: formData.payment_status || undefined,
-    }));
+    transform((formData) => {
+        const selection = normalizeSelection(formData.date, startOption, endOption);
 
-    const [openHour, closeHour] = useMemo(() => parseHourRange(booking?.court?.time_range), [booking?.court?.time_range]);
+        return {
+            ...formData,
+            date: selection?.date || formData.date,
+            end_date: selection?.end_date || null,
+            start_time: selection?.start_time || formData.start_time,
+            end_time: selection?.end_time || formData.end_time,
+            rate_plan_id: selectedRatePlan?.id || '',
+            addons: addonSelection.map(({ plan, quantity }) => ({ rate_plan_id: plan.id, quantity })),
+            payment_method: formData.payment_method || undefined,
+            payment_status: formData.payment_status || undefined,
+        };
+    });
 
-    // Hours already taken on the selected court/date by any other active booking.
-    const bookedHours = useMemo(() => {
-        const hours = new Set();
+    // Shared operating-hours engine. Courts are bookable until at least
+    // midnight (and until 2:00 AM when their schedule closes after midnight).
+    const operatingWindow = useMemo(
+        () => parseOperatingWindow(fullCourt.court?.time_range || booking?.court?.time_range),
+        [fullCourt.court?.time_range, booking?.court?.time_range],
+    );
+    const hourOptions = useMemo(() => buildHourOptions(operatingWindow), [operatingWindow]);
 
-        courtBookings
-            .filter((item) => item.court_id === booking?.court_id
-                && dateOnly(item.date) === data.date
-                && item.id !== booking?.id
-                && String(item.status).toLowerCase() !== 'cancelled')
-            .forEach((item) => {
-                for (let hour = hourOf(item.start_time); hour < hourOf(item.end_time); hour += 1) {
-                    hours.add(hour);
-                }
-            });
+    // Hours already taken on the selected court by any other active booking.
+    const occupiedHours = useMemo(
+        () => occupiedHourKeys((courtBookings || []).filter((item) => item.id !== booking?.id), booking?.court_id ?? null),
+        [courtBookings, booking?.id, booking?.court_id],
+    );
 
-        return hours;
-    }, [courtBookings, booking?.id, booking?.court_id, data.date]);
-
-    const allHourOptions = useMemo(() => {
-        const options = [];
-        for (let hour = openHour; hour <= closeHour; hour += 1) {
-            options.push({ value: `${String(hour).padStart(2, '0')}:00`, hour, label: formatHour(hour) });
+    const dayOptions = useMemo(() => {
+        if (!data.date) {
+            return [];
         }
 
-        return options;
-    }, [openHour, closeHour]);
+        return hourOptions.map((option) => ({
+            ...option,
+            isBooked: occupiedHours.has(`${addDays(data.date, option.dayOffset)}-${parseInt(option.value.slice(0, 2), 10)}`),
+        }));
+    }, [hourOptions, data.date, occupiedHours]);
 
-    const startOptions = useMemo(() => allHourOptions.slice(0, -1), [allHourOptions]);
+    const startOptions = useMemo(
+        () => dayOptions.filter((option) => !option.isClosing && !option.isBooked),
+        [dayOptions],
+    );
+
+    const startOption = useMemo(
+        () => dayOptions.find((option) => option.key === startKey) || null,
+        [dayOptions, startKey],
+    );
+
+    const endOption = useMemo(
+        () => dayOptions.find((option) => option.key === endKey) || null,
+        [dayOptions, endKey],
+    );
 
     const endOptions = useMemo(() => {
-        const startIndex = allHourOptions.findIndex((option) => option.value === data.start_time);
-        if (startIndex === -1) return [];
+        const startIndex = dayOptions.findIndex((option) => option.key === startKey);
 
-        const options = [];
-        for (let index = startIndex + 1; index < allHourOptions.length; index += 1) {
-            const option = allHourOptions[index];
-            options.push(option);
-
-            // An end time right at the next booked hour is still free, past it is not.
-            if (bookedHours.has(option.hour)) break;
+        if (startIndex === -1) {
+            return [];
         }
 
-        return options;
-    }, [allHourOptions, data.start_time, bookedHours]);
+        const firstBooked = dayOptions.findIndex((option, index) => index > startIndex && option.isBooked);
+        const lastIndex = firstBooked === -1 ? dayOptions.length - 1 : firstBooked;
 
-    const durationHours = Math.max(0, hourOf(data.end_time) - hourOf(data.start_time));
-    const canReview = Boolean(data.date && data.start_time && data.end_time);
+        return dayOptions.slice(startIndex + 1, lastIndex + 1);
+    }, [dayOptions, startKey]);
+
+    const durationHours = startOption && endOption
+        ? Math.max(0, (endOption.minutes - startOption.minutes) / 60)
+        : 0;
+    const canReview = Boolean(data.date && startOption && endOption);
+
+    // Preselect the booking's current hours once the court's window is known.
+    useEffect(() => {
+        if (!show || startKey || dayOptions.length === 0) {
+            return;
+        }
+
+        const currentStart = dayOptions.find(
+            (option) => option.value === timeOnly(data.start_time) && !option.isClosing,
+        );
+
+        if (!currentStart) {
+            return;
+        }
+
+        setStartKey(currentStart.key);
+
+        const currentEnd = dayOptions.find(
+            (option) => option.value === timeOnly(data.end_time) && option.minutes > currentStart.minutes,
+        );
+
+        if (currentEnd) {
+            setEndKey(currentEnd.key);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [show, dayOptions, startKey]);
+
+    // Drop an end time that no longer follows the chosen start.
+    useEffect(() => {
+        if (endKey && !endOptions.some((option) => option.key === endKey)) {
+            setEndKey('');
+        }
+    }, [endOptions, endKey]);
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -290,6 +335,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                             <span className="text-[10px] font-bold uppercase tracking-widest text-[#10221C]/40">Current slot</span>
                             <p className="mt-0.5 text-sm font-bold text-[#10221C]">
                                 {formatBookingDate(booking.date)} · {formatHour(hourOf(booking.start_time))} – {formatHour(hourOf(booking.end_time))}
+                                {String(booking.end_time) <= String(booking.start_time) || booking.end_date ? ' (next day)' : ''}
                             </p>
                         </div>
 
@@ -299,9 +345,12 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                                 <input
                                     id="reschedule_date"
                                     type="date"
-                                    min={localToday()}
                                     value={data.date}
-                                    onChange={(event) => setData('date', event.target.value)}
+                                    onChange={(event) => {
+                                        setData('date', event.target.value);
+                                        setStartKey('');
+                                        setEndKey('');
+                                    }}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm"
                                 />
                                 <InputError message={errors.date} className="mt-2" />
@@ -311,18 +360,19 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                                 <InputLabel htmlFor="reschedule_start_time" value="Start Time" />
                                 <select
                                     id="reschedule_start_time"
-                                    value={data.start_time}
-                                    onChange={(event) => setData({
-                                        ...data,
-                                        start_time: event.target.value,
-                                        end_time: event.target.value >= data.end_time ? '' : data.end_time,
-                                    })}
+                                    value={startKey}
+                                    onChange={(event) => {
+                                        const option = dayOptions.find((item) => item.key === event.target.value);
+                                        setStartKey(event.target.value);
+                                        setData('start_time', option?.value || '');
+                                        setEndKey('');
+                                    }}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm"
                                 >
                                     <option value="">--:--</option>
                                     {startOptions.map((option) => (
-                                        <option key={option.value} value={option.value} disabled={bookedHours.has(option.hour)}>
-                                            {option.label}{bookedHours.has(option.hour) ? ' (Booked)' : ''}
+                                        <option key={option.key} value={option.key}>
+                                            {option.label}{option.isNextDay ? ' (next day)' : ''}
                                         </option>
                                     ))}
                                 </select>
@@ -333,14 +383,18 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                                 <InputLabel htmlFor="reschedule_end_time" value="End Time" />
                                 <select
                                     id="reschedule_end_time"
-                                    value={data.end_time}
-                                    onChange={(event) => setData('end_time', event.target.value)}
-                                    disabled={!data.start_time}
+                                    value={endKey}
+                                    onChange={(event) => {
+                                        const option = dayOptions.find((item) => item.key === event.target.value);
+                                        setEndKey(event.target.value);
+                                        setData('end_time', option?.value || '');
+                                    }}
+                                    disabled={!startKey}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm disabled:bg-gray-100"
                                 >
                                     <option value="">--:--</option>
                                     {endOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                        <option key={option.key} value={option.key}>{option.label}</option>
                                     ))}
                                 </select>
                                 <InputError message={errors.end_time} className="mt-2" />
@@ -350,7 +404,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                         {durationHours > 0 && (
                             <p className="-mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-[#D6FF3F]/20 px-2.5 py-1 text-[11px] font-bold text-[#10221C]">
                                 <Clock size={12} />
-                                {durationHours} hr{durationHours === 1 ? '' : 's'} · {formatHour(hourOf(data.start_time))} – {formatHour(hourOf(data.end_time))}
+                                {durationHours} hr{durationHours === 1 ? '' : 's'} · {formatHour(hourOf(data.start_time))} – {formatHour(hourOf(data.end_time))}{endOption?.isNextDay ? ' (next day)' : ''}
                             </p>
                         )}
 
@@ -527,7 +581,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                             dayRate={pricingQuote.dayRate}
                             nightRate={pricingQuote.nightRate}
                             dateLabel={formatBookingDate(data.date)}
-                            timeLabel={`${formatHour(hourOf(data.start_time))} – ${formatHour(hourOf(data.end_time))}`}
+                            timeLabel={`${formatHour(hourOf(data.start_time))} – ${formatHour(hourOf(data.end_time))}${endOption?.isNextDay ? ' (next day)' : ''}`}
                             durationHours={pricingQuote.durationHours}
                             breakdown={pricingQuote.breakdown}
                             addonLines={pricingQuote.addonLines}

@@ -9,12 +9,13 @@ use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
 use App\Notifications\BookingRescheduled;
+use App\Support\OperatingHours;
 use App\Support\RateCardLoader;
 use App\Support\RateQuote;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -79,25 +80,22 @@ class BookingController extends Controller
         // Nearest upcoming booking, independent of the active search and filter.
         $nextBooking = Booking::query()
             ->whereIn('facility_id', $facilityIds)
-            ->where('status', '!=', 'cancelled')
-            ->where(function ($query) {
-                $query->where('date', '>', now()->toDateString())
-                    ->orWhere(function ($sameDay) {
-                        $sameDay->where('date', now()->toDateString())
-                            ->where('end_time', '>', now()->format('H:i:s'));
-                    });
-            })
+            ->upcoming(now())
             ->with(['user:id,name', 'court:id,name', 'facility:id,name'])
             ->orderBy('date')
             ->orderBy('start_time')
             ->first();
 
         // Lightweight slot map so the reschedule form can grey out taken hours.
+        // Yesterday's overnight sessions can still occupy today's early hours.
         $courtBookings = Booking::query()
             ->whereIn('facility_id', $facilityIds)
             ->where('status', '!=', 'cancelled')
-            ->where('date', '>=', now()->toDateString())
-            ->get(['id', 'court_id', 'date', 'start_time', 'end_time', 'status']);
+            ->where(function ($query) {
+                $query->where('date', '>=', now()->subDay()->toDateString())
+                    ->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->get(['id', 'court_id', 'date', 'end_date', 'start_time', 'end_time', 'status']);
 
         return inertia('Facility/Bookings', [
             'bookings' => $bookings,
@@ -117,28 +115,37 @@ class BookingController extends Controller
         $date = $request->query('date');
         $clientId = $request->query('idempotency_key');
         if (! $date) {
-            return response()->json(['locked_slots' => []]);
+            return response()->json(['locked_slots' => [], 'next_day_locked_slots' => []]);
         }
 
+        $nextDate = Carbon::parse($date)->addDay()->toDateString();
+
+        return response()->json([
+            'locked_slots' => $this->heldHours($courtId, $date, $clientId),
+            // A session that runs past midnight holds hours on the next calendar day.
+            'next_day_locked_slots' => $this->heldHours($courtId, $nextDate, $clientId),
+        ]);
+    }
+
+    /**
+     * Hold keys for one court/date that belong to another client.
+     *
+     * @return array<int, string>
+     */
+    private function heldHours(int|string $courtId, string $date, ?string $clientId): array
+    {
         $locked = [];
-        Log::info('getLockedSlots called! URL clientId: '.($clientId ?? 'NULL'));
 
         for ($i = 0; $i < 24; $i++) {
-            $hour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
+            $hour = str_pad((string) $i, 2, '0', STR_PAD_LEFT).':00';
             $key = "court_hold_{$courtId}_{$date}_{$hour}";
-            if (Cache::has($key)) {
-                $heldBy = Cache::get($key);
-                Log::info("Slot {$hour} is held by: {$heldBy}. Does it match? ".($heldBy === $clientId ? 'YES' : 'NO'));
-                if ($heldBy !== $clientId) {
-                    $locked[] = $hour;
-                }
+
+            if (Cache::has($key) && Cache::get($key) !== $clientId) {
+                $locked[] = $hour;
             }
         }
 
-        return response()->json([
-            'locked_slots' => $locked,
-            'debug_clientId' => $clientId,
-        ]);
+        return $locked;
     }
 
     /**
@@ -152,7 +159,8 @@ class BookingController extends Controller
             'court_id' => 'required|exists:courts,id',
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            // `after:start_time` is intentionally omitted — overnight bookings have end < start.
+            'end_time' => 'required|date_format:H:i|different:start_time',
             // Kept for older clients; the amount is always recalculated server-side.
             'total_price' => 'required|numeric|min:0',
             'guest_name' => 'nullable|string|max:255',
@@ -164,18 +172,12 @@ class BookingController extends Controller
 
         $user = $request->user();
 
-        //  Prevent Double Booking
-        $conflict = Booking::where('court_id', $validated['court_id'])
-            ->where('date', $validated['date'])
-            ->where(function ($query) use ($validated) {
-                // A requested time [A, B] overlaps with an existing time [C, D] if A < D and B > C.
-                $query->where('start_time', '<', $validated['end_time'])
-                    ->where('end_time', '>', $validated['start_time']);
-            })
-            ->where('status', '!=', 'cancelled')
-            ->exists();
+        // Resolve the session into real datetimes (an end before the start means
+        // the booking runs past midnight, e.g. 10:00 PM → 12:00 AM).
+        $range = $this->resolveTimeRange($validated['date'], $validated['start_time'], $validated['end_time']);
 
-        if ($conflict) {
+        // Prevent Double Booking — works across calendar-date boundaries.
+        if ($this->hasConflict($validated['court_id'], null, $range['start'], $range['end'])) {
             return back()->withErrors(['conflict' => 'Sorry, this court is already booked for that time.']);
         }
 
@@ -184,6 +186,10 @@ class BookingController extends Controller
 
         $court = Court::findOrFail($validated['court_id']);
         $facility = $court->facility()->firstOrFail();
+
+        // The court's operating schedule is authoritative: sessions must finish
+        // inside its window (always at least until midnight, up to 2:00 AM).
+        $this->assertWithinOperatingHours($court, $range);
 
         $plan = ! empty($validated['rate_plan_id'])
             ? RatePlan::findOrFail($validated['rate_plan_id'])
@@ -205,8 +211,9 @@ class BookingController extends Controller
 
         $subtotal = $quote['subtotal'];
 
-        // Legacy courts with no configured rate still accept the previewed amount.
-        if ($plan === null && $subtotal <= 0) {
+        // Only courts with no configured rate at all (legacy rows) accept the
+        // previewed amount; every configured court is priced server-side.
+        if ($plan === null && $subtotal <= 0 && $this->courtHasNoConfiguredRate($court)) {
             $subtotal = round((float) $validated['total_price'], 2);
             $quote['subtotal'] = $subtotal;
         }
@@ -225,8 +232,9 @@ class BookingController extends Controller
             'rate_plan_id' => $quote['rate_plan_id'],
             'rate_plan_name' => $quote['rate_plan_name'],
             'date' => $validated['date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
+            'end_date' => $range['end_date'],
+            'start_time' => $this->normalizeTime($validated['start_time']),
+            'end_time' => $this->normalizeTime($validated['end_time']),
             'subtotal' => $subtotal,
             'addons_total' => $addonsTotal,
             'booking_fee' => $bookingFee,
@@ -343,7 +351,8 @@ class BookingController extends Controller
         $validated = $request->validate([
             'date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            // `after:start_time` omitted — overnight bookings have end < start.
+            'end_time' => ['required', 'date_format:H:i', 'different:start_time'],
             'rate_plan_id' => ['nullable', 'integer', 'exists:rate_plans,id'],
             'addons' => ['nullable', 'array'],
             'addons.*.rate_plan_id' => ['required_with:addons', 'integer', 'exists:rate_plans,id'],
@@ -353,21 +362,16 @@ class BookingController extends Controller
             'payment_status' => ['nullable', Rule::in(['pending', 'verified', 'rejected'])],
         ]);
 
-        $conflict = Booking::query()
-            ->where('court_id', $booking->court_id)
-            ->whereKeyNot($booking->id)
-            ->where('date', $validated['date'])
-            ->where('status', '!=', 'cancelled')
-            ->where(function ($query) use ($validated) {
-                // A requested time [A, B] overlaps an existing time [C, D] if A < D and B > C.
-                $query->where('start_time', '<', $validated['end_time'])
-                    ->where('end_time', '>', $validated['start_time']);
-            })
-            ->exists();
+        $range = $this->resolveTimeRange($validated['date'], $validated['start_time'], $validated['end_time']);
 
-        if ($conflict) {
+        if ($this->hasConflict($booking->court_id, $booking->id, $range['start'], $range['end'])) {
             return back()->withErrors(['start_time' => 'This court is already booked for the selected time slot.']);
         }
+
+        // Re-quote and re-open the session on the same court, so the court's
+        // operating window still applies after a move.
+        $booking->loadMissing('court');
+        $this->assertWithinOperatingHours($booking->court, $range);
 
         $previousTotal = round((float) $booking->total_price, 2);
 
@@ -375,6 +379,7 @@ class BookingController extends Controller
             $booking = DB::transaction(fn () => $this->applyReschedule(
                 Booking::query()->lockForUpdate()->findOrFail($booking->id),
                 $validated['date'],
+                $range['end_date'],
                 $validated['start_time'],
                 $validated['end_time'],
                 $validated['rate_plan_id'] ?? null,
@@ -426,7 +431,7 @@ class BookingController extends Controller
      *
      * @throws InvalidArgumentException when the chosen rate plan is no longer offered by the court
      */
-    private function applyReschedule(Booking $booking, string $date, string $startTime, string $endTime, ?int $ratePlanId = null, ?array $addons = null): Booking
+    private function applyReschedule(Booking $booking, string $date, ?string $endDate, string $startTime, string $endTime, ?int $ratePlanId = null, ?array $addons = null): Booking
     {
         $startTime = strlen($startTime) === 5 ? $startTime.':00' : $startTime;
         $endTime = strlen($endTime) === 5 ? $endTime.':00' : $endTime;
@@ -454,8 +459,8 @@ class BookingController extends Controller
 
         $subtotal = $quote['subtotal'];
 
-        // Legacy courts with no configured rate keep the court charge they were booked at.
-        if ($plan === null && $subtotal <= 0) {
+        // Courts with no configured rate at all keep the court charge they were booked at.
+        if ($plan === null && $subtotal <= 0 && $this->courtHasNoConfiguredRate($booking->court)) {
             $subtotal = round($booking->subtotal !== null
                 ? (float) $booking->subtotal
                 : max(0, (float) $booking->total_price - (float) $booking->booking_fee - (float) $booking->addons_total), 2);
@@ -468,6 +473,7 @@ class BookingController extends Controller
 
         $booking->update([
             'date' => $date,
+            'end_date' => $endDate,
             'start_time' => $startTime,
             'end_time' => $endTime,
             'rate_plan_id' => $quote['rate_plan_id'],
@@ -579,10 +585,96 @@ class BookingController extends Controller
         return redirect()->back()->with('success', 'Booking rejected. The time slot is now available.');
     }
 
+    /**
+     * Check whether a proposed time range conflicts with any existing active booking
+     * on the given court, optionally excluding one booking (for reschedule checks).
+     *
+     * Existing sessions are compared as full datetimes, so an overnight booking
+     * (stored with an `end_date`) overlaps correctly with the next calendar day.
+     */
+    private function hasConflict(int|string $courtId, ?int $excludeBookingId, Carbon $newStart, Carbon $newEnd): bool
+    {
+        return Booking::query()
+            ->where('court_id', $courtId)
+            ->where('status', '!=', 'cancelled')
+            ->when($excludeBookingId, fn ($query) => $query->whereKeyNot($excludeBookingId))
+            ->whereBetween('date', [
+                $newStart->copy()->subDay()->toDateString(),
+                $newEnd->toDateString(),
+            ])
+            ->get(['id', 'date', 'end_date', 'start_time', 'end_time'])
+            ->some(function (Booking $booking) use ($newStart, $newEnd) {
+                return $newStart->lt($booking->endsAt()) && $newEnd->gt($booking->startsAt());
+            });
+    }
+
+    /**
+     * Resolve a booking date + start/end times into concrete datetimes.
+     *
+     * @return array{start: Carbon, end: Carbon, end_date: string|null, duration_hours: int}
+     */
+    private function resolveTimeRange(string $date, string $startTime, string $endTime): array
+    {
+        $start = Carbon::parse($date.' '.$this->normalizeTime($startTime));
+        $end = Carbon::parse($date.' '.$this->normalizeTime($endTime));
+
+        if ($end->lte($start)) {
+            $end->addDay();
+        }
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'end_date' => $end->toDateString() !== $start->toDateString() ? $end->toDateString() : null,
+            'duration_hours' => max(0, (int) $start->diffInHours($end)),
+        ];
+    }
+
+    private function normalizeTime(string $time): string
+    {
+        return strlen($time) === 5 ? $time.':00' : $time;
+    }
+
+    /**
+     * Reject sessions outside the court's bookable window.
+     *
+     * @param  array{start: Carbon, end: Carbon, duration_hours: int}  $range
+     *
+     * @throws ValidationException
+     */
+    private function assertWithinOperatingHours(Court $court, array $range, string $errorKey = 'start_time'): void
+    {
+        if ($range['duration_hours'] < 1) {
+            throw ValidationException::withMessages([$errorKey => 'A booking must last at least one hour.']);
+        }
+
+        if ($range['duration_hours'] > 24) {
+            throw ValidationException::withMessages([$errorKey => 'A booking cannot be longer than 24 hours.']);
+        }
+
+        $hours = $court->operatingHours();
+        $startMinutes = $range['start']->hour * 60 + $range['start']->minute;
+        $endMinutes = $range['end']->hour * 60 + $range['end']->minute;
+
+        if (! $hours->contains($startMinutes, $endMinutes)) {
+            throw ValidationException::withMessages([
+                $errorKey => "This court can only be booked between {$hours->describe()}.",
+            ]);
+        }
+    }
+
+    /**
+     * True when a court has no hourly, day or night rate configured at all.
+     */
+    private function courtHasNoConfiguredRate(Court $court): bool
+    {
+        return (float) ($court->hourly_rate ?? 0) <= 0
+            && (float) ($court->day_rate ?? 0) <= 0
+            && (float) ($court->night_rate ?? 0) <= 0;
+    }
+
     public function lockSlot(Request $request)
     {
-        Log::info('lockSlot called with payload: ', $request->all());
-
         $request->validate([
             'court_id' => 'required',
             'date' => 'required|date',
@@ -590,46 +682,30 @@ class BookingController extends Controller
             'end_time' => 'required',
         ]);
 
-        $startHour = (int) explode(':', $request->start_time)[0];
-        $endHour = (int) explode(':', $request->end_time)[0];
-
-        $keysToLock = [];
         $clientId = $request->idempotency_key ?? 'unknown';
+        $keysToLock = $this->holdKeys($request->court_id, $request->date, $request->start_time, $request->end_time);
 
         // Check if ANY hour in the range is already locked by someone else!
-        for ($i = $startHour; $i < $endHour; $i++) {
-            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
-            $cacheKey = "court_hold_{$request->court_id}_{$request->date}_{$formattedHour}";
-
-            if (Cache::has($cacheKey)) {
-                $heldBy = Cache::get($cacheKey);
-                if ($heldBy !== $clientId) {
-                    return response()->json(['locked' => true], 423); // 423 means Locked
-                }
+        foreach ($keysToLock as $cacheKey) {
+            if (Cache::has($cacheKey) && Cache::get($cacheKey) !== $clientId) {
+                return response()->json(['locked' => true], 423); // 423 means Locked
             }
-            $keysToLock[] = $cacheKey;
         }
 
-        // If we made it here, every single hour they requested is completely free (or already held by them)!
-
-        // Prevent Slot Hoarding!
-        // Clear any previous times this user was holding that are not in their new selection
+        // Prevent Slot Hoarding: release hours this client held before but no longer needs.
         if ($clientId !== 'unknown') {
             $previousLocks = Cache::get("active_locks_{$clientId}", []);
+
             foreach ($previousLocks as $oldKey) {
-                if (! in_array($oldKey, $keysToLock)) {
-                    $oldHeldBy = Cache::get($oldKey);
-                    if ($oldHeldBy === $clientId) {
-                        Cache::forget($oldKey);
-                    }
+                if (! in_array($oldKey, $keysToLock, true) && Cache::get($oldKey) === $clientId) {
+                    Cache::forget($oldKey);
                 }
             }
-            // Save their new active locks
+
             Cache::put("active_locks_{$clientId}", $keysToLock, now()->addMinutes(7));
         }
 
-        // If we made it here, every single hour they requested is completely free!
-        // Lock all of them for exactly 7 minutes!
+        // Every requested hour is free — hold all of them for 7 minutes.
         foreach ($keysToLock as $key) {
             Cache::put($key, $clientId, now()->addMinutes(7));
         }
@@ -639,27 +715,52 @@ class BookingController extends Controller
 
     public function unlockSlot(Request $request)
     {
-        $courtId = $request->court_id;
-        $date = $request->date;
-        $startHour = (int) explode(':', $request->start_time)[0];
-        $endHour = (int) explode(':', $request->end_time)[0];
         $clientId = $request->idempotency_key;
 
         if (! $clientId) {
             return response()->json(['success' => false], 400);
         }
 
-        for ($i = $startHour; $i < $endHour; $i++) {
-            $formattedHour = str_pad($i, 2, '0', STR_PAD_LEFT).':00';
-            $cacheKey = "court_hold_{$courtId}_{$date}_{$formattedHour}";
-            if (Cache::has($cacheKey)) {
-                $heldBy = Cache::get($cacheKey);
-                if ($heldBy === $clientId) {
-                    Cache::forget($cacheKey);
-                }
+        $keys = $this->holdKeys($request->court_id, (string) $request->date, (string) $request->start_time, (string) $request->end_time);
+
+        foreach ($keys as $cacheKey) {
+            if (Cache::get($cacheKey) === $clientId) {
+                Cache::forget($cacheKey);
             }
         }
 
+        Cache::forget("active_locks_{$clientId}");
+
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Cache keys covering every hour a session occupies, including hours on the
+     * next calendar day when the session runs past midnight.
+     *
+     * @return array<int, string>
+     */
+    private function holdKeys(int|string $courtId, string $date, string $startTime, string $endTime): array
+    {
+        $start = OperatingHours::clockToMinutes(substr($startTime, 0, 5)) ?? 0;
+        $end = OperatingHours::clockToMinutes(substr($endTime, 0, 5)) ?? 0;
+
+        if ($end <= $start) {
+            $end += OperatingHours::MINIMUM_CLOSE_MINUTES;
+        }
+
+        $keys = [];
+
+        for ($minutes = $start; $minutes < $end; $minutes += 60) {
+            $dayOffset = intdiv($minutes, OperatingHours::MINIMUM_CLOSE_MINUTES);
+            $slotDate = $dayOffset === 0
+                ? $date
+                : Carbon::parse($date)->addDays($dayOffset)->toDateString();
+            $hour = intdiv($minutes % OperatingHours::MINIMUM_CLOSE_MINUTES, 60);
+
+            $keys[] = "court_hold_{$courtId}_{$slotDate}_".str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':00';
+        }
+
+        return $keys;
     }
 }
