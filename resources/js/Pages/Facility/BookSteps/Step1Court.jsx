@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sun, Moon } from 'lucide-react';
 
 import CourtRatePlans from '@/Components/CourtRatePlans';
 import { formatCourtTime } from '@/Components/CourtCard';
@@ -7,8 +8,8 @@ import { offeredCourtPlans } from '@/Utils/rateQuote';
 
 export default function Step1Court({ facilityName, facility = null, selectableCourts, selectedCourtId, setSelectedCourtId }) {
     return (
-        <div className="p-6 sm:p-8">
-            <div className="mb-6">
+        <div className="p-3.5 sm:p-6 md:p-8">
+            <div className="mb-4 sm:mb-6">
                 <h2 className="text-2xl font-black text-[#10221C] mb-1">Choose a Court</h2>
                 <p className="text-sm text-gray-500">Select the court you'd like to book at {facilityName}.</p>
             </div>
@@ -30,8 +31,8 @@ export default function Step1Court({ facilityName, facility = null, selectableCo
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                                 selectedCourtId == court.id 
-                                    ? 'border-[#D6FF3F] bg-[#D6FF3F]' 
-                                    : 'border-gray-300 group-hover:border-gray-400'
+                                ? 'border-[#D6FF3F] bg-[#D6FF3F]' 
+                                : 'border-gray-300 group-hover:border-gray-400'
                             }`}>
                                 {selectedCourtId == court.id && (
                                     <svg className="w-3 h-3 text-[#10221C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -62,10 +63,16 @@ export default function Step1Court({ facilityName, facility = null, selectableCo
 
                                 return court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
                                     <div>
-                                        <div className={`font-black text-sm sm:text-base flex items-center gap-1.5 ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
-                                            <span>☀️ {formatPeso(court.day_rate)}</span>
-                                            <span className="opacity-50">/</span>
-                                            <span>🌙 {formatPeso(court.night_rate)}</span>
+                                        <div className={`font-black text-sm sm:text-base flex items-center gap-2 ${selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'}`}>
+                                            <span className="inline-flex items-center gap-1">
+                                                <Sun size={12} strokeWidth={2} className={selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]/70'} />
+                                                {formatPeso(court.day_rate)}
+                                            </span>
+                                            <span className="opacity-40">/</span>
+                                            <span className="inline-flex items-center gap-1">
+                                                <Moon size={11} fill="currentColor" className={selectedCourtId == court.id ? 'text-[#D6FF3F]' : 'text-[#10221C]'} />
+                                                {formatPeso(court.night_rate)}
+                                            </span>
                                             <span className="text-[10px] font-normal opacity-70">/hr</span>
                                         </div>
                                         <span className={`text-[10px] block font-medium ${selectedCourtId == court.id ? 'text-gray-300' : 'text-gray-500'}`}>

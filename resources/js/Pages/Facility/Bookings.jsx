@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Modal from '@/Components/Modal';
-import { CalendarClock, LayoutGrid, List, Plus, Search, X } from 'lucide-react';
+import { CalendarClock, LayoutGrid, List, Plus, Search, X, Sun, Moon } from 'lucide-react';
 import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 import RescheduleBookingModal from '@/Components/RescheduleBookingModal';
 import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
@@ -773,9 +773,20 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                                         }`}
                                                     >
                                                         <p className={`text-sm font-bold ${active ? 'text-white' : 'text-[#10221C]'}`}>{plan.name}</p>
-                                                        <p className={`text-xs font-bold ${active ? 'text-[#D6FF3F]' : 'text-[#10221C]/70'}`}>
-                                                            ☀️ {formatPeso(rates.day)}/hr
-                                                            {rates.night !== null && <> · 🌙 {formatPeso(rates.night)}/hr</>}
+                                                        <p className={`text-xs font-bold flex items-center gap-1.5 ${active ? 'text-[#D6FF3F]' : 'text-[#10221C]/70'}`}>
+                                                            <span className="inline-flex items-center gap-1">
+                                                                <Sun size={11} className={active ? 'text-[#D6FF3F]' : 'text-amber-500'} />
+                                                                {formatPeso(rates.day)}/hr
+                                                            </span>
+                                                            {rates.night !== null && (
+                                                                <>
+                                                                    <span className="opacity-40">·</span>
+                                                                    <span className="inline-flex items-center gap-1">
+                                                                        <Moon size={11} className={active ? 'text-[#D6FF3F]' : 'text-indigo-400'} />
+                                                                        {formatPeso(rates.night)}/hr
+                                                                    </span>
+                                                                </>
+                                                            )}
                                                         </p>
                                                     </button>
                                                 );
@@ -807,9 +818,21 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                         )}
                                     </>
                                 ) : (
-                                    <p className="mt-2 text-sm font-bold text-[#10221C]">
+                                    <p className="mt-2 text-sm font-bold text-[#10221C] flex items-center gap-2">
                                         {selectedCourt?.pricing_mode === 'SPLIT'
-                                            ? <>☀️ {formatPeso(selectedCourt?.day_rate)}/hr · 🌙 {formatPeso(selectedCourt?.night_rate)}/hr</>
+                                            ? (
+                                                <>
+                                                    <span className="inline-flex items-center gap-1 text-amber-700">
+                                                        <Sun size={12} className="text-amber-500" />
+                                                        {formatPeso(selectedCourt?.day_rate)}/hr
+                                                    </span>
+                                                    <span className="text-gray-300">·</span>
+                                                    <span className="inline-flex items-center gap-1 text-indigo-700">
+                                                        <Moon size={12} className="text-indigo-400" />
+                                                        {formatPeso(selectedCourt?.night_rate)}/hr
+                                                    </span>
+                                                </>
+                                            )
                                             : <>{formatPeso(selectedCourt?.hourly_rate)}/hr (court rate)</>}
                                     </p>
                                 )}
