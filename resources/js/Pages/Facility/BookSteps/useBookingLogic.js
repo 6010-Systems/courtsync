@@ -276,6 +276,17 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
             lockedHours.add(parseInt(slot.split(':')[0]));
         });
 
+        // Determine if selected date is today to block past hours
+        const isToday = (() => {
+            try {
+                const todayStr = new Date(Date.now() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                return selectedDate === todayStr;
+            } catch {
+                return false;
+            }
+        })();
+        const currentHour = new Date().getHours();
+
         const options = [];
         // Include the closing hour as an end-time option (e.g. midnight 24:00).
         for (let i = startHour; i <= endHour; i++) {
@@ -286,25 +297,27 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
                 ? '12:00 AM'
                 : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
             
-            const isUnavailable = i < endHour && (bookedHours.has(i) || lockedHours.has(i));
-            const labelSuffix = bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
+            const isPast = isToday && i <= currentHour;
+            const isUnavailable = i < endHour && (isPast || bookedHours.has(i) || lockedHours.has(i));
+            const labelSuffix = isPast ? '(Past)' : bookedHours.has(i) ? '(Booked)' : lockedHours.has(i) ? '(Held)' : '';
 
             let rateTag = '';
+            let isNight = false;
             const slotPlan = selectedRatePlan;
             const planRateSet = slotPlan ? planRates(slotPlan) : null;
 
             if (slotPlan && planRateSet) {
                 const dayStartH = slotPlan.day_start_time ? parseInt(String(slotPlan.day_start_time).split(':')[0], 10) : 5;
                 const nightStartH = slotPlan.night_start_time ? parseInt(String(slotPlan.night_start_time).split(':')[0], 10) : 17;
-                const isNight = planRateSet.night !== null && (i >= nightStartH || i < dayStartH);
+                isNight = planRateSet.night !== null && (i >= nightStartH || i < dayStartH);
                 const rate = isNight ? planRateSet.night : planRateSet.day;
-                rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
+                rateTag = isNight ? `Night ₱${rate.toFixed(0)}` : `Day ₱${rate.toFixed(0)}`;
             } else if (selectedCourt?.pricing_mode === 'SPLIT' && selectedCourt.day_rate && selectedCourt.night_rate) {
                 const dayStartH = selectedCourt.day_start_time ? parseInt(String(selectedCourt.day_start_time).split(':')[0], 10) : 6;
                 const nightStartH = selectedCourt.night_start_time ? parseInt(String(selectedCourt.night_start_time).split(':')[0], 10) : 18;
-                const isNight = i >= nightStartH || i < dayStartH;
+                isNight = i >= nightStartH || i < dayStartH;
                 const rate = isNight ? Number(selectedCourt.night_rate) : Number(selectedCourt.day_rate);
-                rateTag = isNight ? `🌙 ₱${rate.toFixed(0)}` : `☀️ ₱${rate.toFixed(0)}`;
+                rateTag = isNight ? `Night ₱${rate.toFixed(0)}` : `Day ₱${rate.toFixed(0)}`;
             }
             
             options.push({ 
@@ -312,7 +325,9 @@ export function useBookingLogic(facility, preselectedCourtId = null) {
                 label: formatted, 
                 isBooked: isUnavailable, 
                 labelSuffix: labelSuffix,
-                rateTag: rateTag
+                rateTag: rateTag,
+                isNight: Boolean(isNight),
+                hour: i,
             });
         }
         return options;

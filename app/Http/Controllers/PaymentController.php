@@ -29,8 +29,15 @@ class PaymentController extends Controller
 
         $payments = $query->get();
 
+        $facilitiesQuery = Facility::query()->orderBy('name');
+        if ($facilityIds !== null) {
+            $facilitiesQuery->whereIn('id', $facilityIds);
+        }
+        $facilities = $facilitiesQuery->get(['id', 'name']);
+
         return Inertia::render('Facility/Payments', [
             'payments' => $payments,
+            'facilities' => $facilities,
         ]);
     }
 }

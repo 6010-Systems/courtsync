@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             FacilityOwnerSeeder::class,
             FacilityStaffSeeder::class,
             PlayerSeeder::class,
+            BookingSeeder::class,
         ]);
     }
 }

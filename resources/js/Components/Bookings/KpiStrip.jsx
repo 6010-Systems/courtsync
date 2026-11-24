@@ -37,39 +37,39 @@ export default function KpiStrip({ kpis }) {
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-3.5">
             {cards.map(({ key, data, icon: Icon, iconBg, accentBorder }) => (
                 <div
                     key={key}
                     className={[
-                        'group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift',
+                        'group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift',
                         accentBorder,
                     ].join(' ')}
                 >
                     {/* Top row: Small Uppercase Label + Icon */}
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                             {data.label}
                         </span>
-                        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${iconBg} shadow-2xs`}>
-                            <Icon size={14} strokeWidth={2.4} />
+                        <div className={`flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg ${iconBg} shadow-2xs`}>
+                            <Icon size={13} strokeWidth={2.4} />
                         </div>
                     </div>
 
-                    {/* Middle: Oversized Hero Number */}
-                    <div className="my-2">
-                        <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#101F1A]">
+                    {/* Middle: Value Number */}
+                    <div className="my-1 sm:my-1.5">
+                        <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#101F1A] leading-tight">
                             {data.value}
                         </div>
                     </div>
 
                     {/* Bottom: Trend Badge + Contextual Text */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#101F1A]/5">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px]">
                         <TrendBadge
                             delta={data.delta}
                             polarity={data.polarity}
                         />
-                        <span className="text-[11px] font-medium text-[#101F1A]/55 truncate">
+                        <span className="font-medium text-[#101F1A]/60 truncate">
                             {data.comparisonText}
                         </span>
                     </div>

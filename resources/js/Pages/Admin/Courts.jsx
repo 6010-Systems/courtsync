@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import { COURT_STATUS_LABELS, COURT_STATUS_STYLES } from '@/Utils/courtStatus';
 import CourtCard from '@/Components/CourtCard';
 import SportIcon from '@/Components/Bookings/SportIcon';
+import CourtDetailsSheet from '@/Components/Courts/CourtDetailsSheet';
 import { useState, useMemo } from 'react';
 import {
     Layers,
@@ -17,7 +18,9 @@ import {
     X,
     Shield,
     LayoutGrid,
-    List
+    List,
+    Sun,
+    Moon
 } from 'lucide-react';
 
 const SPORT_COURT_IMAGES = {
@@ -86,6 +89,8 @@ export default function Courts({ facilities = [] }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
+    const [selectedCourtForDetails, setSelectedCourtForDetails] = useState(null);
+    const [selectedFacilityForDetails, setSelectedFacilityForDetails] = useState(null);
 
     const totalCourts = facilities.reduce((sum, f) => sum + (f.courts?.length || 0), 0);
     const facilitiesWithCourts = facilities.filter(f => (f.courts || []).length > 0);
@@ -159,82 +164,82 @@ export default function Courts({ facilities = [] }) {
             <Head title="Platform Courts" />
 
             <div className="w-full space-y-4 pb-2">
-                {/* ── KPI Strip (Matching Bookings/Dashboard) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Total System Courts
+                {/* ── KPI Strip (Max 2 rows on mobile/tablet, 1 row on desktop; compact footprint) ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-3.5">
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                System Courts
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
-                                <Layers size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
+                                <Layers size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#101F1A]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#101F1A] leading-tight">
                                 {totalCourts}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#101F1A]/55">
-                            <Building2 size={12} className="text-[#101F1A]/40" />
-                            <span>Across {facilities.length} registered venues</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-[#101F1A]/60 truncate">
+                            <Building2 size={11} className="text-[#101F1A]/40 shrink-0" />
+                            <span className="truncate">Across {facilities.length} venues</span>
                         </div>
                     </div>
 
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#D6FF3F]">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Active Available
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#D6FF3F]">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                Available
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
-                                <CheckCircle2 size={14} strokeWidth={2.4} className="text-emerald-700" />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
+                                <CheckCircle2 size={13} strokeWidth={2.4} className="text-emerald-700" />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-emerald-700">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-emerald-700 leading-tight">
                                 {stats.available}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-emerald-700">
-                            <span>Ready for reservations</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-emerald-700 truncate">
+                            <span className="truncate">Ready for booking</span>
                         </div>
                     </div>
 
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-blue-300">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Open Play Sessions
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-blue-300">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                Open Play
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 shadow-2xs border border-blue-100">
-                                <Activity size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 shadow-2xs border border-blue-100">
+                                <Activity size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-blue-700">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-blue-700 leading-tight">
                                 {stats.openPlay}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-blue-700">
-                            <span>Social drop-in enabled</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-blue-700 truncate">
+                            <span className="truncate">Social queues</span>
                         </div>
                     </div>
 
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#F46036]/30">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Blocked / Offline
+                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#F46036]/30">
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                Blocked / Hold
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F46036]/10 text-[#F46036] shadow-2xs border border-[#F46036]/20">
-                                <AlertTriangle size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#F46036]/10 text-[#F46036] shadow-2xs border border-[#F46036]/20">
+                                <AlertTriangle size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#B8391D]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#B8391D] leading-tight">
                                 {stats.blocked}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#B8391D]">
-                            <span>Restricted or offline</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/5 text-[10px] sm:text-[11px] font-medium text-[#B8391D] truncate">
+                            <span className="truncate">Restricted or offline</span>
                         </div>
                     </div>
                 </div>
@@ -273,10 +278,10 @@ export default function Courts({ facilities = [] }) {
                                 <button
                                     key={tab.key}
                                     onClick={() => setStatusFilter(tab.key)}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                         statusFilter === tab.key
-                                            ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
-                                            : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-white/40'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                            : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50'
                                     }`}
                                 >
                                     {tab.label}
@@ -373,6 +378,10 @@ export default function Courts({ facilities = [] }) {
                                                 court={court}
                                                 image={getCourtImage(court, facility, courtIndex)}
                                                 fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
+                                                onClick={() => {
+                                                    setSelectedCourtForDetails(court);
+                                                    setSelectedFacilityForDetails(facility);
+                                                }}
                                             />
                                         ))}
                                     </div>
@@ -393,7 +402,14 @@ export default function Courts({ facilities = [] }) {
                                                 {facility.filteredCourts.map((court, courtIndex) => {
                                                     const courtImg = getCourtImage(court, facility, courtIndex);
                                                     return (
-                                                        <tr key={court.id} className="hover:bg-[#F5F2EA]/30 transition-colors">
+                                                        <tr
+                                                            key={court.id}
+                                                            onClick={() => {
+                                                                setSelectedCourtForDetails(court);
+                                                                setSelectedFacilityForDetails(facility);
+                                                            }}
+                                                            className="hover:bg-[#F5F2EA]/50 transition-colors cursor-pointer"
+                                                        >
                                                             <td className="px-4 py-2.5 font-bold text-[#101F1A]">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="w-12 h-9 rounded-lg overflow-hidden shrink-0 border border-[#101F1A]/10 bg-[#101F1A]/5 relative">
@@ -428,10 +444,16 @@ export default function Courts({ facilities = [] }) {
                                                             </td>
                                                             <td className="px-4 py-2.5 font-bold text-[#101F1A]">
                                                                 {court.pricing_mode === 'SPLIT' && court.day_rate && court.night_rate ? (
-                                                                    <span className="inline-flex items-center gap-1 text-xs">
-                                                                        <span className="text-amber-700">☀️ ₱{Number(court.day_rate).toFixed(0)}</span>
+                                                                    <span className="inline-flex items-center gap-1.5 text-xs">
+                                                                        <span className="inline-flex items-center gap-1 text-amber-700">
+                                                                            <Sun size={11} className="text-amber-600" />
+                                                                            ₱{Number(court.day_rate).toFixed(0)}
+                                                                        </span>
                                                                         <span className="text-gray-400">/</span>
-                                                                        <span className="text-indigo-700">🌙 ₱{Number(court.night_rate).toFixed(0)}</span>
+                                                                        <span className="inline-flex items-center gap-1 text-indigo-700">
+                                                                            <Moon size={11} className="text-indigo-600" />
+                                                                            ₱{Number(court.night_rate).toFixed(0)}
+                                                                        </span>
                                                                         <span className="text-[10px] text-gray-400 font-normal">/hr</span>
                                                                     </span>
                                                                 ) : (
@@ -455,6 +477,19 @@ export default function Courts({ facilities = [] }) {
                     </div>
                 )}
             </div>
+
+            {/* ── Court Details Slide-over Sheet ── */}
+            <CourtDetailsSheet
+                isOpen={Boolean(selectedCourtForDetails)}
+                onClose={() => {
+                    setSelectedCourtForDetails(null);
+                    setSelectedFacilityForDetails(null);
+                }}
+                court={selectedCourtForDetails}
+                facility={selectedFacilityForDetails}
+                courtImage={selectedCourtForDetails ? getCourtImage(selectedCourtForDetails, selectedFacilityForDetails) : ''}
+                can={{ edit: false }}
+            />
         </AuthenticatedLayout>
     );
 }

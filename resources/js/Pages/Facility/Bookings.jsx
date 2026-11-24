@@ -7,7 +7,7 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import Modal from '@/Components/Modal';
-import { CalendarClock, LayoutGrid, List, Plus, Search, X } from 'lucide-react';
+import { CalendarClock, LayoutGrid, List, Plus, Search, X, Sun, Moon } from 'lucide-react';
 import BookingDetailDrawer from '@/Components/BookingDetailDrawer';
 import RescheduleBookingModal from '@/Components/RescheduleBookingModal';
 import FacilityBookingsBoard from '@/Components/FacilityBookingsBoard';
@@ -438,7 +438,6 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                             className="h-10 w-full rounded-lg border border-[#101F1A]/15 bg-white pl-9 pr-3 text-sm text-[#101F1A] placeholder-[#101F1A]/40 focus:border-[#D6FF3F] focus:ring-1 focus:ring-[#D6FF3F]"
                         />
                     </div>
-
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[#101F1A]/10 bg-[#101F1A]/[0.02] p-1">
                             {FILTERS.map(({ key, label }) => (
@@ -446,23 +445,27 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                     key={key}
                                     type="button"
                                     onClick={() => setActiveFilter(key)}
-                                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
+                                    className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                                         activeFilter === key
-                                            ? 'bg-[#101F1A] text-white shadow-sm'
-                                            : 'text-[#101F1A]/60 hover:text-[#101F1A]'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                            : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50'
                                     }`}
                                 >
                                     {label}
-                                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                                        activeFilter === key ? 'bg-white/15 text-white' : 'bg-[#101F1A]/10 text-[#101F1A]/60'
-                                    }`}>
-                                        {counts[key.toLowerCase()] ?? 0}
-                                    </span>
                                 </button>
                             ))}
                         </div>
 
                         <div className="hidden items-center gap-1 rounded-lg border border-[#101F1A]/10 bg-white p-1 lg:flex">
+                            <button
+                                type="button"
+                                onClick={() => router.visit(route('facility.calendar'))}
+                                aria-label="Calendar view"
+                                title="Calendar Matrix View"
+                                className="rounded-md p-1.5 transition-colors text-[#101F1A]/40 hover:text-[#101F1A]"
+                            >
+                                <Calendar size={16} />
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setViewMode('table')}
@@ -770,9 +773,20 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                                         }`}
                                                     >
                                                         <p className={`text-sm font-bold ${active ? 'text-white' : 'text-[#10221C]'}`}>{plan.name}</p>
-                                                        <p className={`text-xs font-bold ${active ? 'text-[#D6FF3F]' : 'text-[#10221C]/70'}`}>
-                                                            ☀️ {formatPeso(rates.day)}/hr
-                                                            {rates.night !== null && <> · 🌙 {formatPeso(rates.night)}/hr</>}
+                                                        <p className={`text-xs font-bold flex items-center gap-1.5 ${active ? 'text-[#D6FF3F]' : 'text-[#10221C]/70'}`}>
+                                                            <span className="inline-flex items-center gap-1">
+                                                                <Sun size={11} className={active ? 'text-[#D6FF3F]' : 'text-amber-500'} />
+                                                                {formatPeso(rates.day)}/hr
+                                                            </span>
+                                                            {rates.night !== null && (
+                                                                <>
+                                                                    <span className="opacity-40">·</span>
+                                                                    <span className="inline-flex items-center gap-1">
+                                                                        <Moon size={11} className={active ? 'text-[#D6FF3F]' : 'text-indigo-400'} />
+                                                                        {formatPeso(rates.night)}/hr
+                                                                    </span>
+                                                                </>
+                                                            )}
                                                         </p>
                                                     </button>
                                                 );
@@ -804,9 +818,21 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                                         )}
                                     </>
                                 ) : (
-                                    <p className="mt-2 text-sm font-bold text-[#10221C]">
+                                    <p className="mt-2 text-sm font-bold text-[#10221C] flex items-center gap-2">
                                         {selectedCourt?.pricing_mode === 'SPLIT'
-                                            ? <>☀️ {formatPeso(selectedCourt?.day_rate)}/hr · 🌙 {formatPeso(selectedCourt?.night_rate)}/hr</>
+                                            ? (
+                                                <>
+                                                    <span className="inline-flex items-center gap-1 text-amber-700">
+                                                        <Sun size={12} className="text-amber-500" />
+                                                        {formatPeso(selectedCourt?.day_rate)}/hr
+                                                    </span>
+                                                    <span className="text-gray-300">·</span>
+                                                    <span className="inline-flex items-center gap-1 text-indigo-700">
+                                                        <Moon size={12} className="text-indigo-400" />
+                                                        {formatPeso(selectedCourt?.night_rate)}/hr
+                                                    </span>
+                                                </>
+                                            )
                                             : <>{formatPeso(selectedCourt?.hourly_rate)}/hr (court rate)</>}
                                     </p>
                                 )}

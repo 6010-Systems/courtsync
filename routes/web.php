@@ -32,10 +32,13 @@ use Inertia\Inertia;
 // ── Public Platform Landing ───────────────────────────────────────────
 Route::get('/', function () {
     $facilities = Facility::select('id', 'name', 'slug', 'logo_url', 'cover_photo_url', 'city', 'province', 'description')
-        ->with('verification:id,facility_id,facility_photos')
+        ->with([
+            'verification:id,facility_id,facility_photos',
+            'courts:id,facility_id,name,type',
+        ])
         ->where('verification_status', 'APPROVED')
         ->latest()
-        ->take(6)
+        ->take(12)
         ->get();
 
     return Inertia::render('Welcome', [

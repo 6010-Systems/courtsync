@@ -31,49 +31,95 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
     if (!booking) return null;
 
     const formatDate = (dateString) => {
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
+        if (!dateString) return '—';
+        const date = new Date(`${String(dateString).slice(0, 10)}T12:00:00`);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
     };
 
     const formatTime = (timeString) => {
-        const [hour, minute] = timeString.split(':');
-        const date = new Date();
-        date.setHours(hour, minute);
-        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        if (!timeString) return '';
+        const [hourStr, minuteStr] = timeString.split(':');
+        const hour = parseInt(hourStr, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const formattedHour = hour % 12 || 12;
+        return `${formattedHour}:${minuteStr} ${ampm}`;
     };
 
     const isSuccess = mode === 'success';
+    const payment = booking.payment;
+    const paymentStatus = (payment?.status || booking.status || '').toLowerCase();
+    const isPending = paymentStatus === 'pending';
+    const isVerified = paymentStatus === 'verified' || paymentStatus === 'confirmed';
+    const isRejected = paymentStatus === 'rejected' || paymentStatus === 'cancelled';
 
     const bookingFee = Number(booking.booking_fee ?? 0);
-    const totalPrice = Number(booking.total_price ?? 0);
+    const totalPrice = Number(payment?.amount ?? booking.total_price ?? 0);
     const addonsTotal = Number(booking.addons_total ?? 0);
     const courtRate = booking.subtotal != null
         ? Number(booking.subtotal)
         : Math.max(0, totalPrice - bookingFee - addonsTotal);
 
+    const playerName = booking.user?.name || booking.guest_name || 'Walk-in Player';
+    const playerEmail = booking.user?.email || booking.guest_email || null;
+    const playerPhone = booking.user?.phone || booking.guest_phone || null;
+    const isRegistered = Boolean(booking.user?.email);
+
+    const facilityName = booking.facility?.name || booking.court?.facility?.name || 'Facility';
+    const courtName = booking.court?.name || 'Court';
+    const proofUrl = receiptUrl(payment?.proof_path);
+
+    const getInitials = (name) => {
+        return String(name || '?')
+            .split(' ')
+            .filter(Boolean)
+            .map((part) => part[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase();
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-[#10221C]/40 backdrop-blur-sm z-40"
+                        className="fixed inset-0 bg-[#101F1A]/60 backdrop-blur-xs z-50 transition-opacity"
                     />
 
+                    {/* Modal Dialog */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="booking-detail-title"
+                        initial={{ opacity: 0, scale: 0.96, y: 12 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+                        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 pointer-events-none"
                     >
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden pointer-events-auto flex flex-col relative">
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden pointer-events-auto flex flex-col relative max-h-[92vh] border border-[#101F1A]/10">
                             
-                            {/* Top Section */}
-                            <div className="bg-[#101F1A] px-5 py-6 flex flex-col items-center text-center relative">
+                            {/* ── Dialog Header ── */}
+                            <div className="bg-[#101F1A] px-6 py-5 text-left relative shrink-0">
+                                {/* Close Button */}
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#D6FF3F]"
+                                    aria-label="Close booking details dialog"
+                                >
+                                    <X size={16} />
+                                </button>
 
                                 {/* Close Button */}
                                 <button
@@ -92,20 +138,6 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
                                         <ShieldCheck size={28} strokeWidth={2.5} />
                                     )}
                                 </div>
-                                
-                                <h2 className="text-xl font-bold text-white mb-2 tracking-tight">
-                                    {isSuccess ? 'Booking Added Successfully!' : 'Booking Details'}
-                                </h2>
-                                
-                                {isSuccess ? (
-                                    <p className="text-white/70 text-sm leading-tight">
-                                        {booking.user?.name || booking.guest_name || 'Walk-in player'} has been registered in the system.
-                                    </p>
-                                ) : (
-                                    <span className="px-3 py-1 bg-[#D6FF3F] text-[#101F1A] text-[10px] font-black rounded-full uppercase tracking-widest shadow-sm">
-                                        {booking.status}
-                                    </span>
-                                )}
                             </div>
 
                             {/* Bottom Section (Details) */}
@@ -146,15 +178,9 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
                                 {/* Booking details panel */}
                                 <div className={isSuccess || activeTab === 'details' ? 'space-y-2 mb-4' : 'hidden'}>
                                     
-                                    {/* Main Info Card */}
-                                    <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex justify-between items-center mb-0.5">
-                                            <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium uppercase tracking-wide">
-                                                <User size={12} /> Player Info
-                                            </span>
-                                            {booking.user?.email && (
-                                                <span className="text-[9px] bg-[#D6FF3F]/20 text-[#10221C] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Registered</span>
-                                            )}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#101F1A] text-xs font-bold text-[#D6FF3F] shadow-2xs">
+                                            {getInitials(playerName)}
                                         </div>
                                         <div className="text-[15px] font-black text-[#10221C] truncate">
                                             {booking.user?.name || booking.guest_name || 'Walk-in'}
@@ -229,28 +255,6 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
                                                         {booking.payment.status}
                                                     </span>
                                                 )}
-                                            </div>
-
-                                            <div className="flex items-center justify-between text-[#10221C]/70">
-                                                <span>{booking.rate_plan_name || 'Court rate'}</span>
-                                                <span className="font-bold text-[#10221C]">{formatPeso(courtRate)}</span>
-                                            </div>
-
-                                            {addonsTotal > 0 && (
-                                                <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
-                                                    <span>Add-ons</span>
-                                                    <span className="font-bold text-[#10221C]">{formatPeso(addonsTotal)}</span>
-                                                </div>
-                                            )}
-
-                                            <div className="mt-1 flex items-center justify-between text-[#10221C]/70">
-                                                <span>Booking fee</span>
-                                                <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
-                                            </div>
-
-                                            <div className="mt-1.5 flex items-center justify-between border-t border-dashed border-[#10221C]/15 pt-1.5">
-                                                <span className="font-black uppercase tracking-wide text-[#10221C]/60">Total</span>
-                                                <span className="font-black text-[#10221C]">{formatPeso(totalPrice)}</span>
                                             </div>
                                         </div>
                                     )}
@@ -372,11 +376,53 @@ export default function BookingDetailDrawer({ isOpen, onClose, onReschedule, onV
 
                                 {/* Footer / Actions */}
                                 {isSuccess && (
-                                    <div className="pt-3 border-t border-[#10221C]/10 flex items-center gap-2 text-sm text-green-700 font-medium bg-green-50/50 -mx-4 -mb-4 p-4">
-                                        <Sparkles size={16} className="text-green-600" />
-                                        <span>Booking successfully confirmed and logged.</span>
+                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 flex items-center gap-3">
+                                        <Sparkles size={18} className="text-emerald-600 shrink-0" />
+                                        <span className="text-xs font-semibold text-emerald-800">
+                                            Reservation successfully confirmed and logged into the facility calendar.
+                                        </span>
                                     </div>
                                 )}
+                            </div>
+
+                            {/* ── Dialog Action Footer ── */}
+                            <div className="border-t border-[#101F1A]/10 bg-white px-5 py-3.5 flex flex-wrap items-center justify-end gap-2 shrink-0">
+                                {isPending && onVerify && (
+                                    <>
+                                        {onReject && (
+                                            <button
+                                                type="button"
+                                                disabled={isProcessing}
+                                                onClick={() => onReject(payment)}
+                                                className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-white px-3.5 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50 min-h-[40px]"
+                                            >
+                                                <X size={14} />
+                                                <span>Reject</span>
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            disabled={isProcessing}
+                                            onClick={() => onVerify(payment)}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-[#D6FF3F] hover:bg-[#c8f526] px-4 py-2.5 text-xs font-bold text-[#101F1A] shadow-2xs hover:shadow-card transition-all cursor-pointer disabled:opacity-50 min-h-[40px]"
+                                        >
+                                            {isProcessing ? (
+                                                <Loader2 size={14} className="animate-spin text-[#101F1A]" />
+                                            ) : (
+                                                <Check size={14} className="text-[#101F1A] stroke-[2.5]" />
+                                            )}
+                                            <span>Verify Payment</span>
+                                        </button>
+                                    </>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="rounded-xl border border-[#101F1A]/15 bg-white px-4 py-2.5 text-xs font-bold text-[#101F1A] shadow-2xs hover:bg-[#F5F2EA] transition-all cursor-pointer min-h-[40px]"
+                                >
+                                    Close
+                                </button>
                             </div>
                         </div>
                     </motion.div>

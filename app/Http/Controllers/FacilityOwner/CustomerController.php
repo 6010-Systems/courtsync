@@ -26,6 +26,7 @@ class CustomerController extends Controller
         $validated = $request->validate([
             'facility_id' => ['sometimes', 'nullable', 'integer'],
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'type' => ['sometimes', 'nullable', 'string', 'in:all,registered,walk_in'],
             'page' => ['sometimes', 'integer', 'min:1'],
         ]);
 
@@ -103,6 +104,13 @@ class CustomerController extends Controller
             'total_spent' => round((float) $customers->sum('total_spent'), 2),
         ];
 
+        $type = $validated['type'] ?? 'all';
+        if ($type === 'registered') {
+            $customers = $customers->where('type', 'registered')->values();
+        } elseif ($type === 'walk_in') {
+            $customers = $customers->where('type', 'walk_in')->values();
+        }
+
         $search = trim((string) ($validated['search'] ?? ''));
 
         if ($search !== '') {
@@ -138,6 +146,7 @@ class CustomerController extends Controller
             'filters' => [
                 'facility_id' => $facilityId,
                 'search' => $search !== '' ? $search : null,
+                'type' => $type !== 'all' ? $type : null,
             ],
             'customers' => $customersPaginator->withQueryString(),
             'summary' => $summary,

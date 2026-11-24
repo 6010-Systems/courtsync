@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import Dialog from '@/Components/Dialog';
+import CourtDetailsSheet from '@/Components/Courts/CourtDetailsSheet';
 import SportIcon from '@/Components/Bookings/SportIcon';
 import { useConfirm } from '@/Components/ConfirmContext';
 import { useToast } from '@/Components/ToastContext';
@@ -45,7 +46,9 @@ import {
     Target,
     Sparkles,
     ChevronRight,
-    CircleDot
+    CircleDot,
+    Sun,
+    Moon
 } from 'lucide-react';
 
 const START_HOUR_OPTIONS = buildHourOptions();
@@ -263,6 +266,8 @@ export default function Courts({ facilities = [], can = {} }) {
     const toast = useToast();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCourt, setEditingCourt] = useState(null);
+    const [selectedCourtForDetails, setSelectedCourtForDetails] = useState(null);
+    const [selectedFacilityForDetails, setSelectedFacilityForDetails] = useState(null);
     const [step, setStep] = useState(1);
 
     // Search and filter states
@@ -807,87 +812,115 @@ export default function Courts({ facilities = [], can = {} }) {
             <Head title="Courts" />
 
             <div className="w-full space-y-4 pb-2">
-                {/* ── KPI Strip (Styled exactly like Bookings KpiStrip & Dashboard StatCards) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {/* ── KPI Strip (Max 2 rows on mobile/tablet, 1 row on desktop; compact footprint) ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-3.5">
                     {/* Card 1: Total Courts */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#101F1A]/20">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div
+                        onClick={() => setStatusFilter('ALL')}
+                        className={`group relative flex flex-col justify-between rounded-xl border bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:scale-[0.99] ${
+                            statusFilter === 'ALL'
+                                ? 'border-[#101F1A] ring-2 ring-[#101F1A]/20 shadow-md'
+                                : 'border-[#101F1A]/10 hover:border-[#101F1A]/25'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Total Courts
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
-                                <Layers size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#101F1A]/[0.05] text-[#101F1A] shadow-2xs">
+                                <Layers size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#101F1A]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#101F1A] leading-tight">
                                 {stats.total}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#101F1A]/55">
-                            <Building2 size={12} className="text-[#101F1A]/40" />
-                            <span>Across {stats.facilitiesCount} venue{stats.facilitiesCount === 1 ? '' : 's'}</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/6 text-[10px] sm:text-[11px] font-medium text-[#101F1A]/70 truncate">
+                            <Building2 size={11} className="text-[#101F1A]/50 shrink-0" />
+                            <span className="truncate">{stats.facilitiesCount} venue{stats.facilitiesCount === 1 ? '' : 's'}</span>
                         </div>
                     </div>
 
                     {/* Card 2: Available Courts */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#D6FF3F]">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Available Now
+                    <div
+                        onClick={() => setStatusFilter(statusFilter === 'AVAILABLE' ? 'ALL' : 'AVAILABLE')}
+                        className={`group relative flex flex-col justify-between rounded-xl border bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:scale-[0.99] ${
+                            statusFilter === 'AVAILABLE'
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-md'
+                                : 'border-[#101F1A]/10 hover:border-[#D6FF3F]'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                Available
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
-                                <CheckCircle2 size={14} strokeWidth={2.4} className="text-emerald-700" />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#D6FF3F]/35 text-[#101F1A] shadow-2xs border border-[#D6FF3F]/60">
+                                <CheckCircle2 size={13} strokeWidth={2.4} className="text-emerald-700" />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-emerald-700">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-emerald-700 leading-tight">
                                 {stats.available}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-emerald-700">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span>Ready for booking</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/6 text-[10px] sm:text-[11px] font-medium text-emerald-700 truncate">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                            <span className="truncate">Ready to book</span>
                         </div>
                     </div>
 
                     {/* Card 3: Open Play Sessions */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-blue-300">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
+                    <div
+                        onClick={() => setStatusFilter(statusFilter === 'OPEN_PLAY' ? 'ALL' : 'OPEN_PLAY')}
+                        className={`group relative flex flex-col justify-between rounded-xl border bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:scale-[0.99] ${
+                            statusFilter === 'OPEN_PLAY'
+                                ? 'border-blue-500 ring-2 ring-blue-500/30 shadow-md'
+                                : 'border-[#101F1A]/10 hover:border-blue-300'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
                                 Open Play
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 shadow-2xs border border-blue-100">
-                                <Activity size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 shadow-2xs border border-blue-100">
+                                <Activity size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-blue-700">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-blue-700 leading-tight">
                                 {stats.openPlay}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-blue-700">
-                            <span>Drop-in & queue slots</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/6 text-[10px] sm:text-[11px] font-medium text-blue-700 truncate">
+                            <span className="truncate">Drop-in queues</span>
                         </div>
                     </div>
 
                     {/* Card 4: Maintenance / Blocked */}
-                    <div className="group relative flex flex-col justify-between rounded-xl border border-[#101F1A]/10 bg-white/90 p-4 shadow-card backdrop-blur-md transition-all duration-200 hover-lift hover:border-[#FF5A36]/40">
-                        <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/60">
-                                Blocked / Offline
+                    <div
+                        onClick={() => setStatusFilter(statusFilter === 'BLOCKED' ? 'ALL' : 'BLOCKED')}
+                        className={`group relative flex flex-col justify-between rounded-xl border bg-white/90 p-2.5 sm:p-3 lg:p-3.5 shadow-card backdrop-blur-md transition-all duration-200 cursor-pointer hover:-translate-y-0.5 active:scale-[0.99] ${
+                            statusFilter === 'BLOCKED'
+                                ? 'border-[#FF5A36] ring-2 ring-[#FF5A36]/30 shadow-md'
+                                : 'border-[#101F1A]/10 hover:border-[#FF5A36]/40'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/70 truncate">
+                                Blocked / Hold
                             </span>
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#FF5A36]/15 text-[#B8391D] shadow-2xs border border-[#FF5A36]/30">
-                                <AlertTriangle size={14} strokeWidth={2.4} />
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-[#FF5A36]/15 text-[#B8391D] shadow-2xs border border-[#FF5A36]/30">
+                                <AlertTriangle size={13} strokeWidth={2.4} />
                             </div>
                         </div>
-                        <div className="my-2">
-                            <div className="text-3xl sm:text-4xl font-black tracking-tight text-[#B8391D]">
+                        <div className="my-1 sm:my-1.5">
+                            <div className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#B8391D] leading-tight">
                                 {stats.blocked}
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-[#101F1A]/5 text-[11px] font-medium text-[#B8391D]">
-                            <span>Under maintenance or hold</span>
+                        <div className="flex items-center gap-1 pt-1 sm:pt-1.5 border-t border-[#101F1A]/6 text-[10px] sm:text-[11px] font-medium text-[#B8391D] truncate">
+                            <span className="truncate">Maintenance / hold</span>
                         </div>
                     </div>
                 </div>
@@ -935,7 +968,7 @@ export default function Courts({ facilities = [], can = {} }) {
                             )}
 
                             {/* Status Filter Tabs (Matching Bookings segmented control) */}
-                            <div className="flex items-center gap-0.5 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 p-0.5 shadow-2xs">
+                            <div className="flex items-center gap-0.5 rounded-lg border border-[#101F1A]/10 bg-[#F5F2EA]/70 p-0.5 shadow-2xs overflow-x-auto max-w-full">
                                 {[
                                     { key: 'ALL', label: 'All' },
                                     { key: 'AVAILABLE', label: 'Available' },
@@ -946,10 +979,10 @@ export default function Courts({ facilities = [], can = {} }) {
                                     <button
                                         key={tab.key}
                                         onClick={() => setStatusFilter(tab.key)}
-                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                        className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                                             statusFilter === tab.key
-                                                ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
-                                                : 'text-[#101F1A]/60 hover:text-[#101F1A] hover:bg-white/40'
+                                                ? 'bg-[#D6FF3F] text-[#101F1A] shadow-2xs'
+                                                : 'text-[#101F1A]/70 hover:text-[#101F1A] hover:bg-white/50'
                                         }`}
                                     >
                                         {tab.label}
@@ -1016,13 +1049,15 @@ export default function Courts({ facilities = [], can = {} }) {
                             return (
                                 <div key={facility.id} className="space-y-3">
                                     {/* Facility Header Strip */}
-                                    <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center justify-between pb-2.5 border-b border-[#101F1A]/8 px-1">
                                         <div className="flex items-center gap-2">
-                                            <Building2 size={14} className="text-[#101F1A]/50" />
-                                            <h3 className="text-sm font-bold text-[#101F1A]">
+                                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#101F1A]/5 text-[#101F1A]">
+                                                <Building2 size={13} className="text-[#101F1A]/70" />
+                                            </div>
+                                            <h3 className="font-display text-sm font-bold tracking-tight text-[#101F1A]">
                                                 {facility.name}
                                             </h3>
-                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#101F1A]/5 text-[#101F1A]/70">
                                                 {facility.filteredCourts.length} {facility.filteredCourts.length === 1 ? 'court' : 'courts'}
                                             </span>
                                         </div>
@@ -1030,10 +1065,10 @@ export default function Courts({ facilities = [], can = {} }) {
                                         {can.create && (
                                             <button
                                                 onClick={() => openAddModal(facility.id)}
-                                                className="text-xs font-bold text-[#101F1A] hover:underline flex items-center gap-1 cursor-pointer"
+                                                className="inline-flex items-center gap-1 text-xs font-bold text-[#101F1A] hover:text-[#FF5A36] transition-colors cursor-pointer"
                                             >
                                                 <Plus size={13} strokeWidth={2.4} />
-                                                Add court
+                                                <span>Add court</span>
                                             </button>
                                         )}
                                     </div>
@@ -1048,14 +1083,21 @@ export default function Courts({ facilities = [], can = {} }) {
                                                 fallbackImage={DEFAULT_COURT_IMAGES[courtIndex % DEFAULT_COURT_IMAGES.length]}
                                                 className="animate-fade-up"
                                                 style={{ animationDelay: `${courtIndex * 40}ms` }}
+                                                onClick={() => {
+                                                    setSelectedCourtForDetails(court);
+                                                    setSelectedFacilityForDetails(facility);
+                                                }}
                                                 actions={
                                                     can.edit || can.delete ? (
                                                         <>
                                                             {can.edit && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => openEditModal(court, facility)}
-                                                                    className="inline-flex items-center gap-1 rounded-xl bg-[#D6FF3F] px-2.5 py-1.5 text-xs font-bold text-[#10221C] transition-all hover:bg-[#c4ec32]"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        openEditModal(court, facility);
+                                                                    }}
+                                                                    className="inline-flex items-center gap-1 px-2.5 h-7 text-xs font-bold text-[#10221C] bg-[#D6FF3F] hover:bg-[#c4ec32] rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105"
                                                                 >
                                                                     <Edit3 size={11} strokeWidth={2.2} />
                                                                     <span>Edit</span>
@@ -1064,12 +1106,15 @@ export default function Courts({ facilities = [], can = {} }) {
                                                             {can.delete && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => handleDeleteCourt(court)}
-                                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteCourt(court);
+                                                                    }}
+                                                                    className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
                                                                     title="Delete court"
                                                                     aria-label={`Delete ${court.name}`}
                                                                 >
-                                                                    <Trash2 size={12} />
+                                                                    <Trash2 size={13} />
                                                                 </button>
                                                             )}
                                                         </>
@@ -1381,7 +1426,7 @@ export default function Courts({ facilities = [], can = {} }) {
                                     onClick={() => setData('pricing_mode', 'FLAT')}
                                     className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                                         data.pricing_mode === 'FLAT'
-                                            ? 'bg-[#101F1A] text-white shadow-xs'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
                                             : 'text-[#101F1A]/60 hover:text-[#101F1A]'
                                     }`}
                                 >
@@ -1392,11 +1437,15 @@ export default function Courts({ facilities = [], can = {} }) {
                                     onClick={() => setData('pricing_mode', 'SPLIT')}
                                     className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
                                         data.pricing_mode === 'SPLIT'
-                                            ? 'bg-[#101F1A] text-[#D6FF3F] shadow-xs'
+                                            ? 'bg-[#D6FF3F] text-[#101F1A] shadow-xs'
                                             : 'text-[#101F1A]/60 hover:text-[#101F1A]'
                                     }`}
                                 >
-                                    <span>☀️ Day / 🌙 Night Split</span>
+                                    <Sun size={12} className="text-amber-400 shrink-0" />
+                                    <span>Day</span>
+                                    <span className="opacity-40">/</span>
+                                    <Moon size={12} className="text-indigo-400 shrink-0" />
+                                    <span>Night Split</span>
                                 </button>
                             </div>
                         </div>
@@ -1435,7 +1484,8 @@ export default function Courts({ facilities = [], can = {} }) {
                                     {/* Day Rate & Start Time */}
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700">
-                                            <span>☀️ Daytime Rate</span>
+                                            <Sun size={12} className="text-amber-600 shrink-0" />
+                                            <span>Daytime Rate</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
@@ -1475,7 +1525,8 @@ export default function Courts({ facilities = [], can = {} }) {
                                     {/* Night Rate & Start Time */}
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700">
-                                            <span>🌙 Nighttime Rate</span>
+                                            <Moon size={12} className="text-indigo-600 shrink-0" />
+                                            <span>Nighttime Rate</span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
@@ -1776,6 +1827,20 @@ export default function Courts({ facilities = [], can = {} }) {
                     </div>
                 </form>
             </Dialog>
+
+            {/* ── Court Details Slide-over Sheet ── */}
+            <CourtDetailsSheet
+                isOpen={Boolean(selectedCourtForDetails)}
+                onClose={() => {
+                    setSelectedCourtForDetails(null);
+                    setSelectedFacilityForDetails(null);
+                }}
+                court={selectedCourtForDetails}
+                facility={selectedFacilityForDetails}
+                courtImage={selectedCourtForDetails ? getCourtImage(selectedCourtForDetails, selectedFacilityForDetails) : ''}
+                can={can}
+                onEdit={(court, facility) => openEditModal(court, facility)}
+            />
         </AuthenticatedLayout>
     );
 }

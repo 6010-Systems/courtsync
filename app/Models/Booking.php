@@ -40,9 +40,12 @@ class Booking extends Model
         string $startTime,
         string $endTime,
     ): void {
+        $startTime = strlen($startTime) === 5 ? $startTime.':00' : $startTime;
+        $endTime = strlen($endTime) === 5 ? $endTime.':00' : $endTime;
+
         $query->where('court_id', $courtId)
             ->where('date', $date)
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'rejected', 'CANCELLED', 'REJECTED'])
             ->where('start_time', '<', $endTime)
             ->where('end_time', '>', $startTime);
     }
