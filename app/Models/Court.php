@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\RateQuote;
 use Database\Factories\CourtFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -163,19 +164,12 @@ class Court extends Model
         $dayStartH = Carbon::parse($this->day_start_time ?: '06:00:00')->format('H:i');
         $nightStartH = Carbon::parse($this->night_start_time ?: '18:00:00')->format('H:i');
 
-        $dayHours = 0;
-        $nightHours = 0;
-        $cursor = $start->copy();
-
-        while ($cursor->lt($end)) {
-            $slotTime = $cursor->format('H:i');
-            if ($slotTime >= $nightStartH || $slotTime < $dayStartH) {
-                $nightHours++;
-            } else {
-                $dayHours++;
-            }
-            $cursor->addHour();
-        }
+        [$dayHours, $nightHours] = RateQuote::splitHours(
+            $start->format('H:i'),
+            $end->format('H:i'),
+            $dayStartH,
+            $nightStartH,
+        );
 
         $dayRate = (float) $this->day_rate;
         $nightRate = (float) $this->night_rate;

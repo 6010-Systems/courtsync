@@ -8,6 +8,8 @@ use App\Models\Facility;
 use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
+use App\Notifications\BookingRescheduled;
+use App\Support\RateCardLoader;
 use App\Support\RateQuote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -35,7 +37,7 @@ class BookingController extends Controller
         $filter = $request->input('filter', 'All');
 
         $query = Booking::whereIn('facility_id', $facilityIds)
-            ->with(['user:id,name,email', 'court:id,name', 'facility:id,name', 'payment:id,booking_id,amount,status,payment_method,proof_path']);
+            ->with(['user:id,name,email', 'court:id,name,time_range', 'facility:id,name', 'payment:id,booking_id,amount,status,payment_method,proof_path']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -62,7 +64,8 @@ class BookingController extends Controller
 
         $facilities = Facility::whereIn('id', $facilityIds)
             ->with('courts')
-            ->get();
+            ->get()
+            ->each(fn (Facility $facility) => RateCardLoader::load($facility));
 
         $countQuery = Booking::query()->whereIn('facility_id', $facilityIds);
 
@@ -73,8 +76,33 @@ class BookingController extends Controller
             'pending' => (clone $countQuery)->where('status', 'pending')->count(),
         ];
 
+        // Nearest upcoming booking, independent of the active search and filter.
+        $nextBooking = Booking::query()
+            ->whereIn('facility_id', $facilityIds)
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) {
+                $query->where('date', '>', now()->toDateString())
+                    ->orWhere(function ($sameDay) {
+                        $sameDay->where('date', now()->toDateString())
+                            ->where('end_time', '>', now()->format('H:i:s'));
+                    });
+            })
+            ->with(['user:id,name', 'court:id,name', 'facility:id,name'])
+            ->orderBy('date')
+            ->orderBy('start_time')
+            ->first();
+
+        // Lightweight slot map so the reschedule form can grey out taken hours.
+        $courtBookings = Booking::query()
+            ->whereIn('facility_id', $facilityIds)
+            ->where('status', '!=', 'cancelled')
+            ->where('date', '>=', now()->toDateString())
+            ->get(['id', 'court_id', 'date', 'start_time', 'end_time', 'status']);
+
         return inertia('Facility/Bookings', [
             'bookings' => $bookings,
+            'nextBooking' => $nextBooking,
+            'courtBookings' => $courtBookings,
             'facilities' => $facilities,
             'counts' => $counts,
             'filters' => [
@@ -288,6 +316,178 @@ class BookingController extends Controller
     }
 
     /**
+     * Move an existing booking to a different date and/or time slot.
+     *
+     * The court and the player stay the same; only the schedule changes, and the
+     * price is re-quoted from the court's current rate card for the new duration.
+     */
+    public function reschedule(Request $request, Booking $booking)
+    {
+        $user = $request->user();
+
+        $facilityIds = collect();
+        if ($user->role === 'FACILITY_OWNER') {
+            $facilityIds = $user->facilities()->pluck('id');
+        } elseif ($user->role === 'FACILITY_STAFF' && $user->facility_id) {
+            $facilityIds = collect([$user->facility_id]);
+        }
+
+        if (! $facilityIds->contains($booking->facility_id)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        if ($booking->status === 'cancelled') {
+            return back()->withErrors(['booking' => 'Cancelled bookings can no longer be rescheduled.']);
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'rate_plan_id' => ['nullable', 'integer', 'exists:rate_plans,id'],
+            'addons' => ['nullable', 'array'],
+            'addons.*.rate_plan_id' => ['required_with:addons', 'integer', 'exists:rate_plans,id'],
+            'addons.*.quantity' => ['required_with:addons', 'integer', 'min:0', 'max:50'],
+            'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_status' => ['nullable', Rule::in(['pending', 'verified', 'rejected'])],
+        ]);
+
+        $conflict = Booking::query()
+            ->where('court_id', $booking->court_id)
+            ->whereKeyNot($booking->id)
+            ->where('date', $validated['date'])
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) use ($validated) {
+                // A requested time [A, B] overlaps an existing time [C, D] if A < D and B > C.
+                $query->where('start_time', '<', $validated['end_time'])
+                    ->where('end_time', '>', $validated['start_time']);
+            })
+            ->exists();
+
+        if ($conflict) {
+            return back()->withErrors(['start_time' => 'This court is already booked for the selected time slot.']);
+        }
+
+        $previousTotal = round((float) $booking->total_price, 2);
+
+        try {
+            $booking = DB::transaction(fn () => $this->applyReschedule(
+                Booking::query()->lockForUpdate()->findOrFail($booking->id),
+                $validated['date'],
+                $validated['start_time'],
+                $validated['end_time'],
+                $validated['rate_plan_id'] ?? null,
+                $validated['addons'] ?? null,
+            ));
+        } catch (InvalidArgumentException $exception) {
+            return back()->withErrors(['start_time' => $exception->getMessage()]);
+        }
+
+        $booking->loadMissing(['court', 'facility', 'user', 'payment']);
+        $booking->user?->notify(new BookingRescheduled($booking));
+
+        $message = 'Booking rescheduled successfully.';
+
+        if (round((float) $booking->total_price, 2) !== $previousTotal && $booking->payment?->status === 'verified') {
+            $message .= ' The new total is ₱'.number_format((float) $booking->total_price, 2)
+                .'; the verified payment amount was left unchanged.';
+        }
+
+        $paymentEdits = array_filter([
+            'payment_method' => $validated['payment_method'] ?? null,
+            'amount' => $validated['payment_amount'] ?? null,
+            'status' => $validated['payment_status'] ?? null,
+        ], fn ($value) => $value !== null);
+
+        if ($paymentEdits !== []) {
+            if ($booking->payment) {
+                $booking->payment->update($paymentEdits);
+            } else {
+                $booking->payment()->create(array_merge([
+                    'user_id' => $booking->user_id,
+                    'amount' => $booking->total_price,
+                    'payment_method' => 'cash',
+                    'status' => 'pending',
+                ], $paymentEdits));
+            }
+
+            $message = 'Booking updated successfully.';
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * Store a rescheduled date/time (and, optionally, a new rate plan / add-ons)
+     * on the booking and re-quote its price.
+     *
+     * @param  array<int, array{rate_plan_id?: mixed, quantity?: mixed}>|null  $addons
+     *
+     * @throws InvalidArgumentException when the chosen rate plan is no longer offered by the court
+     */
+    private function applyReschedule(Booking $booking, string $date, string $startTime, string $endTime, ?int $ratePlanId = null, ?array $addons = null): Booking
+    {
+        $startTime = strlen($startTime) === 5 ? $startTime.':00' : $startTime;
+        $endTime = strlen($endTime) === 5 ? $endTime.':00' : $endTime;
+
+        $booking->loadMissing(['court', 'facility', 'ratePlan', 'payment']);
+
+        $plan = $ratePlanId !== null
+            ? RatePlan::findOrFail($ratePlanId)
+            : $booking->ratePlan;
+
+        $addonLines = $addons !== null
+            ? collect($addons)
+            : collect($booking->price_breakdown['addons'] ?? []);
+
+        $addonLines = $addonLines
+            ->map(fn ($line) => [
+                'rate_plan_id' => $line['rate_plan_id'] ?? null,
+                'quantity' => $line['quantity'] ?? 0,
+            ])
+            ->filter(fn ($line) => ! empty($line['rate_plan_id']))
+            ->values()
+            ->all();
+
+        $quote = (new RateQuote)->forBooking($booking->court, $startTime, $endTime, $plan, $addonLines);
+
+        $subtotal = $quote['subtotal'];
+
+        // Legacy courts with no configured rate keep the court charge they were booked at.
+        if ($plan === null && $subtotal <= 0) {
+            $subtotal = round($booking->subtotal !== null
+                ? (float) $booking->subtotal
+                : max(0, (float) $booking->total_price - (float) $booking->booking_fee - (float) $booking->addons_total), 2);
+            $quote['subtotal'] = $subtotal;
+        }
+
+        $addonsTotal = $quote['addons_total'];
+        $bookingFee = $booking->facility->calculateBookingFee($subtotal + $addonsTotal);
+        $totalPrice = round($subtotal + $addonsTotal + $bookingFee, 2);
+
+        $booking->update([
+            'date' => $date,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'rate_plan_id' => $quote['rate_plan_id'],
+            'rate_plan_name' => $quote['rate_plan_name'],
+            'subtotal' => $subtotal,
+            'addons_total' => $addonsTotal,
+            'booking_fee' => $bookingFee,
+            'total_price' => $totalPrice,
+            'price_breakdown' => $quote,
+        ]);
+
+        // A payment that has not been verified yet still owes the new total.
+        if ($booking->payment && $booking->payment->status !== 'verified') {
+            $booking->payment->update(['amount' => $totalPrice]);
+        }
+
+        return $booking;
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Request $request, Booking $booking)
@@ -330,19 +530,29 @@ class BookingController extends Controller
         DB::transaction(function () use ($booking): void {
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
 
-            if ($booking->status === 'confirmed') {
-                return;
+            abort_if($booking->status === 'cancelled', 409, 'Cancelled bookings cannot be verified.');
+
+            $wasAlreadyConfirmed = $booking->status === 'confirmed';
+
+            if (! $wasAlreadyConfirmed) {
+                $booking->update(['status' => 'confirmed']);
+                $booking->loadMissing(['court', 'facility']);
+                $booking->user?->notify(new BookingConfirmed($booking));
             }
 
-            abort_unless($booking->status === 'pending', 409, 'Only pending bookings can be confirmed.');
-
-            $booking->update(['status' => 'confirmed']);
-            $booking->payment()->update(['status' => 'verified']);
-            $booking->loadMissing(['court', 'facility']);
-            $booking->user?->notify(new BookingConfirmed($booking));
+            // Update existing payment or create one (walk-in bookings may have no payment record).
+            if ($booking->payment) {
+                $booking->payment->update(['status' => 'verified']);
+            } else {
+                $booking->payment()->create([
+                    'amount' => $booking->total_price,
+                    'payment_method' => 'cash',
+                    'status' => 'verified',
+                ]);
+            }
         });
 
-        return redirect()->back()->with('success', 'Booking and payment verified successfully.');
+        return redirect()->back()->with('success', 'Payment verified successfully.');
     }
 
     public function rejectPayment(Request $request, Booking $booking)

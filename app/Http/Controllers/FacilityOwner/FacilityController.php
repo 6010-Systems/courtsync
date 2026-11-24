@@ -21,16 +21,21 @@ class FacilityController extends Controller
             'workFacility' => fn ($query) => $query->withCount(['staff', 'players']),
         ]);
 
+        $paymentStatus = $request->query('payment_status', 'all');
+
         return Inertia::render('FacilityOwner/Dashboard', [
             'user' => $user,
-            'metrics' => $this->dashboardMetrics($user),
+            'metrics' => $this->dashboardMetrics($user, $paymentStatus),
+            'filters' => [
+                'payment_status' => $paymentStatus,
+            ],
         ]);
     }
 
     /**
      * @return array<string, mixed>|null
      */
-    private function dashboardMetrics(User $user): ?array
+    private function dashboardMetrics(User $user, ?string $paymentStatus = null): ?array
     {
         $metrics = new FacilityDashboardMetrics;
 
@@ -44,6 +49,7 @@ class FacilityController extends Controller
             return $metrics->summarize(
                 $approved->pluck('id')->all(),
                 (int) $approved->sum('players_count'),
+                $paymentStatus,
             );
         }
 
@@ -51,6 +57,7 @@ class FacilityController extends Controller
             return $metrics->summarize(
                 [$user->workFacility->id],
                 (int) $user->workFacility->players_count,
+                $paymentStatus,
             );
         }
 

@@ -136,6 +136,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     Route::post('/bookings/{booking}/verify', [BookingController::class, 'verifyPayment'])->name('bookings.verify');
     Route::post('/bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
+    Route::post('/bookings/{booking}/reschedule', [BookingController::class, 'reschedule'])->name('bookings.reschedule');
     Route::post('/bookings/lock', [BookingController::class, 'lockSlot'])->name('bookings.lock');
     Route::post('/bookings/unlock', [BookingController::class, 'unlockSlot'])->name('bookings.unlock');
 

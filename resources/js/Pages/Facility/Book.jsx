@@ -121,11 +121,11 @@ export default function Book({ facility, preselectedCourtId = null }) {
             <Head title={`Book a Court - ${facility.name}`} />
 
             {/* Top Bar */}
-            <div className="bg-[#F5F2EA] border-b border-gray-200/60 px-4 sm:px-6 py-4">
+            <div className="bg-[#F5F2EA] border-b border-gray-200/60 px-3 sm:px-6 py-2.5 sm:py-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <Link 
                         href={route('facility.show', facility.slug)}
-                        className="inline-flex items-center text-sm font-bold text-gray-500 hover:text-[#10221C] transition group"
+                        className="inline-flex items-center text-xs sm:text-sm font-bold text-gray-500 hover:text-[#10221C] transition group"
                     >
                         <svg className="w-5 h-5 mr-2 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -137,32 +137,32 @@ export default function Book({ facility, preselectedCourtId = null }) {
             </div>
 
             {/* Progress Bar */}
-            <div className="bg-[#F5F2EA] px-4 sm:px-6 pt-6 pb-2">
+            <div className="bg-[#F5F2EA] px-3 sm:px-6 pt-3 pb-1.5 sm:pt-6 sm:pb-2">
                 <div className="max-w-4xl mx-auto">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                         {stepsData.map((s, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ${
+                            <div key={i} className="flex items-center gap-1 sm:gap-2">
+                                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black transition-all duration-300 ${
                                     step > s.id ? 'bg-[#10221C] text-white' : 
                                     step === s.id ? 'bg-[#D6FF3F] text-[#10221C] shadow-md shadow-[#D6FF3F]/30' : 
                                     'bg-gray-200 text-gray-400'
                                 }`}>
                                     {step > s.id ? (
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                     ) : s.id}
                                 </div>
                                 <span className={`text-xs font-bold hidden sm:block transition-colors ${step === s.id ? 'text-[#10221C]' : 'text-gray-400'}`}>{s.label}</span>
                             </div>
                         ))}
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-gray-200 rounded-full h-1 sm:h-1.5 overflow-hidden">
                         <div className="bg-[#D6FF3F] h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${((step - 1) / (stepsData.length - 1)) * 100}%` }}></div>
                     </div>
                 </div>
             </div>
 
             {/* Main Wizard Content */}
-            <div className="flex-1 flex items-start justify-center px-4 sm:px-6 py-6 sm:py-8">
+            <div className="flex-1 flex items-start justify-center px-3 sm:px-6 py-3 sm:py-8">
                 <div className="w-full max-w-4xl">
                     
                     {selectableCourts.length === 0 ? (
@@ -177,11 +177,11 @@ export default function Book({ facility, preselectedCourtId = null }) {
                             {currentStepData.component}
 
                             {/* Footer Navigation */}
-                            <div className="px-6 sm:px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between gap-4">
+                            <div className="px-4 sm:px-8 py-3.5 sm:py-5 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between gap-4">
                                 {step > 1 ? (
                                     <button
                                         onClick={goPrev}
-                                        className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[#10221C] transition px-4 py-2.5 rounded-lg hover:bg-gray-100"
+                                        className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-600 hover:text-[#10221C] transition px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg hover:bg-gray-100"
                                     >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
                                         Previous
@@ -194,7 +194,7 @@ export default function Book({ facility, preselectedCourtId = null }) {
                                     <button
                                         onClick={goNext}
                                         disabled={!canGoNext()}
-                                        className={`inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-lg transition-all duration-200 ${
+                                        className={`inline-flex items-center gap-2 text-xs sm:text-sm font-black px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg transition-all duration-200 ${
                                             canGoNext() 
                                                 ? 'bg-[#10221C] text-white hover:bg-[#1a362d] shadow-md hover:shadow-lg hover:-translate-y-0.5' 
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -207,7 +207,7 @@ export default function Book({ facility, preselectedCourtId = null }) {
                                     <button
                                         onClick={handleBooking}
                                         disabled={!canConfirm || processing}
-                                        className={`inline-flex items-center gap-2 text-sm font-black px-6 py-2.5 rounded-lg transition-all duration-200 ${
+                                        className={`inline-flex items-center gap-2 text-xs sm:text-sm font-black px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg transition-all duration-200 ${
                                             canConfirm && !processing 
                                                 ? 'bg-[#10221C] text-white hover:bg-[#1a362d] shadow-md hover:shadow-lg hover:-translate-y-0.5' 
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
