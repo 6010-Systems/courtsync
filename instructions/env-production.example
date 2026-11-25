@@ -1,0 +1,132 @@
+# =============================================================================
+#  CourtSync - PRODUCTION ENV TEMPLATE  (https://courtsync.page)
+# =============================================================================
+#  THIS IS A TEMPLATE, NOT A DROP-IN FILE.
+#
+#  * Do NOT overwrite the server's live .env with this file. Edit the live
+#    .env in place. Overwriting loses APP_KEY (breaks encrypted sessions /
+#    cookies) and the VAPID keys (breaks existing push subscriptions).
+#  * Values wrapped in <...> must be copied from the live server or the
+#    respective provider console. Never commit real secrets to this repo.
+#  * Only the GOOGLE_PLAYER_* block below changed for the Google login work.
+#
+#  After ANY .env edit on the server:
+#      php artisan optimize:clear          # clears config/route/view caches
+#      php artisan config:cache            # only if you cache config in prod
+# =============================================================================
+
+APP_NAME="CourtSync"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://courtsync.page
+
+# Keep the existing live value. Regenerating it invalidates every session,
+# remember-me cookie and encrypted payload already issued to users.
+APP_KEY=<base64:copy-from-the-live-.env>
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+# APP_MAINTENANCE_STORE=database
+
+# PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+# Use "error" in production; "debug" writes a lot and can leak request data.
+LOG_LEVEL=error
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=courtsync
+DB_USERNAME=courtsyncuser
+# Replace with a strong, unique password (the current one is guessable) and
+# update the MySQL user to match:
+#   ALTER USER 'courtsyncuser'@'localhost' IDENTIFIED BY '<new-password>';
+DB_PASSWORD=<strong-db-password>
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+# null is correct for a single host. Set ".courtsync.page" only if you need
+# the session shared across subdomains.
+SESSION_DOMAIN=null
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+# "database" requires a running worker (supervisor / systemd):
+#   php artisan queue:work --sleep=3 --tries=3
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+# CACHE_PREFIX=
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+# MAIL_MAILER=log writes booking/confirmation emails to storage/logs instead of
+# sending them. Switch to smtp (or resend/postmark/ses) before going live.
+MAIL_MAILER=log
+MAIL_SCHEME=null
+MAIL_HOST=127.0.0.1
+MAIL_PORT=2525
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+VITE_APP_NAME="${APP_NAME}"
+
+# Push notifications (Web Push / PWA). Keep the existing live pair - fresh keys
+# invalidate every browser subscription that is already registered.
+VAPID_SUBJECT=https://courtsync.page
+VAPID_PUBLIC_KEY=BAAJLGq6Bj7CGnm5QqRA4t9rYu25ZqzB07hUsx5ErV0RY7wCCsw6gULvW9jFLYhnRfBXpbQ2OZ-UQY_lkuu3Vbg
+VAPID_PRIVATE_KEY=<copy-from-the-live-.env>
+
+# =============================================================================
+#  Google OAuth
+# =============================================================================
+#  Only the PLAYER audience is configured. Owner/staff stay blank - their
+#  buttons then show "Google authentication is not yet configured on this
+#  server." instead of sending anyone to Google.
+#
+#  Google Cloud -> Google Auth Platform -> Clients -> "courtsync_player".
+#  Redirect URIs registered on that client:
+#      https://courtsync.page/auth/google/player/callback
+#      http://localhost:8000/auth/google/player/callback
+#
+#  GOOGLE_PLAYER_REDIRECT_URI must equal {APP_URL}/auth/google/player/callback
+#  character-for-character, and APP_URL must be the exact origin players browse
+#  (scheme + host, no trailing slash).
+# =============================================================================
+
+GOOGLE_STAFF_CLIENT_ID=
+GOOGLE_STAFF_CLIENT_SECRET=
+GOOGLE_STAFF_REDIRECT_URI="${APP_URL}/auth/google/staff/callback"
+
+GOOGLE_OWNER_CLIENT_ID=
+GOOGLE_OWNER_CLIENT_SECRET=
+GOOGLE_OWNER_REDIRECT_URI="${APP_URL}/auth/google/owner/callback"
+
+GOOGLE_PLAYER_CLIENT_ID=836179080897-iagr6is50s866c9m1bs55gnc06s0g2d0.apps.googleusercontent.com
+GOOGLE_PLAYER_CLIENT_SECRET=<GOCSPX-...-the-secret-ending-in-CqqF>
+# NOTE: the live value was "${APP_URL}/auth/google/owner/callback" (wrong
+# audience). It must point at the PLAYER callback:
+GOOGLE_PLAYER_REDIRECT_URI="${APP_URL}/auth/google/player/callback"

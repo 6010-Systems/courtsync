@@ -56,7 +56,9 @@ CREATE DATABASE courtsync CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ### Optional: Google login
 
-CourtSync supports Google OAuth for three separate audiences (staff / owner / player). Only needed if you're testing social login locally — leave blank otherwise.
+CourtSync supports Google OAuth for three separate audiences (staff / owner / player). Only needed if you're testing social login locally — leave blank otherwise. **Only the player audience is configured right now**, so `GOOGLE_PLAYER_*` is the only group you need.
+
+See **[google-oauth-setup.md](google-oauth-setup.md)** for the full walkthrough (Google Cloud client, redirect URIs, testing, troubleshooting).
 
 ```env
 GOOGLE_STAFF_CLIENT_ID=

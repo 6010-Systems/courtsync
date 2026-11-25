@@ -18,7 +18,7 @@ import {
     MapPin
 } from 'lucide-react';
 
-export default function PlayerLogin({ status, canResetPassword, lastLoginMethod, facility }) {
+export default function PlayerLogin({ status, canResetPassword, lastLoginMethod, facility, flash }) {
     const [showPassword, setShowPassword] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -96,6 +96,14 @@ export default function PlayerLogin({ status, canResetPassword, lastLoginMethod,
                                 </Link>
                             </p>
                         </div>
+
+                        {/* Flash Error Message (e.g. a failed Google sign-in) */}
+                        {flash?.error && (
+                            <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700">
+                                <XCircle className="h-4 w-4 shrink-0" />
+                                <span>{flash.error}</span>
+                            </div>
+                        )}
 
                         {/* Flash Status Message */}
                         {status && (

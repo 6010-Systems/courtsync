@@ -40,7 +40,7 @@ const formItemVariants = {
     },
 };
 
-export default function Login({ status, canResetPassword, lastLoginMethod }) {
+export default function Login({ status, canResetPassword, lastLoginMethod, flash }) {
     const [showPassword, setShowPassword] = useState(false);
     const shouldReduce = useReducedMotion();
 
@@ -154,6 +154,22 @@ export default function Login({ status, canResetPassword, lastLoginMethod }) {
                                 Find court <ArrowRight className="h-3 w-3" />
                             </Link>
                         </motion.div>
+
+                        {/* Flash Error Message (e.g. a failed Google sign-in) */}
+                        <AnimatePresence>
+                            {flash?.error && (
+                                <motion.div
+                                    initial={shouldReduce ? false : { opacity: 0, y: -6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.25 }}
+                                    className="mb-6 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700"
+                                >
+                                    <XCircle className="h-4 w-4 shrink-0" />
+                                    <span>{flash.error}</span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Flash Status Message */}
                         <AnimatePresence>

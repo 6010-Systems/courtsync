@@ -117,7 +117,9 @@ LOG_CHANNEL=stack
 LOG_LEVEL=error
 ```
 
-Fill in Google OAuth credentials (`GOOGLE_STAFF_*`, `GOOGLE_OWNER_*`, `GOOGLE_PLAYER_*`) if social login is used in production, using the real domain in each redirect URI.
+Fill in Google OAuth credentials only for the audiences you actually expose. **Only the player login is configured for now**, so `GOOGLE_PLAYER_CLIENT_ID`, `GOOGLE_PLAYER_CLIENT_SECRET` and `GOOGLE_PLAYER_REDIRECT_URI` are enough — leave `GOOGLE_OWNER_*` and `GOOGLE_STAFF_*` blank. Use the real domain in the redirect URI, then run `php artisan optimize:clear`.
+
+See **[google-oauth-setup.md](google-oauth-setup.md)** for the full Google Cloud + `.env` walkthrough and troubleshooting.
 
 ## 10. Run migrations
 
