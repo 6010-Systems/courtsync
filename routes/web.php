@@ -47,6 +47,9 @@ Route::get('/', function () {
     ]);
 });
 
+// ── Public Facility Discovery Map ─────────────────────────────────────
+Route::get('/discover', [RootFacilityController::class, 'discover'])->name('facility.discover');
+
 // ── Authenticated Common Routes (Profile) ──────────────────────────────
 Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -120,6 +123,7 @@ Route::middleware(['auth', CheckBanned::class])->group(function () {
     Route::get('/facility/payment-settings', [RootFacilityController::class, 'paymentSettings'])->name('facility.payment-settings');
     Route::post('/facility/payment-settings/{facility}', [RootFacilityController::class, 'updatePaymentSettings'])->name('facility.payment-settings.update');
     Route::post('/facility/{facility}/branding', [RootFacilityController::class, 'updateBranding'])->name('facility.branding.update');
+    Route::patch('/facility/{facility}/qr-theme', [RootFacilityController::class, 'updateQrTheme'])->name('facility.qr-theme.update');
     // Calendar
     Route::get('/facility/calendar', [CalendarController::class, 'index'])->name('facility.calendar');
 
@@ -173,7 +177,7 @@ Route::middleware(['auth', CheckBanned::class, CheckAdmin::class])->prefix('admi
 });
 
 // ── Tenant Player Auth Routes ─────────────────────────────────────────
-$reservedFacilitySlugs = 'admin|api|auth|bookings|confirm-password|dashboard|email|facilities|facility|forgot-password|login|logout|password|profile|register|reset-password|storage|up|verify-email';
+$reservedFacilitySlugs = 'admin|api|auth|bookings|confirm-password|dashboard|discover|email|facilities|facility|forgot-password|login|logout|password|profile|register|reset-password|storage|up|verify-email';
 $facilitySlugPattern = sprintf('(?!(%s)$)[a-z0-9-]+', $reservedFacilitySlugs);
 
 Route::middleware('guest')->group(function () use ($facilitySlugPattern) {

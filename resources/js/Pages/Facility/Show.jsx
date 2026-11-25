@@ -1,5 +1,6 @@
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import ShareButton from '@/Components/ShareButton';
+import FacilityEmbedMap from '@/Components/Map/FacilityEmbedMap';
 import Dialog from '@/Components/Dialog';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
@@ -86,6 +87,10 @@ export default function Show({ facility }) {
     const { auth } = usePage().props;
     const user = auth.user;
     const isOwner = user && (user.role === 'ADMIN' || (user.role === 'FACILITY_OWNER' && user.id === facility.user_id));
+    const hasMapEmbed = Boolean(facility.map_embed_url);
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        [facility.address, facility.city, facility.province].filter(Boolean).join(', '),
+    )}`;
     const acceptingBookings = facilityIsAcceptingBookings(facility);
     const availabilityBanner = facilityAvailabilityBanner(facility);
     const operatingDaysLabel = facility.operating_days_label || formatOperatingDaysLabel(facility.operating_days);
@@ -363,7 +368,8 @@ export default function Show({ facility }) {
 
                 {/* Mobile-Only Compact Rectangle Booking CTA  */}
                 <div className="block lg:hidden mb-6 sm:mb-8">
-                    <div className="bg-[#10221C] p-4 sm:p-5 rounded-2xl shadow-xl border border-white/5 flex items-center justify-between gap-3.5">
+                    <div className="bg-[#10221C] p-4 sm:p-5 rounded-2xl shadow-xl border border-white/5">
+                        <div className="flex items-center justify-between gap-3.5">
                         <div className="min-w-0 flex-1">
                             <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">
                                 {acceptingBookings ? 'Ready to play?' : (availabilityBanner?.title || 'Bookings paused')}
@@ -394,6 +400,18 @@ export default function Show({ facility }) {
                             <span className="shrink-0 inline-flex items-center justify-center bg-white/10 text-white/70 font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl border border-white/10">
                                 Unavailable
                             </span>
+                        )}
+                        </div>
+
+                        {hasMapEmbed && (
+                            <div className="mt-4 border-t border-white/10 pt-3">
+                                <FacilityEmbedMap
+                                    url={facility.map_embed_url}
+                                    name={facility.name}
+                                    directionsUrl={directionsUrl}
+                                    height="h-44"
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
@@ -615,11 +633,13 @@ export default function Show({ facility }) {
                                 <span className="opacity-70">{facility.country}</span>
                             </p>
                         </section>
+
                     </div>
 
                     {/* Right Column - Booking CTA (Desktop Sticky Sidebar) */}
                     <div className="hidden lg:block lg:col-span-5 xl:col-span-4">
-                        <div className="bg-[#10221C] p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5 sticky top-8">
+                        <div className="sticky top-8 space-y-4">
+                        <div className="bg-[#10221C] p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/5">
                             <h2 className="text-2xl font-bold text-white mb-4">
                                 {acceptingBookings ? 'Ready to play?' : (availabilityBanner?.title || 'Bookings paused')}
                             </h2>
@@ -651,6 +671,31 @@ export default function Show({ facility }) {
                                     Unavailable
                                 </div>
                             )}
+
+                            {hasMapEmbed && (
+                                <div className="mt-6 border-t border-white/10 pt-4">
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/55">
+                                            Find the venue
+                                        </p>
+                                        <a
+                                            href={directionsUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[11px] font-bold text-[#D6FF3F] hover:underline"
+                                        >
+                                            Get directions
+                                        </a>
+                                    </div>
+                                    <FacilityEmbedMap
+                                        url={facility.map_embed_url}
+                                        name={facility.name}
+                                        directionsUrl={directionsUrl}
+                                        height="h-48"
+                                    />
+                                </div>
+                            )}
+                        </div>
                         </div>
                     </div>
                 </div>

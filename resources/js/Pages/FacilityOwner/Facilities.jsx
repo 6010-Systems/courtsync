@@ -4,6 +4,8 @@ import { Head, useForm, Link, router } from '@inertiajs/react';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
+import FacilityShareQrCard from '@/Components/Qr/FacilityShareQrCard';
+import QrDesignerModal from '@/Components/Qr/QrDesignerModal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import { useConfirm } from '@/Components/ConfirmContext';
@@ -138,6 +140,7 @@ export default function Facilities({ auth, facilities = [] }) {
     const [createdFacilityId, setCreatedFacilityId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [qrFacility, setQrFacility] = useState(null);
 
     // Form for Step 1: Facility Details
     const { data: facilityData, setData: setFacilityData, post: postFacility, processing: facilityProcessing, errors: facilityErrors, reset: resetFacility } = useForm({
@@ -148,6 +151,7 @@ export default function Facilities({ auth, facilities = [] }) {
         city: '',
         province: '',
         country: '',
+        map_embed_url: '',
         contact_number: '',
         description: '',
         operating_days: ALL_OPERATING_DAYS,
@@ -180,12 +184,28 @@ export default function Facilities({ auth, facilities = [] }) {
                     const latestFacility = newFacilities?.[newFacilities.length - 1];
                     if (latestFacility) {
                         setCreatedFacilityId(latestFacility.id);
+                        setFacilityData('facility_id', latestFacility.id);
                     }
                     setActiveStep(2);
                 }
             },
             onError: () => {
                 toast.error('Please check the form for errors');
+            }
+        });
+    };
+
+    const submitMapEmbed = (e) => {
+        e.preventDefault();
+
+        postFacility(route('facility.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Venue location map saved');
+                setActiveStep(3);
+            },
+            onError: () => {
+                toast.error('Please check the Google Maps embed URL');
             }
         });
     };
@@ -206,6 +226,7 @@ export default function Facilities({ auth, facilities = [] }) {
             city: facility.city,
             province: facility.province,
             country: facility.country,
+            map_embed_url: facility.map_embed_url ?? '',
             contact_number: facility.contact_number,
             description: facility.description || '',
             operating_days: normalizedOperatingDays(facility.operating_days),
@@ -338,7 +359,7 @@ export default function Facilities({ auth, facilities = [] }) {
                     header={
                         <PageHeader
                             title={isEditing ? 'Edit Facility' : 'Add New Facility'}
-                            subtitle="Step 1 of 2: Core facility details, address, and contact info"
+                            subtitle="Step 1 of 3: Core facility details, address, and contact info"
                             actions={
                                 <button
                                     type="button"
@@ -372,7 +393,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                     </div>
                                 </div>
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/50 bg-[#F5F2EA] px-2.5 py-1 rounded-lg">
-                                    Step 1 of 2
+                                    Step 1 of 3
                                 </span>
                             </div>
                             
@@ -547,11 +568,11 @@ export default function Facilities({ auth, facilities = [] }) {
                                             onClick={() => setActiveStep(2)} 
                                             className="text-xs font-bold text-[#101F1A]/70 hover:text-[#101F1A] flex items-center gap-1 cursor-pointer"
                                         >
-                                            Next: Verification Documents <ChevronRight size={14} />
+                                            Next: Location Map <ChevronRight size={14} />
                                         </button>
                                     ) : <div></div>}
                                     <PrimaryButton disabled={facilityProcessing} className="!bg-[#101F1A] hover:!bg-[#162923] text-[#D6FF3F] font-bold text-xs py-2 px-5">
-                                        {isEditing ? 'Save Details' : 'Continue to Documents →'}
+                                        {isEditing ? 'Save Details' : 'Continue to Location Map →'}
                                     </PrimaryButton>
                                 </div>
                             </form>
@@ -585,8 +606,148 @@ export default function Facilities({ auth, facilities = [] }) {
                 <AuthenticatedLayout
                     header={
                         <PageHeader
+                            title={isEditing ? 'Update Location Map' : 'Venue Location Map'}
+                            subtitle="Step 2 of 3: Optional — show your venue on a Google Map"
+                            actions={
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsAdding(false); setIsEditing(false); }}
+                                    className="text-xs font-bold text-[#101F1A]/70 hover:text-[#101F1A] transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                            }
+                            showSearch={false}
+                            showNotifications={false}
+                        />
+                    }
+                >
+                    <Head title="Venue Location Map" />
+                    <div className="py-4 max-w-3xl mx-auto">
+                        <div className="bg-white/95 backdrop-blur-md p-6 sm:p-8 shadow-card rounded-xl border border-[#101F1A]/10">
+                            {/* Step Indicator */}
+                            <div className="mb-6 pb-5 border-b border-[#101F1A]/10 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-[#101F1A] text-[#D6FF3F] flex items-center justify-center font-black text-sm">
+                                        2
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black text-[#101F1A]">Location Map</h2>
+                                        <p className="text-xs text-[#101F1A]/60">
+                                            Add a Google Map of your venue to the public booking page. You can skip this and add it later.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/50 bg-[#F5F2EA] px-2.5 py-1 rounded-lg">
+                                    Step 2 of 3 · Optional
+                                </span>
+                            </div>
+
+                            {/* Setup guide */}
+                            <div className="mb-5 rounded-xl border border-[#101F1A]/10 bg-[#F5F2EA]/70 p-4">
+                                <h3 className="text-xs font-black uppercase tracking-wider text-[#101F1A] flex items-center gap-1.5">
+                                    <MapPin size={14} />
+                                    <span>How to get your Google Maps embed link</span>
+                                </h3>
+                                <ol className="mt-3 space-y-2 text-[11px] leading-relaxed text-[#101F1A]/75 list-decimal list-inside">
+                                    <li>
+                                        Open{' '}
+                                        <a
+                                            href="https://www.google.com/maps"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-bold text-[#101F1A] underline underline-offset-2 inline-flex items-center gap-0.5"
+                                        >
+                                            Google Maps <ExternalLink size={10} />
+                                        </a>{' '}
+                                        and search for your venue by exact name or address.
+                                    </li>
+                                    <li>Click the venue on the map so its place panel opens on the left.</li>
+                                    <li>Click <strong>Share</strong> in the place panel, then choose the <strong>Embed a map</strong> tab.</li>
+                                    <li>
+                                        Click <strong>Copy HTML</strong>. The copied snippet looks like{' '}
+                                        <code className="rounded bg-white px-1 py-0.5 font-mono text-[10px]">&lt;iframe src="https://www.google.com/maps/embed?pb=..."&gt;&lt;/iframe&gt;</code>.
+                                    </li>
+                                    <li>
+                                        Paste the whole snippet — or just the <code className="rounded bg-white px-1 py-0.5 font-mono text-[10px]">https://www.google.com/maps/embed?pb=...</code> link — into the field below.
+                                    </li>
+                                    <li>Check the live preview, then click <strong>Save map &amp; continue</strong>. The map appears on your public venue page.</li>
+                                </ol>
+                                <p className="mt-3 text-[11px] text-[#101F1A]/55">
+                                    No Google API key is needed. Use the <strong>Embed a map</strong> tab — a regular share link such as{' '}
+                                    <span className="font-mono">maps.app.goo.gl/...</span> will not work.
+                                </p>
+                            </div>
+
+                            <form onSubmit={submitMapEmbed} className="flex flex-col gap-4">
+                                <div>
+                                    <InputLabel htmlFor="map_embed_url" value="Google Maps embed URL or HTML snippet" />
+                                    <textarea
+                                        id="map_embed_url"
+                                        value={facilityData.map_embed_url}
+                                        onChange={(e) => setFacilityData('map_embed_url', e.target.value)}
+                                        className="mt-1 block w-full rounded-xl border border-[#101F1A]/15 bg-white p-3 text-xs font-medium text-[#101F1A] placeholder:text-[#101F1A]/40 focus:border-[#D6FF3F] focus:ring-1 focus:ring-[#D6FF3F] shadow-2xs transition-all"
+                                        rows="3"
+                                        placeholder={'<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450"></iframe>'}
+                                    />
+                                    <InputError message={facilityErrors.map_embed_url} className="mt-1" />
+                                    {facilityData.map_embed_url.trim().length > 0 &&
+                                        /^https:\/\/(www\.|maps\.)?google\.com\/maps\/embed\?/i.test(facilityData.map_embed_url.trim()) && (
+                                            <div className="mt-2 h-40 overflow-hidden rounded-xl border border-[#101F1A]/15">
+                                                <iframe
+                                                    src={facilityData.map_embed_url.trim()}
+                                                    title="Venue map preview"
+                                                    loading="lazy"
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                    allowFullScreen
+                                                    className="h-full w-full border-0"
+                                                />
+                                            </div>
+                                        )}
+                                    {facilityData.map_embed_url.trim().length > 0 &&
+                                        !/^https:\/\/(www\.|maps\.)?google\.com\/maps\/embed\?/i.test(facilityData.map_embed_url.trim()) && (
+                                            <p className="mt-1 text-[11px] font-medium text-amber-700">
+                                                That does not look like a Google Maps embed link yet — follow the steps above and paste the copied HTML or embed URL.
+                                            </p>
+                                        )}
+                                </div>
+
+                                <div className="mt-2 pt-4 border-t border-[#101F1A]/10 flex flex-wrap justify-between items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveStep(1)}
+                                        className="text-xs font-bold text-[#101F1A]/70 hover:text-[#101F1A] transition-colors cursor-pointer"
+                                    >
+                                        ← Back to Details
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveStep(3)}
+                                            disabled={facilityProcessing}
+                                            className="rounded-lg border border-[#101F1A]/15 bg-white px-3.5 py-2 text-xs font-bold text-[#101F1A]/70 hover:border-[#101F1A]/40 hover:text-[#101F1A] transition-colors cursor-pointer disabled:opacity-50"
+                                        >
+                                            Skip for now
+                                        </button>
+                                        <PrimaryButton disabled={facilityProcessing} className="!bg-[#101F1A] hover:!bg-[#162923] text-[#D6FF3F] font-bold text-xs py-2 px-5">
+                                            Save map &amp; continue →
+                                        </PrimaryButton>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </AuthenticatedLayout>
+            );
+        }
+
+        if (activeStep === 3) {
+            return (
+                <AuthenticatedLayout
+                    header={
+                        <PageHeader
                             title={isEditing ? 'Update Verification Documents' : 'Submit Documents'}
-                            subtitle="Step 2 of 2: Upload government ID, permits, and facility photos"
+                            subtitle="Step 3 of 3: Upload government ID, permits, and facility photos"
                             actions={
                                 <button
                                     type="button"
@@ -608,7 +769,7 @@ export default function Facilities({ auth, facilities = [] }) {
                             <div className="mb-6 pb-5 border-b border-[#101F1A]/10 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-xl bg-[#D6FF3F] text-[#101F1A] flex items-center justify-center font-black text-sm shadow-2xs">
-                                        2
+                                        3
                                     </div>
                                     <div>
                                         <h2 className="text-lg font-black text-[#101F1A]">
@@ -620,7 +781,7 @@ export default function Facilities({ auth, facilities = [] }) {
                                     </div>
                                 </div>
                                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#101F1A]/50 bg-[#F5F2EA] px-2.5 py-1 rounded-lg">
-                                    Step 2 of 2
+                                    Step 3 of 3
                                 </span>
                             </div>
                             
@@ -776,10 +937,10 @@ export default function Facilities({ auth, facilities = [] }) {
                                 <div className="mt-6 pt-4 border-t border-[#101F1A]/10 flex justify-between items-center">
                                     <button 
                                         type="button" 
-                                        onClick={() => setActiveStep(1)} 
+                                        onClick={() => setActiveStep(2)} 
                                         className="text-xs font-bold text-[#101F1A]/70 hover:text-[#101F1A] transition-colors cursor-pointer"
                                     >
-                                        ← Back to Details
+                                        ← Back to Location Map
                                     </button>
                                     <PrimaryButton disabled={verificationProcessing} className="!bg-[#101F1A] hover:!bg-[#162923] text-[#D6FF3F] font-bold text-xs py-2 px-5">
                                         {isEditing ? 'Update Documents' : 'Submit Application'}
@@ -1183,7 +1344,40 @@ export default function Facilities({ auth, facilities = [] }) {
                         })}
                     </div>
                 )}
+
+                {facilities.some((facility) => facility.slug) && (
+                    <div className="rounded-xl border border-[#101F1A]/10 bg-white/95 p-4 shadow-card backdrop-blur-md sm:p-5">
+                        <div className="mb-3">
+                            <h2 className="font-display text-base font-black tracking-tight text-[#101F1A]">Booking QR codes</h2>
+                            <p className="text-[11px] text-[#101F1A]/55">
+                                Download, share, or restyle the QR that opens each venue's public booking page.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {facilities.filter((facility) => facility.slug).map((facility) => (
+                                <div
+                                    key={facility.id}
+                                    className="rounded-2xl border border-[#101F1A]/10 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5"
+                                >
+                                    <FacilityShareQrCard
+                                        facility={facility}
+                                        canCustomize
+                                        showLabel
+                                        onCustomize={() => setQrFacility(facility)}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
+
+            <QrDesignerModal
+                show={Boolean(qrFacility)}
+                facility={qrFacility}
+                onClose={() => setQrFacility(null)}
+                onSaved={() => router.reload({ only: ['facilities'] })}
+            />
         </AuthenticatedLayout>
     );
 }

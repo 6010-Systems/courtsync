@@ -73,6 +73,10 @@ class FacilityController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge([
+            'map_embed_url' => Facility::normalizeMapEmbedUrl($request->input('map_embed_url')),
+        ]);
+
         $validated = $request->validate([
             'facility_id' => 'nullable|exists:facilities,id',
             'name' => 'required|string|max:255',
@@ -81,6 +85,7 @@ class FacilityController extends Controller
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'country' => 'required|string|max:255',
+            'map_embed_url' => ['nullable', 'string', 'max:2048', 'regex:#^https://(www\.|maps\.)?google\.com/maps/embed\?#i'],
             'contact_number' => 'required|string|max:20',
             'description' => 'nullable|string',
             'operating_days' => 'required|array|min:1',
@@ -104,6 +109,7 @@ class FacilityController extends Controller
                 'city' => $request->city,
                 'province' => $request->province,
                 'country' => $request->country,
+                'map_embed_url' => $validated['map_embed_url'] ?? null,
                 'contact_number' => $request->contact_number,
                 'description' => $request->description,
                 'operating_days' => $operatingDays,
@@ -123,6 +129,7 @@ class FacilityController extends Controller
                 'city' => $request->city,
                 'province' => $request->province,
                 'country' => $request->country,
+                'map_embed_url' => $validated['map_embed_url'] ?? null,
                 'contact_number' => $request->contact_number,
                 'description' => $request->description,
                 'operating_days' => $operatingDays,

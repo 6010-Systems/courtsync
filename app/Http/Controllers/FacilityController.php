@@ -20,6 +20,37 @@ class FacilityController extends Controller
         ]);
     }
 
+    /**
+     * Public discovery list of every approved facility.
+     */
+    public function discover(Request $request)
+    {
+        $city = trim($request->string('city')->toString());
+
+        $facilities = Facility::query()
+            ->select(['id', 'name', 'slug', 'logo_url', 'cover_photo_url', 'address', 'city', 'province'])
+            ->with('verification:id,facility_id,facility_photos')
+            ->where('verification_status', 'APPROVED')
+            ->when($city !== '', function ($query) use ($city) {
+                $term = '%'.$city.'%';
+
+                $query->where(function ($query) use ($term) {
+                    $query->where('name', 'like', $term)
+                        ->orWhere('city', 'like', $term)
+                        ->orWhere('province', 'like', $term);
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Facility/Discover', [
+            'facilities' => $facilities,
+            'filters' => [
+                'city' => $city,
+            ],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -489,5 +520,39 @@ class FacilityController extends Controller
         }
 
         return back()->with('success', 'Facility branding updated successfully.');
+    }
+
+    public function updateQrTheme(Request $request, Facility $facility)
+    {
+        if (! $this->canManage($request, $facility)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'dot_style' => ['sometimes', Rule::in(Facility::QR_DOT_STYLES)],
+            'corner_style' => ['sometimes', Rule::in(Facility::QR_CORNER_STYLES)],
+            'foreground' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background' => ['sometimes', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'caption' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'logo' => ['sometimes', 'boolean'],
+            'error_correction' => ['sometimes', Rule::in(Facility::QR_ERROR_LEVELS)],
+        ]);
+
+        // A centre logo covers modules, so keep at least quartile correction.
+        if (($validated['logo'] ?? false) && in_array($validated['error_correction'] ?? 'Q', ['L', 'M'], true)) {
+            $validated['error_correction'] = 'Q';
+        }
+
+        $facility->update(['qr_theme' => array_merge($facility->qrTheme(), $validated)]);
+
+        return back()->with('success', 'QR design saved.');
+    }
+
+    private function canManage(Request $request, Facility $facility): bool
+    {
+        $user = $request->user();
+
+        return $user->role === 'ADMIN'
+            || ($user->role === 'FACILITY_OWNER' && $facility->user_id === $user->id);
     }
 }

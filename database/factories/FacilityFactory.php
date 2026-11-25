@@ -93,6 +93,16 @@ class FacilityFactory extends Factory
     }
 
     /**
+     * Give the facility a Google Maps embed URL.
+     */
+    public function withMapEmbed(string $url = 'https://www.google.com/maps/embed?pb=test-embed'): static
+    {
+        return $this->state(fn () => [
+            'map_embed_url' => $url,
+        ]);
+    }
+
+    /**
      * Facility only opens Monday–Friday.
      */
     public function weekdaysOnly(): static

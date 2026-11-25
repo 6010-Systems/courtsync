@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['user_id', 'slug', 'name', 'logo_url', 'cover_photo_url', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'operating_days', 'operational_status', 'verification_status', 'gcash_name', 'gcash_number', 'gcash_qr_url', 'maya_name', 'maya_number', 'maya_qr_url', 'booking_fee_type', 'booking_fee_value'])]
+#[Fillable(['user_id', 'slug', 'name', 'logo_url', 'cover_photo_url', 'qr_theme', 'map_embed_url', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'operating_days', 'operational_status', 'verification_status', 'gcash_name', 'gcash_number', 'gcash_qr_url', 'maya_name', 'maya_number', 'maya_qr_url', 'booking_fee_type', 'booking_fee_value'])]
 class Facility extends Model
 {
     /** @use HasFactory<FacilityFactory> */
@@ -30,6 +30,46 @@ class Facility extends Model
      * @var array<int, string>
      */
     public const BOOKING_FEE_TYPES = ['FIXED', 'PERCENT'];
+
+    /**
+     * Default booking-QR design, used when an owner has not customised it yet.
+     *
+     * @var array<string, mixed>
+     */
+    public const QR_THEME_DEFAULTS = [
+        'dot_style' => 'rounded',
+        'corner_style' => 'extra-rounded',
+        'foreground' => '#101F1A',
+        'background' => '#FFFFFF',
+        'error_correction' => 'Q',
+        'logo' => true,
+        'caption' => null,
+    ];
+
+    /**
+     * @var array<int, string>
+     */
+    public const QR_DOT_STYLES = ['square', 'dots', 'rounded', 'classy', 'classy-rounded', 'extra-rounded'];
+
+    /**
+     * @var array<int, string>
+     */
+    public const QR_CORNER_STYLES = ['square', 'dot', 'extra-rounded'];
+
+    /**
+     * @var array<int, string>
+     */
+    public const QR_ERROR_LEVELS = ['L', 'M', 'Q', 'H'];
+
+    /**
+     * Accepted Google Maps "share → embed a map" URL prefixes for facility maps.
+     *
+     * @var array<int, string>
+     */
+    public const MAP_EMBED_URL_PREFIXES = [
+        'https://www.google.com/maps/embed?',
+        'https://maps.google.com/maps/embed?',
+    ];
 
     public const OPERATIONAL_OPEN = 'OPEN';
 
@@ -81,7 +121,57 @@ class Facility extends Model
         return [
             'booking_fee_value' => 'decimal:2',
             'operating_days' => 'array',
+            'qr_theme' => 'array',
         ];
+    }
+
+    /**
+     * Reduce a pasted embed snippet to a bare, trimmed Google Maps embed URL.
+     */
+    public static function normalizeMapEmbedUrl(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/src=["\']([^"\']+)["\']/i', $value, $matches) === 1) {
+            $value = trim($matches[1]);
+        }
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Whether the value is a Google Maps embed URL we are willing to render in an iframe.
+     */
+    public static function isGoogleMapEmbedUrl(?string $url): bool
+    {
+        $url = trim((string) $url);
+
+        foreach (self::MAP_EMBED_URL_PREFIXES as $prefix) {
+            if (str_starts_with($url, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function setMapEmbedUrlAttribute(?string $value): void
+    {
+        $this->attributes['map_embed_url'] = self::normalizeMapEmbedUrl($value);
+    }
+
+    /**
+     * Stored QR design merged over the platform defaults.
+     *
+     * @return array<string, mixed>
+     */
+    public function qrTheme(): array
+    {
+        return array_merge(self::QR_THEME_DEFAULTS, $this->qr_theme ?? []);
     }
 
     /**

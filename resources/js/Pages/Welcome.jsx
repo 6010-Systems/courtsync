@@ -111,7 +111,7 @@ export default function Welcome({ auth, facilities = [] }) {
 
                                 <div className="mt-9 flex flex-wrap items-center gap-4 animate-fade-up delay-300">
                                     <Link
-                                        href={route('register')}
+                                        href={route('facility.discover')}
                                         className="rounded-md bg-[#D6FF3F] px-7 py-3.5 font-display font-bold text-lg tracking-wide text-[#101F1A] transition-all hover:bg-[#c2ea2e] hover:scale-[1.03] hover:shadow-lg hover:shadow-[#D6FF3F]/20 active:scale-[0.98]"
                                     >
                                         Find a court
@@ -207,7 +207,7 @@ export default function Welcome({ auth, facilities = [] }) {
                                     Top Facilities
                                 </h2>
                             </div>
-                            <Link href={route('register')} className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#FF5A36] hover:text-[#e64d2b] transition-colors">
+                            <Link href={route('facility.discover')} className="group flex items-center gap-1 text-xs sm:text-sm font-bold text-[#FF5A36] hover:text-[#e64d2b] transition-colors">
                                 <span>View all</span>
                                 <ArrowRight size={13} className="transition-transform duration-200 group-hover:translate-x-1" />
                             </Link>
