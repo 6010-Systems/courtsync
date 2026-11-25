@@ -16,6 +16,7 @@ Dated records of what changed, newest first:
 
 - **[update-2026-11-25-google-auth.md](update-2026-11-25-google-auth.md)** — Google authentication go-live: cloud client and redirect URIs, per-environment `.env`, the 7 issues found and fixed, verification, deployment steps, rollback and open items.
 - **[update-2026-11-25-app-update.md](update-2026-11-25-app-update.md)** — application changes shipped that day: shared `flash` props, OAuth `state` hardening (local-only stateless fallback), per-audience failure redirects, open-redirect fix, login-page error banners, rewritten OAuth tests.
+- **[update-2026-11-25-notifications.md](update-2026-11-25-notifications.md)** — notifications everywhere: shared push store + hook, automatic opt-in banner on every authenticated page, real notification centre (no fake badges), iOS install→enable flow, icon fixes, manifest updates, verification matrix.
 
 Supporting files:
 

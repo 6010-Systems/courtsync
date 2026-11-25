@@ -107,7 +107,7 @@ class Booking extends Model
 
     protected $fillable = [
         'facility_id', 'user_id', 'guest_name', 'court_id', 'rate_plan_id', 'rate_plan_name', 'date', 'end_date', 'start_time', 'end_time',
-        'subtotal', 'addons_total', 'booking_fee', 'total_price', 'price_breakdown', 'status',
+        'subtotal', 'addons_total', 'booking_fee', 'total_price', 'price_breakdown', 'status', 'source',
     ];
 
     /**

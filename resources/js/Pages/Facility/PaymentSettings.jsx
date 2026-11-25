@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PageHeader from '@/Components/PageHeader';
 import { Head, useForm } from '@inertiajs/react';
-import { Save, Wallet, UploadCloud, Receipt } from 'lucide-react';
+import { Save, Wallet, UploadCloud, Receipt, Banknote } from 'lucide-react';
 
 export default function PaymentSettings({ auth }) {
     const facilities = auth.user.facilities || [];
@@ -25,6 +25,8 @@ export default function PaymentSettings({ auth }) {
         clear_maya_qr: false,
         booking_fee_type: selectedFacility?.booking_fee_type || 'FIXED',
         booking_fee_value: selectedFacility?.booking_fee_value ?? 0,
+        walk_in_fee_type: selectedFacility?.walk_in_fee_type || 'FIXED',
+        walk_in_fee_value: selectedFacility?.walk_in_fee_value ?? 0,
     });
 
     // Handle facility change
@@ -42,6 +44,8 @@ export default function PaymentSettings({ auth }) {
                 maya_qr: null,
                 booking_fee_type: facility.booking_fee_type || 'FIXED',
                 booking_fee_value: facility.booking_fee_value ?? 0,
+                walk_in_fee_type: facility.walk_in_fee_type || 'FIXED',
+                walk_in_fee_value: facility.walk_in_fee_value ?? 0,
             });
             setGcashPreview(facility.gcash_qr_url || null);
             setMayaPreview(facility.maya_qr_url || null);
@@ -66,6 +70,11 @@ export default function PaymentSettings({ auth }) {
     const sampleBookingFee = data.booking_fee_type === 'PERCENT'
         ? Math.round(sampleCourtTotal * Math.min(bookingFeeValue, 100)) / 100
         : bookingFeeValue;
+
+    const walkInFeeValue = Number(data.walk_in_fee_value) || 0;
+    const sampleWalkInFee = data.walk_in_fee_type === 'PERCENT'
+        ? Math.round(sampleCourtTotal * Math.min(walkInFeeValue, 100)) / 100
+        : walkInFeeValue;
 
     const submit = (e) => {
         e.preventDefault();
@@ -125,7 +134,7 @@ export default function PaymentSettings({ auth }) {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     
                     {/* Tabs */}
-                    <div className="flex border-b border-gray-100">
+                    <div className="flex overflow-x-auto border-b border-gray-100">
                         <button
                             type="button"
                             onClick={() => setActiveTab('gcash')}
@@ -153,6 +162,16 @@ export default function PaymentSettings({ auth }) {
                         >
                             <Receipt className="w-4 h-4" />
                             Booking Fee
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('walk_in_fee')}
+                            className={`flex-1 whitespace-nowrap px-4 py-4 text-center text-sm font-black transition-colors flex items-center justify-center gap-2 ${
+                                activeTab === 'walk_in_fee' ? 'text-[#10221C] border-b-2 border-[#10221C] bg-[#D6FF3F]/20' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            }`}
+                        >
+                            <Banknote className="w-4 h-4" />
+                            Walk-in Fee
                         </button>
                     </div>
 
@@ -316,9 +335,9 @@ export default function PaymentSettings({ auth }) {
                         <div className={activeTab === 'booking_fee' ? 'block animate-in fade-in' : 'hidden'}>
                             <div className="max-w-2xl space-y-6">
                                 <div>
-                                    <h3 className="text-sm font-bold text-[#10221C] mb-1">Custom Booking Fee</h3>
+                                    <h3 className="text-sm font-bold text-[#10221C] mb-1">Online Booking Fee</h3>
                                     <p className="text-xs text-gray-500 leading-relaxed">
-                                        An extra fee charged on top of the court rate. Players see it as a separate line on their booking and in My Bookings.
+                                        An extra fee charged on top of the court rate for online bookings. Players see it as a separate line on their booking and in My Bookings.
                                     </p>
                                 </div>
 
@@ -369,6 +388,67 @@ export default function PaymentSettings({ auth }) {
 
                                 <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 leading-relaxed">
                                     Set the amount to <span className="font-bold text-[#10221C]">0</span> to disable the fee. Existing bookings keep the fee that was applied when they were created.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Walk-in Fee Settings */}
+                        <div className={activeTab === 'walk_in_fee' ? 'block animate-in fade-in' : 'hidden'}>
+                            <div className="max-w-2xl space-y-6">
+                                <div>
+                                    <h3 className="text-sm font-bold text-[#10221C] mb-1">Walk-in System Fee</h3>
+                                    <p className="text-xs text-gray-500 leading-relaxed">
+                                        Your own system fee for walk-in and manual bookings logged at the desk. It is independent of the online booking fee — set it to whatever you want, including <span className="font-bold text-[#10221C]">0 to make walk-ins free</span>.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-[#10221C] mb-2">Fee Type</label>
+                                        <select
+                                            value={data.walk_in_fee_type}
+                                            onChange={e => setData('walk_in_fee_type', e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 text-[#10221C] text-sm font-semibold rounded-xl focus:ring-[#D6FF3F] focus:border-[#D6FF3F] block p-3 transition-colors cursor-pointer"
+                                        >
+                                            <option value="FIXED">Fixed amount (₱ per walk-in)</option>
+                                            <option value="PERCENT">Percentage (% of court rate)</option>
+                                        </select>
+                                        {errors.walk_in_fee_type && <p className="text-red-500 text-xs mt-1">{errors.walk_in_fee_type}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-[#10221C] mb-2">Fee Amount</label>
+                                        <div className="relative">
+                                            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-bold text-gray-400">
+                                                {data.walk_in_fee_type === 'PERCENT' ? '%' : '₱'}
+                                            </span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                max={data.walk_in_fee_type === 'PERCENT' ? 100 : undefined}
+                                                value={data.walk_in_fee_value}
+                                                onChange={e => setData('walk_in_fee_value', e.target.value)}
+                                                placeholder={data.walk_in_fee_type === 'PERCENT' ? 'e.g. 5' : 'e.g. 15'}
+                                                className="w-full bg-gray-50 border border-gray-200 text-[#10221C] text-sm rounded-xl focus:ring-[#D6FF3F] focus:border-[#D6FF3F] block p-3 pl-9 transition-colors"
+                                            />
+                                        </div>
+                                        {errors.walk_in_fee_value && <p className="text-red-500 text-xs mt-1">{errors.walk_in_fee_value}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-[#10221C]/10 bg-[#D6FF3F]/15 p-5">
+                                    <p className="text-[10px] font-bold text-[#10221C]/60 uppercase tracking-widest">Walk-in Preview</p>
+                                    <p className="mt-1 text-sm font-bold text-[#10221C]">
+                                        ₱{sampleCourtTotal.toLocaleString()} court rate + ₱{sampleWalkInFee.toFixed(2)} walk-in fee
+                                    </p>
+                                    <p className="mt-1 text-xs text-gray-600">
+                                        Customer pays <span className="font-bold text-[#10221C]">₱{(sampleCourtTotal + sampleWalkInFee).toFixed(2)}</span> at the desk.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-500 leading-relaxed">
+                                    Applies to walk-in bookings logged in <span className="font-bold text-[#10221C]">Facility Bookings</span>. Court blocks are always fee-free. Existing walk-in bookings keep their current fee — you can adjust each one from its Edit Booking screen.
                                 </div>
                             </div>
                         </div>

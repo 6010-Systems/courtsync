@@ -112,6 +112,10 @@ export interface Facility extends Timestamps {
     contact_number: string;
     description: string | null;
     verification_status: VerificationStatus;
+    booking_fee_type?: 'FIXED' | 'PERCENT';
+    booking_fee_value?: number | string;
+    walk_in_fee_type?: 'FIXED' | 'PERCENT';
+    walk_in_fee_value?: number | string;
 
     // Aggregates & Relationships
     staff_count?: number;
@@ -193,6 +197,10 @@ export interface Booking extends Timestamps {
     rate_plan_id?: number | null;
     rate_plan_name?: string | null;
     addons_total?: number | string;
+    subtotal?: number | string;
+    booking_fee?: number | string;
+    guest_name?: string | null;
+    source?: 'online' | 'walk_in' | 'staff_block';
     price_breakdown?: Record<string, unknown> | null;
 
     // Relationships

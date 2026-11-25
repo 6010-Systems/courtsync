@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Facility;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -26,6 +27,7 @@ class PlayerBookingController extends Controller
             ],
             'nextBooking' => (clone $bookings)->upcoming($at)->orderBy('date')->orderBy('start_time')->orderBy('id')->first(),
             'recentBookings' => $bookings->latest('id')->limit(5)->get(),
+            'bookFacility' => $this->bookFacilityFor($request->user()),
             'timezone' => config('app.timezone'),
         ]);
     }
@@ -69,5 +71,31 @@ class PlayerBookingController extends Controller
                 'court:id,name',
                 'payment:id,booking_id,status,payment_method',
             ]);
+    }
+
+    /**
+     * The venue the dashboard's "Book Court" action should open: the facility the
+     * player last opened, then their most recently joined facility, then the
+     * facility of their latest booking.
+     *
+     * @return array{id: int, name: string, slug: string}|null
+     */
+    private function bookFacilityFor(User $user): ?array
+    {
+        $lastSlug = session('last_facility_slug');
+
+        $facility = $lastSlug
+            ? Facility::query()->where('slug', $lastSlug)->first(['id', 'name', 'slug'])
+            : null;
+
+        $facility ??= $user->joinedFacilities()
+            ->orderByPivot('updated_at', 'desc')
+            ->first(['facilities.id', 'facilities.name', 'facilities.slug']);
+
+        $facility ??= $user->bookings()->with('facility:id,name,slug')->latest('id')->first()?->facility;
+
+        return $facility
+            ? ['id' => $facility->id, 'name' => $facility->name, 'slug' => $facility->slug]
+            : null;
     }
 }

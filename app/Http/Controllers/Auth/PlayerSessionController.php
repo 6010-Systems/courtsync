@@ -40,10 +40,13 @@ class PlayerSessionController extends Controller
         $facility = Facility::where('slug', $facilitySlug)->first();
         if ($facility) {
             $request->user()->joinedFacilities()->syncWithoutDetaching([$facility->id]);
+            session(['last_facility_slug' => $facility->slug]);
         }
 
-        // Redirect back to the facility show page
-        return redirect()->intended('/'.$facilitySlug)
+        // Return to whatever booking page sent the player to login (a court card
+        // deep-links with ?court={id}); otherwise land straight on the booking
+        // page, since players exist to book courts.
+        return redirect()->intended('/'.$facilitySlug.'/book')
             ->withCookie(cookie('last_login_method', 'email', 60 * 24 * 365));
     }
 }

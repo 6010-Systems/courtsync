@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Facility;
+use App\Models\FacilityBilling;
 use App\Models\RatePlan;
 use App\Models\User;
 use App\Notifications\BookingRescheduled;
@@ -373,5 +374,164 @@ class BookingRescheduleTest extends TestCase
             ->assertSessionHasNoErrors();
 
         Notification::assertSentTo($player, BookingRescheduled::class);
+    }
+
+    public function test_owner_can_waive_the_system_fee_on_a_walk_in_booking(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id, 'booking_fee_type' => 'FIXED', 'booking_fee_value' => 15]);
+        $court = Court::factory()->flatPricing(250)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '24 Hours',
+        ]);
+
+        $booking = Booking::query()->create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'user_id' => null,
+            'guest_name' => 'Emily Gelig',
+            'source' => 'walk_in',
+            'date' => '2026-12-01',
+            'start_time' => '19:00:00',
+            'end_time' => '20:00:00',
+            'subtotal' => 250,
+            'booking_fee' => 15,
+            'total_price' => 265,
+            'status' => 'confirmed',
+        ]);
+        $booking->payment()->create(['amount' => 265, 'payment_method' => 'cash', 'status' => 'pending']);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-01',
+                'start_time' => '19:00',
+                'end_time' => '20:00',
+                'booking_fee' => 0,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $booking->refresh();
+
+        $this->assertSame(0.0, (float) $booking->booking_fee);
+        $this->assertSame(250.0, (float) $booking->total_price);
+        $this->assertSame('manual_override', $booking->price_breakdown['fee']['source']);
+        $this->assertSame(15.0, (float) $booking->price_breakdown['fee']['previous']);
+        $this->assertSame(250.0, (float) $booking->payment->amount);
+    }
+
+    public function test_rescheduling_a_walk_in_without_editing_the_fee_keeps_the_stored_fee(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create([
+            'user_id' => $owner->id,
+            'booking_fee_type' => 'FIXED',
+            'booking_fee_value' => 15,
+            'walk_in_fee_type' => 'FIXED',
+            'walk_in_fee_value' => 0,
+        ]);
+        $court = Court::factory()->flatPricing(250)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '24 Hours',
+        ]);
+
+        $booking = Booking::query()->create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'user_id' => null,
+            'guest_name' => 'Emily Gelig',
+            'source' => 'walk_in',
+            'date' => '2026-12-01',
+            'start_time' => '19:00:00',
+            'end_time' => '20:00:00',
+            'subtotal' => 250,
+            'booking_fee' => 15,
+            'total_price' => 265,
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-02',
+                'start_time' => '19:00',
+                'end_time' => '20:00',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $booking->refresh();
+
+        $this->assertSame(15.0, (float) $booking->booking_fee);
+        $this->assertSame(265.0, (float) $booking->total_price);
+    }
+
+    public function test_online_bookings_ignore_a_supplied_system_fee(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $player = User::factory()->player()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id, 'booking_fee_type' => 'FIXED', 'booking_fee_value' => 15]);
+        $court = Court::factory()->flatPricing(300)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '24 Hours',
+        ]);
+        $booking = $this->bookingFor($facility, $court, $player);
+        $booking->update(['source' => 'online']);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-02',
+                'start_time' => '09:00',
+                'end_time' => '10:00',
+                'booking_fee' => 0,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(15.0, (float) $booking->fresh()->booking_fee);
+    }
+
+    public function test_system_fee_cannot_be_changed_after_the_month_is_billed(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+        $court = Court::factory()->flatPricing(250)->create([
+            'facility_id' => $facility->id,
+            'time_range' => '24 Hours',
+        ]);
+
+        $booking = Booking::query()->create([
+            'facility_id' => $facility->id,
+            'court_id' => $court->id,
+            'user_id' => null,
+            'guest_name' => 'Emily Gelig',
+            'source' => 'walk_in',
+            'date' => '2026-12-01',
+            'start_time' => '19:00:00',
+            'end_time' => '20:00:00',
+            'subtotal' => 250,
+            'booking_fee' => 15,
+            'total_price' => 265,
+            'status' => 'confirmed',
+        ]);
+
+        FacilityBilling::query()->create([
+            'facility_id' => $facility->id,
+            'period' => '2026-12',
+            'status' => 'BILLED',
+            'billed_at' => now(),
+            'billed_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('bookings.reschedule', $booking), [
+                'date' => '2026-12-01',
+                'start_time' => '19:00',
+                'end_time' => '20:00',
+                'booking_fee' => 0,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('booking_fee');
+
+        $this->assertSame(15.0, (float) $booking->fresh()->booking_fee);
     }
 }

@@ -1,6 +1,8 @@
 import Sidebar, { MobileMenu } from '@/Components/Sidebar';
 import Dropdown from '@/Components/Dropdown';
 import InstallPwaPrompt from '@/Components/InstallPwaPrompt';
+import NotificationPrompt from '@/Components/NotificationPrompt';
+import usePushNotifications from '@/hooks/usePushNotifications';
 import { usePage } from '@inertiajs/react';
 import { Menu } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -10,6 +12,7 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
     const horizontalPad = 'px-3';
     const page = usePage();
     const user = page.props.auth.user;
+    const push = usePushNotifications();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
     const [collapsed, setCollapsed] = useState(() => {
@@ -121,7 +124,8 @@ export default function AuthenticatedLayout({ header, children, inset = 'default
                 </main>
             </div>
 
-            <InstallPwaPrompt />
+            <NotificationPrompt />
+            <InstallPwaPrompt suppress={push.promptVisible} />
         </div>
     );
 }

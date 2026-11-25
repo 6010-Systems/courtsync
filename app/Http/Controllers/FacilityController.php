@@ -327,6 +327,10 @@ class FacilityController extends Controller
 
     public function show(Facility $facility)
     {
+        // Remember which venue the player is browsing so their dashboard can
+        // offer "Book Court" for it instead of the facility directory.
+        session(['last_facility_slug' => $facility->slug]);
+
         $facility->load('verification:id,facility_id,facility_photos');
         RateCardLoader::load($facility);
         $facility->load(['bookings' => function ($q) {
@@ -351,6 +355,9 @@ class FacilityController extends Controller
 
     public function book(Request $request, Facility $facility)
     {
+        // Keep the dashboard's "Book Court" action pointed at this venue.
+        session(['last_facility_slug' => $facility->slug]);
+
         $facility->load('verification:id,facility_id,facility_photos');
         RateCardLoader::load($facility);
         $facility->load(['bookings' => function ($q) {
@@ -408,6 +415,13 @@ class FacilityController extends Controller
                 'min:0',
                 Rule::when($request->input('booking_fee_type') === 'PERCENT', 'max:100', 'max:100000'),
             ],
+            'walk_in_fee_type' => ['sometimes', 'required', Rule::in(Facility::BOOKING_FEE_TYPES)],
+            'walk_in_fee_value' => [
+                'sometimes',
+                'numeric',
+                'min:0',
+                Rule::when($request->input('walk_in_fee_type') === 'PERCENT', 'max:100', 'max:100000'),
+            ],
         ]);
 
         $updateData = [
@@ -417,6 +431,8 @@ class FacilityController extends Controller
             'maya_number' => $validated['maya_number'] ?? null,
             'booking_fee_type' => $validated['booking_fee_type'] ?? $facility->booking_fee_type ?? 'FIXED',
             'booking_fee_value' => $validated['booking_fee_value'] ?? $facility->booking_fee_value ?? 0,
+            'walk_in_fee_type' => $validated['walk_in_fee_type'] ?? $facility->walk_in_fee_type ?? 'FIXED',
+            'walk_in_fee_value' => $validated['walk_in_fee_value'] ?? $facility->walk_in_fee_value ?? 0,
         ];
 
         if ($request->hasFile('gcash_qr')) {

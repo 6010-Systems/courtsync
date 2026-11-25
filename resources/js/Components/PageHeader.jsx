@@ -1,3 +1,4 @@
+import usePushNotifications from '@/hooks/usePushNotifications';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
@@ -8,46 +9,6 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const output = new Uint8Array(rawData.length);
-
-    for (let index = 0; index < rawData.length; index += 1) {
-        output[index] = rawData.charCodeAt(index);
-    }
-
-    return output;
-}
-
-const isIosDevice = () => {
-    if (typeof navigator === 'undefined') {
-        return false;
-    }
-
-    return /iPad|iPhone|iPod/.test(navigator.userAgent)
-        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-};
-
-const isStandaloneApp = () => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
-};
-
-async function storeSubscription(subscription) {
-    const payload = subscription.toJSON();
-
-    await window.axios.post(route('push-subscriptions.store'), {
-        endpoint: payload.endpoint,
-        keys: payload.keys,
-        content_encoding: 'aes128gcm',
-    });
-}
 
 function formatRelativeTime(isoString) {
     const elapsedSeconds = Math.round((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -87,7 +48,7 @@ export default function PageHeader({
     actions,
     showSearch = true,
     showNotifications = true,
-    liveNotifications = false,
+    liveNotifications = true,
     notificationsFooterHref = null,
     searchQuery = '',
     onSearchChange,
@@ -96,11 +57,10 @@ export default function PageHeader({
     containerClassName = '',
 }) {
     const [notifOpen, setNotifOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(2);
     const [liveItems, setLiveItems] = useState([]);
-    const [liveUnreadCount, setLiveUnreadCount] = useState(0);
-    const [pushStatus, setPushStatus] = useState('unknown');
-    const { vapidPublicKey } = usePage().props;
+    const { notifications: sharedNotifications } = usePage().props;
+    const [liveUnreadCount, setLiveUnreadCount] = useState(sharedNotifications?.unread_count ?? 0);
+    const push = usePushNotifications();
     const notifRef = useRef(null);
     const searchInputRef = useRef(null);
 
@@ -115,34 +75,6 @@ export default function PageHeader({
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
-
-    // Venue notifications
-    const [notifications, setNotifications] = useState([
-        {
-            id: 1,
-            title: 'Court 2 Booked',
-            desc: 'Marcus Vance • Doubles (6:00 PM - 8:00 PM)',
-            time: '4m ago',
-            type: 'booking',
-            unread: true,
-        },
-        {
-            id: 2,
-            title: 'Payment Confirmed',
-            desc: '₱350.00 received via GCash for Court 1',
-            time: '28m ago',
-            type: 'payment',
-            unread: true,
-        },
-        {
-            id: 3,
-            title: 'Court 4 Available',
-            desc: 'Booking concluded on schedule',
-            time: '1h ago',
-            type: 'system',
-            unread: false,
-        },
-    ]);
 
     const loadNotifications = useCallback(() => {
         if (!liveNotifications) {
@@ -168,141 +100,6 @@ export default function PageHeader({
         return () => window.clearInterval(intervalId);
     }, [liveNotifications, loadNotifications]);
 
-    useEffect(() => {
-        if (!liveNotifications) {
-            return undefined;
-        }
-
-        // iOS/iPadOS only allows Web Push from an installed (Home Screen) app.
-        if (isIosDevice() && !isStandaloneApp()) {
-            setPushStatus('ios-install');
-
-            return undefined;
-        }
-
-        if (!vapidPublicKey || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            setPushStatus('unsupported');
-
-            return undefined;
-        }
-
-        if (Notification.permission === 'denied') {
-            setPushStatus('denied');
-
-            return undefined;
-        }
-
-        let active = true;
-
-        (async () => {
-            try {
-                const registration = await navigator.serviceWorker.register('/sw.js');
-                let subscription = await registration.pushManager.getSubscription();
-
-                // Permission is already granted (e.g. from a previous session) but the
-                // subscription was lost/cleared: recreate it silently so background
-                // notifications keep working without another click.
-                let createdNow = false;
-
-                if (!subscription && Notification.permission === 'granted') {
-                    subscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-                    });
-                    createdNow = true;
-                }
-
-                if (!active) {
-                    return;
-                }
-
-                if (!subscription) {
-                    setPushStatus('default');
-
-                    return;
-                }
-
-                setPushStatus('enabled');
-
-                // Re-sync at most every 6 hours so the server keeps a valid endpoint.
-                const lastSyncedAt = Number(sessionStorage.getItem('courtsync-push-synced-at') || 0);
-
-                if (!createdNow && Date.now() - lastSyncedAt < 6 * 60 * 60 * 1000) {
-                    return;
-                }
-
-                await storeSubscription(subscription);
-                sessionStorage.setItem('courtsync-push-synced-at', String(Date.now()));
-            } catch (error) {
-                if (active) {
-                    setPushStatus('default');
-                }
-            }
-        })();
-
-        return () => {
-            active = false;
-        };
-    }, [liveNotifications, vapidPublicKey]);
-
-    const enablePush = async () => {
-        if (isIosDevice() && !isStandaloneApp()) {
-            setPushStatus('ios-install');
-
-            return;
-        }
-
-        if (!vapidPublicKey || !('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            setPushStatus('unsupported');
-
-            return;
-        }
-
-        setPushStatus('saving');
-
-        try {
-            const permission = await Notification.requestPermission();
-
-            if (permission !== 'granted') {
-                setPushStatus(permission === 'denied' ? 'denied' : 'default');
-
-                return;
-            }
-
-            const registration = await navigator.serviceWorker.register('/sw.js');
-            const existing = await registration.pushManager.getSubscription();
-            const subscription = existing || await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-            });
-
-            await storeSubscription(subscription);
-            setPushStatus('enabled');
-        } catch {
-            setPushStatus('error');
-        }
-    };
-
-    const disablePush = async () => {
-        setPushStatus('saving');
-
-        try {
-            const registration = await navigator.serviceWorker.getRegistration('/sw.js');
-            const subscription = await registration?.pushManager.getSubscription();
-
-            if (subscription) {
-                await window.axios.delete(route('push-subscriptions.destroy'), {
-                    data: { endpoint: subscription.endpoint },
-                });
-                await subscription.unsubscribe();
-            }
-
-            setPushStatus('default');
-        } catch {
-            setPushStatus('error');
-        }
-    };
-
     // Close notifications on outside click or Escape
     useEffect(() => {
         if (!notifOpen) return;
@@ -323,13 +120,6 @@ export default function PageHeader({
     }, [notifOpen]);
 
     const markAllRead = () => {
-        if (!liveNotifications) {
-            setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
-            setUnreadCount(0);
-
-            return;
-        }
-
         window.axios.post(route('notifications.read-all')).then(({ data }) => {
             setLiveUnreadCount(data.unread_count);
             setLiveItems((current) => current.map((item) => ({
@@ -347,7 +137,7 @@ export default function PageHeader({
             }
         };
 
-        if (!liveNotifications || item.read_at) {
+        if (item.read_at) {
             finish();
 
             return;
@@ -362,18 +152,16 @@ export default function PageHeader({
         });
     };
 
-    const visibleUnreadCount = liveNotifications ? liveUnreadCount : unreadCount;
-    const displayedNotifications = liveNotifications
-        ? liveItems.map((item) => ({
-            id: item.id,
-            title: item.title,
-            desc: item.message,
-            time: formatRelativeTime(item.created_at),
-            unread: item.read_at === null,
-            url: item.url,
-            type: 'booking',
-        }))
-        : notifications;
+    const visibleUnreadCount = liveUnreadCount;
+    const displayedNotifications = liveItems.map((item) => ({
+        id: item.id,
+        title: item.title,
+        desc: item.message,
+        time: formatRelativeTime(item.created_at),
+        unread: item.read_at === null,
+        url: item.url,
+        type: 'booking',
+    }));
 
     const headerContent = (
         <div
@@ -470,31 +258,29 @@ export default function PageHeader({
                                     )}
                                 </div>
 
-                                {liveNotifications && (
-                                    <div className="border-b border-[#101F1A]/10 px-3 py-2">
-                                        {pushStatus === 'enabled' ? (
-                                            <button type="button" onClick={disablePush} className="text-[11px] font-bold text-[#101F1A]/70 hover:text-[#101F1A] cursor-pointer">
-                                                Browser notifications are on
-                                            </button>
-                                        ) : pushStatus === 'denied' ? (
-                                            <p className="text-[11px] font-medium text-[#101F1A]/60">Notifications are blocked in this browser.</p>
-                                        ) : pushStatus === 'ios-install' ? (
-                                            <p className="text-[11px] font-medium text-[#101F1A]/60">
-                                                On iPhone/iPad, tap Share then &quot;Add to Home Screen&quot; and enable notifications inside the installed app.
-                                            </p>
-                                        ) : pushStatus === 'unsupported' ? (
-                                            <p className="text-[11px] font-medium text-[#101F1A]/60">This browser cannot receive notifications.</p>
-                                        ) : pushStatus === 'error' ? (
-                                            <button type="button" onClick={enablePush} className="text-[11px] font-bold text-[#FF5A36] cursor-pointer">
-                                                Could not enable notifications. Try again.
-                                            </button>
-                                        ) : (
-                                            <button type="button" onClick={enablePush} disabled={pushStatus === 'saving' || !vapidPublicKey} className="rounded-lg bg-[#101F1A] px-2.5 py-1.5 text-[11px] font-bold text-[#D6FF3F] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60">
-                                                {pushStatus === 'saving' ? 'Enabling notifications...' : 'Enable notifications'}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                <div className="border-b border-[#101F1A]/10 px-3 py-2">
+                                    {push.status === 'enabled' ? (
+                                        <button type="button" onClick={push.disable} className="text-[11px] font-bold text-[#101F1A]/70 hover:text-[#101F1A] cursor-pointer">
+                                            Browser notifications are on
+                                        </button>
+                                    ) : push.status === 'denied' ? (
+                                        <p className="text-[11px] font-medium text-[#101F1A]/60">Notifications are blocked in this browser.</p>
+                                    ) : push.status === 'ios-install' ? (
+                                        <p className="text-[11px] font-medium text-[#101F1A]/60">
+                                            On iPhone/iPad, tap Share then &quot;Add to Home Screen&quot; and enable notifications inside the installed app.
+                                        </p>
+                                    ) : push.status === 'unsupported' ? (
+                                        <p className="text-[11px] font-medium text-[#101F1A]/60">This browser cannot receive notifications.</p>
+                                    ) : push.status === 'error' ? (
+                                        <button type="button" onClick={push.enable} className="text-[11px] font-bold text-[#FF5A36] cursor-pointer">
+                                            Could not enable notifications. Try again.
+                                        </button>
+                                    ) : (
+                                        <button type="button" onClick={push.enable} disabled={push.status === 'saving'} className="rounded-lg bg-[#101F1A] px-2.5 py-1.5 text-[11px] font-bold text-[#D6FF3F] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60">
+                                            {push.status === 'saving' ? 'Enabling notifications...' : 'Enable notifications'}
+                                        </button>
+                                    )}
+                                </div>
 
                                 <div className="max-h-72 divide-y divide-[#101F1A]/[0.06] overflow-y-auto">
                                     {displayedNotifications.length === 0 ? (
@@ -531,14 +317,6 @@ export default function PageHeader({
                                             item.unread ? 'bg-[#F5F2EA]/30' : '',
                                         ].join(' ');
 
-                                        if (!liveNotifications) {
-                                            return (
-                                                <div key={item.id} className={itemClassName}>
-                                                    {content}
-                                                </div>
-                                            );
-                                        }
-
                                         return (
                                             <button
                                                 key={item.id}
@@ -552,24 +330,14 @@ export default function PageHeader({
                                     })}
                                 </div>
 
-                                {(!liveNotifications || notificationsFooterHref) && (
+                                {notificationsFooterHref && (
                                     <div className="border-t border-[#101F1A]/10 p-1.5 text-center">
-                                        {liveNotifications ? (
-                                            <Link
-                                                href={notificationsFooterHref}
-                                                className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A]"
-                                            >
-                                                View bookings
-                                            </Link>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={() => setNotifOpen(false)}
-                                                className="w-full rounded-lg py-1.5 text-center text-xs font-bold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A] cursor-pointer"
-                                            >
-                                                View all activity
-                                            </button>
-                                        )}
+                                        <Link
+                                            href={notificationsFooterHref}
+                                            className="block w-full rounded-lg py-1.5 text-center text-xs font-bold text-[#101F1A]/70 transition-colors hover:bg-[#F5F2EA] hover:text-[#101F1A]"
+                                        >
+                                            View bookings
+                                        </Link>
                                     </div>
                                 )}
                             </div>

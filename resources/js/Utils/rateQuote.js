@@ -273,19 +273,36 @@ export function offeredAddons(court, facility = null) {
 
 /**
  * Preview of Facility::calculateBookingFee() — the server has the final say.
+ *
+ * @param {object|null} facility
+ * @param {number} subtotal
+ * @param {'online'|'walk_in'|'staff_block'} channel
  */
-export function estimateBookingFee(facility, subtotal) {
-    const value = Number(facility?.booking_fee_value || 0);
+export function estimateBookingFee(facility, subtotal, channel = 'online') {
+    if (channel === 'staff_block') {
+        return 0;
+    }
+
+    const isWalkIn = channel === 'walk_in';
+    const type = isWalkIn ? facility?.walk_in_fee_type : facility?.booking_fee_type;
+    const value = Number((isWalkIn ? facility?.walk_in_fee_value : facility?.booking_fee_value) || 0);
 
     if (value <= 0) {
         return 0;
     }
 
-    if (facility?.booking_fee_type === 'PERCENT') {
+    if (type === 'PERCENT') {
         return Math.round(subtotal * Math.min(value, 100)) / 100;
     }
 
     return Math.round(value * 100) / 100;
+}
+
+/**
+ * The owner-controlled walk-in system fee for a facility.
+ */
+export function estimateWalkInFee(facility, subtotal) {
+    return estimateBookingFee(facility, subtotal, 'walk_in');
 }
 
 /**

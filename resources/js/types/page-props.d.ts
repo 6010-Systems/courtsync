@@ -23,10 +23,19 @@ export interface FlashMessages {
     status?: string;
 }
 
+/**
+ * Notification state shared with every authenticated page.
+ */
+export interface NotificationProps {
+    unread_count: number;
+    has_push_subscription: boolean;
+}
+
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
     auth: AuthProps;
     flash?: FlashMessages;
-    errors?: Record<string, string>;
+    notifications?: NotificationProps | null;
+    errors?: Record<string, unknown>;
 };
 
 // ── Admin Page Props ─────────────────────────────────────────────────────────

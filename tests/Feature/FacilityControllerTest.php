@@ -56,6 +56,18 @@ class FacilityControllerTest extends TestCase
         );
     }
 
+    public function test_guest_booking_a_specific_court_returns_to_that_court_after_login(): void
+    {
+        $facility = Facility::factory()->create();
+        $court = Court::factory()->create(['facility_id' => $facility->id]);
+        $bookUrl = route('facility.book', ['facility' => $facility->slug, 'court' => $court->id]);
+
+        $this->get($bookUrl)
+            ->assertRedirect(route('player.login', $facility->slug));
+
+        $this->assertSame($bookUrl, session('url.intended'));
+    }
+
     public function test_authenticated_book_page_renders_facility_book(): void
     {
         $facility = Facility::factory()->create();
@@ -158,6 +170,42 @@ class FacilityControllerTest extends TestCase
         $facility->refresh();
         $this->assertSame('PERCENT', $facility->booking_fee_type);
         $this->assertSame('5.00', $facility->booking_fee_value);
+    }
+
+    public function test_owner_can_save_a_separate_walk_in_fee(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create([
+            'user_id' => $owner->id,
+            'booking_fee_type' => 'FIXED',
+            'booking_fee_value' => 15,
+        ]);
+
+        $this->actingAs($owner)->post(route('facility.payment-settings.update', $facility), [
+            'booking_fee_type' => 'FIXED',
+            'booking_fee_value' => 15,
+            'walk_in_fee_type' => 'FIXED',
+            'walk_in_fee_value' => 0,
+        ])->assertSessionHasNoErrors();
+
+        $facility->refresh();
+
+        $this->assertSame(15.0, (float) $facility->booking_fee_value);
+        $this->assertSame('FIXED', $facility->walk_in_fee_type);
+        $this->assertSame(0.0, (float) $facility->walk_in_fee_value);
+    }
+
+    public function test_percentage_walk_in_fee_cannot_exceed_one_hundred(): void
+    {
+        $owner = User::factory()->facilityOwner()->create();
+        $facility = Facility::factory()->create(['user_id' => $owner->id]);
+
+        $this->actingAs($owner)->post(route('facility.payment-settings.update', $facility), [
+            'walk_in_fee_type' => 'PERCENT',
+            'walk_in_fee_value' => 150,
+        ])->assertSessionHasErrors('walk_in_fee_value');
+
+        $this->assertSame(0.0, (float) $facility->fresh()->walk_in_fee_value);
     }
 
     public function test_percentage_booking_fee_cannot_exceed_one_hundred(): void

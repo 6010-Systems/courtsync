@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['user_id', 'slug', 'name', 'logo_url', 'cover_photo_url', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'verification_status', 'gcash_name', 'gcash_number', 'gcash_qr_url', 'maya_name', 'maya_number', 'maya_qr_url', 'booking_fee_type', 'booking_fee_value'])]
+#[Fillable(['user_id', 'slug', 'name', 'logo_url', 'cover_photo_url', 'address', 'city', 'province', 'country', 'contact_number', 'description', 'verification_status', 'gcash_name', 'gcash_number', 'gcash_qr_url', 'maya_name', 'maya_number', 'maya_qr_url', 'booking_fee_type', 'booking_fee_value', 'walk_in_fee_type', 'walk_in_fee_value'])]
 class Facility extends Model
 {
     /** @use HasFactory<FacilityFactory> */
@@ -30,12 +30,21 @@ class Facility extends Model
     public const BOOKING_FEE_TYPES = ['FIXED', 'PERCENT'];
 
     /**
+     * Channels a booking can come through. Every channel except online is
+     * logged at the desk by the owner or their staff.
+     *
+     * @var array<int, string>
+     */
+    public const BOOKING_CHANNELS = ['online', 'walk_in', 'staff_block'];
+
+    /**
      * @var array<string, string>
      */
     protected function casts(): array
     {
         return [
             'booking_fee_value' => 'decimal:2',
+            'walk_in_fee_value' => 'decimal:2',
         ];
     }
 
@@ -43,16 +52,27 @@ class Facility extends Model
      * Amount charged on top of the court subtotal for a booking.
      *
      * A FIXED fee is a flat peso amount, a PERCENT fee is a share of the subtotal.
+     * Online bookings use the online fee, walk-ins have their own owner-controlled
+     * fee, and court blocks (staff-only, no customer) are always free.
      */
-    public function calculateBookingFee(float $subtotal): float
+    public function calculateBookingFee(float $subtotal, string $channel = 'online'): float
     {
-        $value = (float) ($this->booking_fee_value ?? 0);
+        return match ($channel) {
+            'staff_block' => 0.0,
+            'walk_in' => $this->feeAmount($this->walk_in_fee_type, $this->walk_in_fee_value, $subtotal),
+            default => $this->feeAmount($this->booking_fee_type, $this->booking_fee_value, $subtotal),
+        };
+    }
+
+    private function feeAmount(?string $type, mixed $value, float $subtotal): float
+    {
+        $value = (float) ($value ?? 0);
 
         if ($value <= 0) {
             return 0.0;
         }
 
-        if ($this->booking_fee_type === 'PERCENT') {
+        if ($type === 'PERCENT') {
             return round($subtotal * min($value, 100) / 100, 2);
         }
 

@@ -349,21 +349,12 @@ export default function Show({ facility }) {
                             <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight">Ready to play?</h2>
                             <p className="text-xs text-gray-300 truncate mt-0.5">Book a court now at {facility.name}</p>
                         </div>
-                        {user ? (
-                            <Link
-                                href={route('facility.book', facility.slug)}
-                                className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
-                            >
-                                Book a Court
-                            </Link>
-                        ) : (
-                            <Link
-                                href={`/${facility.slug}/login`}
-                                className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
-                            >
-                                Sign In to Book
-                            </Link>
-                        )}
+                        <Link
+                            href={route('facility.book', facility.slug)}
+                            className="shrink-0 inline-flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-xs sm:text-sm py-2.5 px-4 rounded-xl transition duration-300 shadow-md shadow-[#D6FF3F]/20 hover:-translate-y-0.5"
+                        >
+                            {user ? 'Book a Court' : 'Sign In to Book'}
+                        </Link>
                     </div>
                 </div>
 
@@ -391,6 +382,11 @@ export default function Show({ facility }) {
                                     {facility.courts.map((court, courtIndex) => {
                                         const isBookable = court.status === 'AVAILABLE';
 
+                                        // Guests are bounced to this facility's player login by the
+                                        // auth middleware, which stores this exact URL (court
+                                        // included) as url.intended. After signing in they land
+                                        // back on the booking page with this court preselected.
+
                                         return (
                                             <CourtCard
                                                 key={court.id}
@@ -400,7 +396,7 @@ export default function Show({ facility }) {
                                                 actions={
                                                     isBookable ? (
                                                         <Link
-                                                            href={user ? route('facility.book', { facility: facility.slug, court: court.id }) : `/${facility.slug}/login`}
+                                                            href={route('facility.book', { facility: facility.slug, court: court.id })}
                                                             className="inline-flex items-center gap-1 rounded-xl bg-[#10221C] px-3.5 py-2 text-xs font-bold text-[#D6FF3F] shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0c4a34]"
                                                         >
                                                             Book court
@@ -590,21 +586,12 @@ export default function Show({ facility }) {
                             <h2 className="text-2xl font-bold text-white mb-4">Ready to play?</h2>
                             <p className="text-gray-400 mb-6">Book a court now at {facility.name}.</p>
 
-                            {user ? (
-                                <Link
-                                    href={route('facility.book', facility.slug)}
-                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
-                                >
-                                    Book a Court
-                                </Link>
-                            ) : (
-                                <Link
-                                    href={`/${facility.slug}/login`}
-                                    className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
-                                >
-                                    Sign In to Book
-                                </Link>
-                            )}
+                            <Link
+                                href={route('facility.book', facility.slug)}
+                                className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-lg py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
+                            >
+                                {user ? 'Book a Court' : 'Sign In to Book'}
+                            </Link>
                         </div>
                     </div>
                 </div>

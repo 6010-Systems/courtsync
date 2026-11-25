@@ -191,7 +191,7 @@ class FacilityDashboardMetrics
     {
         $bookings = $this->bookings($facilityIds)
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->get(['user_id', 'guest_name']);
+            ->get(['user_id', 'guest_name', 'source']);
 
         $online = 0;
         $walkIn = 0;
@@ -201,6 +201,20 @@ class FacilityDashboardMetrics
         $userRoles = User::whereIn('id', $userIds)->pluck('role', 'id');
 
         foreach ($bookings as $booking) {
+            if ($booking->source === 'walk_in') {
+                $walkIn++;
+
+                continue;
+            }
+
+            if ($booking->source === 'staff_block') {
+                $staff++;
+
+                continue;
+            }
+
+            // Online bookings — legacy rows may still be attributed to an
+            // owner/staff user, so keep classifying by role as a fallback.
             if ($booking->user_id) {
                 $role = $userRoles[$booking->user_id] ?? 'PLAYER';
                 if (in_array($role, ['FACILITY_STAFF', 'FACILITY_OWNER'])) {

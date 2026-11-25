@@ -6,8 +6,11 @@ use App\Models\Booking;
 use App\Models\Court;
 use App\Models\User;
 use App\Notifications\BookingConfirmed;
+use App\Notifications\BookingRequested;
+use App\Notifications\BookingRescheduled;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class NotificationControllerTest extends TestCase
@@ -115,6 +118,46 @@ class NotificationControllerTest extends TestCase
         $this->postJson(route('notifications.read-all'))->assertUnauthorized();
 
         $this->assertNull($notification->fresh()->read_at);
+    }
+
+    public function test_authenticated_pages_share_unread_count_and_push_subscription_state(): void
+    {
+        $player = User::factory()->player()->create();
+        $this->confirmationFor($player);
+
+        $this->actingAs($player)->get(route('profile.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('notifications.unread_count', 1)
+                ->where('notifications.has_push_subscription', false)
+            );
+
+        $player->updatePushSubscription('https://push.example.test/phone', 'public-key', 'auth-token', 'aes128gcm');
+
+        $this->actingAs($player)->get(route('profile.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('notifications.has_push_subscription', true)
+            );
+    }
+
+    public function test_web_push_payloads_use_icons_that_exist_in_public(): void
+    {
+        $player = User::factory()->player()->create();
+        [$booking] = $this->confirmationFor($player);
+
+        $notifications = [
+            new BookingRequested($booking),
+            new BookingConfirmed($booking),
+            new BookingRescheduled($booking),
+        ];
+
+        foreach ($notifications as $notification) {
+            $payload = $notification->toWebPush($player, $notification)->toArray();
+
+            $this->assertSame('/icons/icon-192.png', $payload['icon']);
+            $this->assertSame('/icons/favicon-32.png', $payload['badge']);
+            $this->assertFileExists(public_path($payload['icon']));
+            $this->assertFileExists(public_path($payload['badge']));
+        }
     }
 
     /**

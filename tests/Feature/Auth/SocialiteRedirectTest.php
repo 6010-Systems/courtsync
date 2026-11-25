@@ -72,9 +72,16 @@ class SocialiteRedirectTest extends TestCase
 
     public function test_player_redirect_remembers_the_facility_for_the_callback(): void
     {
-        $this->get(route('google.redirect', ['tenant' => 'player', 'facility' => 'court-king']))
+        $response = $this->get(route('google.redirect', ['tenant' => 'player', 'facility' => 'court-king']))
             ->assertRedirect()
             ->assertSessionHas('auth_facility_slug', 'court-king');
+
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        // The slug also rides along in the state so a dropped session (e.g.
+        // localhost vs 127.0.0.1) cannot lose the facility.
+        $this->assertStringEndsWith('.court-king', $query['state']);
+        $this->assertSame($query['state'], session('state'));
     }
 
     public function test_redirect_returns_a_visible_error_when_credentials_are_missing(): void

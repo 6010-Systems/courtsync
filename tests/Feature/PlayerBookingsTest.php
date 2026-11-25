@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\Court;
+use App\Models\Facility;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,9 +101,36 @@ class PlayerBookingsTest extends TestCase
     public function test_new_player_has_empty_dashboard_and_booking_list(): void
     {
         $this->actingAs(User::factory()->player()->create())->get('/dashboard')->assertInertia(fn (Assert $page) => $page
-            ->where('nextBooking', null)->has('recentBookings', 0)->where('stats.upcoming', 0)->where('stats.past', 0));
+            ->where('nextBooking', null)->has('recentBookings', 0)->where('stats.upcoming', 0)->where('stats.past', 0)
+            ->where('bookFacility', null));
         $this->get(route('player.bookings'))->assertInertia(fn (Assert $page) => $page
             ->where('filter', 'upcoming')->has('bookings.data', 0));
+    }
+
+    public function test_player_dashboard_offers_booking_at_the_last_viewed_facility(): void
+    {
+        $player = User::factory()->player()->create();
+        $joined = Facility::factory()->create();
+        $player->joinedFacilities()->attach($joined->id, ['status' => 'ACTIVE']);
+
+        $viewed = Facility::factory()->create();
+        $this->actingAs($player)->get(route('facility.show', $viewed->slug))->assertOk();
+
+        $this->get('/dashboard')->assertInertia(fn (Assert $page) => $page
+            ->component('Players/Dashboard')
+            ->where('bookFacility.slug', $viewed->slug)
+            ->where('bookFacility.name', $viewed->name));
+    }
+
+    public function test_player_dashboard_falls_back_to_their_most_recently_joined_facility(): void
+    {
+        $player = User::factory()->player()->create();
+        $facility = Facility::factory()->create();
+        $player->joinedFacilities()->attach($facility->id, ['status' => 'ACTIVE']);
+
+        $this->actingAs($player)->get('/dashboard')->assertInertia(fn (Assert $page) => $page
+            ->component('Players/Dashboard')
+            ->where('bookFacility.slug', $facility->slug));
     }
 
     public function test_guests_and_other_roles_cannot_access_player_bookings(): void

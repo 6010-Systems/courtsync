@@ -4,12 +4,12 @@ import { Head, router } from '@inertiajs/react';
 import { formatCount, formatPeso } from '@/Components/MetricCard';
 import {
     ArrowLeft,
+    Banknote,
     Building2,
     CalendarCheck2,
     CheckCircle2,
     ChevronRight,
     ReceiptText,
-    Wallet,
 } from 'lucide-react';
 
 const PAYMENT_STYLES = {
@@ -23,6 +23,12 @@ const BOOKING_STYLES = {
     confirmed: 'bg-[#D6FF3F]/25 text-[#101F1A] border-[#D6FF3F]/60',
     pending: 'bg-amber-50 text-amber-700 border-amber-200',
     cancelled: 'bg-red-50 text-red-700 border-red-200',
+};
+
+const SOURCE_LABELS = {
+    online: 'Online',
+    walk_in: 'Walk-in',
+    staff_block: 'Court block',
 };
 
 function formatBookingDate(value) {
@@ -157,12 +163,13 @@ export default function BillingReportView({
                 </div>
 
                 {/* Summary */}
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <StatCard label="Facilities w/ Fees" value={formatCount(summary.facilities ?? 0)} hint={`${formatCount(summary.billed_facilities ?? 0)} billed · ${formatCount(summary.unbilled_facilities ?? 0)} not billed`} icon={Building2} />
                     <StatCard label="Bookings w/ Fee" value={formatCount(summary.bookings ?? 0)} hint={`Court rate subtotal ${formatPeso(summary.subtotal ?? 0)}`} icon={CalendarCheck2} />
                     <StatCard label="Booking Fees Due" value={formatPeso(summary.booking_fee ?? 0)} hint={`${formatPeso(summary.pending_fee ?? 0)} still pending`} icon={ReceiptText} />
-                    <StatCard label="Fees Collected" value={formatPeso(summary.collected_fee ?? 0)} hint="From verified payments" icon={Wallet} />
-                    <StatCard label="Billed Collections" value={formatPeso(summary.billed_fee ?? 0)} hint={`${formatPeso(summary.unbilled_fee ?? 0)} not yet billed`} icon={CheckCircle2} />
+                    <StatCard label="Online Fees" value={formatPeso(summary.online_fee ?? 0)} hint="From online bookings" icon={ReceiptText} />
+                    <StatCard label="Walk-in Fees" value={formatPeso(summary.walk_in_fee ?? 0)} hint="From desk/walk-in bookings" icon={Banknote} />
+                    <StatCard label="Fees Collected" value={formatPeso(summary.collected_fee ?? 0)} hint={`${formatPeso(summary.billed_fee ?? 0)} billed · ${formatPeso(summary.unbilled_fee ?? 0)} not billed`} icon={CheckCircle2} />
                 </div>
 
                 {/* Per-facility summary */}
@@ -222,7 +229,10 @@ export default function BillingReportView({
                                                 </td>
                                                 <td className="px-4 py-3 text-right text-sm font-bold text-[#101F1A]">{formatCount(facility.bookings_count)}</td>
                                                 <td className="px-4 py-3 text-right text-sm text-[#101F1A]/70">{formatPeso(facility.subtotal)}</td>
-                                                <td className="px-4 py-3 text-right text-sm font-black text-[#101F1A]">{formatPeso(facility.booking_fee)}</td>
+                                                <td className="px-4 py-3 text-right text-sm font-black text-[#101F1A]">
+                                                    {formatPeso(facility.booking_fee)}
+                                                    <p className="text-[10px] font-medium text-[#101F1A]/50">{formatPeso(facility.walk_in_fee ?? 0)} walk-in</p>
+                                                </td>
                                                 <td className="px-4 py-3 text-right text-sm text-emerald-700">{formatPeso(facility.collected_fee)}</td>
                                                 <td className="px-4 py-3 text-right text-sm text-amber-700">{formatPeso(facility.pending_fee)}</td>
                                                 <td className="px-4 py-3">
@@ -339,7 +349,7 @@ export default function BillingReportView({
                                                 <td className="px-4 py-3 text-sm text-[#101F1A]">{row.court}</td>
                                                 <td className="px-4 py-3 text-sm text-[#101F1A]">
                                                     <p>{row.player}</p>
-                                                    <p className="text-[11px] text-[#101F1A]/50">Booking #{row.id}</p>
+                                                    <p className="text-[11px] text-[#101F1A]/50">Booking #{row.id} · {SOURCE_LABELS[row.source] ?? 'Online'}</p>
                                                 </td>
                                                 <td className="px-4 py-3 text-right text-sm text-[#101F1A]/70">{formatPeso(row.subtotal)}</td>
                                                 <td className="px-4 py-3 text-right text-sm font-black text-[#101F1A]">{formatPeso(row.booking_fee)}</td>

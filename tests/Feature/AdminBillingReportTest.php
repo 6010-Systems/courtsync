@@ -236,4 +236,30 @@ class AdminBillingReportTest extends TestCase
             ])
             ->assertForbidden();
     }
+
+    public function test_report_separates_online_and_walk_in_fees(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $facility = Facility::factory()->create(['name' => 'Alpha Courts']);
+
+        $this->booking($facility, ['booking_fee' => 20, 'total_price' => 320, 'source' => 'online']);
+        $this->booking($facility, [
+            'booking_fee' => 5,
+            'total_price' => 305,
+            'source' => 'walk_in',
+            'user_id' => null,
+            'guest_name' => 'Walk-in Juan',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reports.billing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/BillingReport')
+                ->where('summary.booking_fee', 25)
+                ->where('summary.online_fee', 20)
+                ->where('summary.walk_in_fee', 5)
+                ->where('facilities.0.online_fee', 20)
+                ->where('facilities.0.walk_in_fee', 5));
+    }
 }

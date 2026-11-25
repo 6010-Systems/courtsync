@@ -72,6 +72,7 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
         end_time: '',
         total_price: '',
         guest_name: '',
+        booking_type: 'walk_in',
         rate_plan_id: '',
     });
 
@@ -262,7 +263,8 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                     id: 'NEW',
                     status: 'pending',
                     user: null,
-                    guest_name: data.guest_name || 'Walk-in',
+                    guest_name: data.guest_name || (data.booking_type === 'staff_block' ? 'Court block' : 'Walk-in'),
+                    source: data.booking_type,
                     date: manualSelection?.date || data.date,
                     end_date: manualSelection?.end_date || null,
                     start_time: manualSelection?.start_time || '',
@@ -399,13 +401,14 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
     }), [selectedCourt, selectedRatePlan, addonSelection, manualSelection]);
 
     const bookingFeeEstimate = useMemo(
-        () => estimateBookingFee(selectedFacility, pricingQuote.total),
-        [selectedFacility, pricingQuote.total],
+        () => estimateBookingFee(selectedFacility, pricingQuote.total, data.booking_type),
+        [selectedFacility, pricingQuote.total, data.booking_type],
     );
     const grandTotal = pricingQuote.total + bookingFeeEstimate;
 
     const canReviewManualBooking = Boolean(
-        data.facility_id && data.court_id && data.date && manualSelection,
+        data.facility_id && data.court_id && data.date && manualSelection
+        && (data.booking_type === 'staff_block' || data.guest_name.trim()),
     );
 
     transform((formData) => ({
@@ -416,6 +419,7 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
         end_time: manualSelection?.end_time || '',
         rate_plan_id: selectedRatePlan?.id || '',
         total_price: pricingQuote.total,
+        booking_type: data.booking_type,
         addons: addonSelection.map(({ plan, quantity }) => ({ rate_plan_id: plan.id, quantity })),
     }));
 
@@ -675,8 +679,22 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="guest_name" value="Player Name (Optional Walk-in)" />
-                                <TextInput id="guest_name" type="text" value={data.guest_name} onChange={(e) => setData('guest_name', e.target.value)} className="mt-1 block w-full" placeholder="e.g. John Doe" />
+                                <InputLabel htmlFor="booking_type" value="Booking Type" />
+                                <select
+                                    id="booking_type"
+                                    value={data.booking_type}
+                                    onChange={(e) => setData('booking_type', e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm"
+                                >
+                                    <option value="walk_in">Walk-in player</option>
+                                    <option value="staff_block">Court block (no system fee)</option>
+                                </select>
+                                <InputError message={errors.booking_type} className="mt-2" />
+                            </div>
+
+                            <div>
+                                <InputLabel htmlFor="guest_name" value={data.booking_type === 'staff_block' ? 'Label (optional)' : 'Walk-in Player Name'} />
+                                <TextInput id="guest_name" type="text" value={data.guest_name} onChange={(e) => setData('guest_name', e.target.value)} className="mt-1 block w-full" placeholder={data.booking_type === 'staff_block' ? 'e.g. Maintenance' : 'e.g. John Doe'} />
                                 <InputError message={errors.guest_name} className="mt-2" />
                             </div>
 
@@ -839,8 +857,12 @@ export default function Bookings({ bookings, nextBooking = null, courtBookings =
                             subtotal={pricingQuote.subtotal}
                             addonsTotal={pricingQuote.addonsTotal}
                             bookingFee={bookingFeeEstimate}
+                            bookingFeeLabel={data.booking_type === 'staff_block' ? 'System fee' : 'Walk-in system fee'}
                             total={grandTotal}
-                            extraRows={[{ label: 'Player', value: data.guest_name || 'Walk-in' }]}
+                            extraRows={[
+                                { label: 'Type', value: data.booking_type === 'staff_block' ? 'Court block' : 'Walk-in' },
+                                { label: 'Player', value: data.guest_name || (data.booking_type === 'staff_block' ? 'Court block' : 'Walk-in') },
+                            ]}
                         />
 
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">

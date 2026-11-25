@@ -7,6 +7,7 @@ use App\Models\Facility;
 use App\Models\User;
 use GuzzleHttp\Client;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
@@ -24,8 +25,11 @@ class SocialiteController extends Controller
             abort(404);
         }
 
+        $facilitySlug = null;
+
         if ($tenant === 'player' && request()->has('facility')) {
-            session(['auth_facility_slug' => request('facility')]);
+            $facilitySlug = (string) request('facility');
+            session(['auth_facility_slug' => $facilitySlug]);
         }
 
         $config = config("services.{$provider}");
@@ -38,10 +42,29 @@ class SocialiteController extends Controller
             $config['redirect'] = url($config['redirect']);
         }
 
-        // Use secure OAuth state parameter (RFC 6749) to prevent CSRF and impersonation
-        return Socialite::buildProvider(GoogleProvider::class, $config)
-            ->with(['prompt' => 'select_account'])
+        // Use secure OAuth state parameter (RFC 6749) to prevent CSRF and
+        // impersonation. For players we append the facility slug so the
+        // callback can still return them to that venue when the session is
+        // dropped mid-flow (e.g. the flow started on 127.0.0.1 but APP_URL is
+        // localhost, so Google lands on a different origin).
+        $parameters = ['prompt' => 'select_account'];
+        $state = null;
+
+        if ($facilitySlug) {
+            $state = $parameters['state'] = Str::random(40).'.'.$facilitySlug;
+        }
+
+        $response = Socialite::buildProvider(GoogleProvider::class, $config)
+            ->with($parameters)
             ->redirect();
+
+        if ($state) {
+            // Socialite stores its own generated state in the session; align it
+            // with the state we embedded so the callback still verifies it.
+            session(['state' => $state]);
+        }
+
+        return $response;
     }
 
     public function callback($tenant)
@@ -63,6 +86,10 @@ class SocialiteController extends Controller
         } catch (\Exception $e) {
             return $this->authenticationFailed($tenant, $e);
         }
+
+        $facilitySlug = $tenant === 'player' ? $this->facilitySlugFor(request()) : null;
+
+        request()->session()->forget('auth_facility_slug');
 
         $user = User::where('email', $googleUser->getEmail())->first();
 
@@ -95,19 +122,41 @@ class SocialiteController extends Controller
         Auth::login($user);
 
         // Attach player to the facility they logged in from
-        if ($tenant === 'player' && session()->has('auth_facility_slug')) {
-            $slug = session()->pull('auth_facility_slug');
-            $facility = Facility::where('slug', $slug)->first();
+        if ($facilitySlug) {
+            $facility = Facility::where('slug', $facilitySlug)->first();
 
             if ($facility) {
                 $user->joinedFacilities()->syncWithoutDetaching([$facility->id]);
+                session(['last_facility_slug' => $facility->slug]);
 
-                return redirect('/'.$facility->slug)
+                // Honour the booking page the player was sent to login from (e.g. a
+                // court card deep-link with ?court={id}); otherwise land on booking.
+                return redirect()->intended('/'.$facility->slug.'/book')
                     ->withCookie(cookie('last_login_method', 'google', 60 * 24 * 365));
             }
         }
 
         return redirect('/dashboard')->withCookie(cookie('last_login_method', 'google', 60 * 24 * 365));
+    }
+
+    /**
+     * The facility a player started signing in from. The OAuth state carries the
+     * slug so it survives a dropped session (e.g. localhost vs 127.0.0.1); the
+     * session is the fallback.
+     */
+    private function facilitySlugFor(Request $request): ?string
+    {
+        $state = (string) $request->input('state', '');
+
+        if (str_contains($state, '.')) {
+            $slug = Str::afterLast($state, '.');
+
+            if (Facility::where('slug', $slug)->exists()) {
+                return $slug;
+            }
+        }
+
+        return $request->session()->get('auth_facility_slug');
     }
 
     /**
@@ -164,7 +213,9 @@ class SocialiteController extends Controller
             ? 'Google sign-in failed: '.$e->getMessage()
             : 'We could not sign you in with Google. Please try again.';
 
-        if ($tenant === 'player' && $slug = session()->pull('auth_facility_slug')) {
+        if ($tenant === 'player' && $slug = $this->facilitySlugFor(request())) {
+            request()->session()->forget('auth_facility_slug');
+
             $facility = Facility::where('slug', $slug)->first();
 
             if ($facility) {

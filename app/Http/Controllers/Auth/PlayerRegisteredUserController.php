@@ -51,11 +51,14 @@ class PlayerRegisteredUserController extends Controller
 
         // Attach player to this facility
         $user->joinedFacilities()->syncWithoutDetaching([$facility->id]);
+        session(['last_facility_slug' => $facility->slug]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect('/'.$facilitySlug);
+        // Honour the booking page the player was sent to login from (e.g. a court
+        // card deep-link with ?court={id}); otherwise land on the booking page.
+        return redirect()->intended('/'.$facilitySlug.'/book');
     }
 }

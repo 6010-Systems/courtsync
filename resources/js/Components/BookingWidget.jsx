@@ -354,8 +354,10 @@ export default function BookingWidget({ facility, user, courts = [] }) {
                         {processing ? 'Processing...' : 'Confirm Booking'}
                     </button>
                 ) : (
+                    // Send guests through the book route so the auth middleware can
+                    // remember it as url.intended and return them here after login.
                     <Link
-                        href={`/${facility.slug}/login`}
+                        href={route('facility.book', facility.slug)}
                         className="w-full flex items-center justify-center bg-[#D6FF3F] hover:bg-[#c4ec39] text-[#10221C] font-black text-base sm:text-lg py-3.5 sm:py-4 px-4 rounded-xl transition duration-300 shadow-xl shadow-[#D6FF3F]/20 hover:-translate-y-1"
                     >
                         Sign In to Book

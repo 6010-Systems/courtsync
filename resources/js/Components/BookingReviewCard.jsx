@@ -22,6 +22,7 @@ export default function BookingReviewCard({
     subtotal = 0,
     addonsTotal = 0,
     bookingFee = 0,
+    bookingFeeLabel = 'Booking fee',
     total = 0,
     extraRows = [],
 }) {
@@ -109,7 +110,7 @@ export default function BookingReviewCard({
                 )}
                 {bookingFee > 0 && (
                     <div className="flex justify-between text-gray-600">
-                        <span>Booking fee</span>
+                        <span>{bookingFeeLabel}</span>
                         <span className="font-bold text-[#10221C]">{formatPeso(bookingFee)}</span>
                     </div>
                 )}

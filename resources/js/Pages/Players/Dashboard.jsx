@@ -3,8 +3,9 @@ import PlayerBookingCard, { EmptyPlayerBookings } from '@/Components/PlayerBooki
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 
-export default function Dashboard({ stats, nextBooking, recentBookings, timezone }) {
+export default function Dashboard({ stats, nextBooking, recentBookings, timezone, bookFacility = null }) {
     const { auth } = usePage().props;
+    const bookHref = bookFacility ? route('facility.book', bookFacility.slug) : '/';
 
     return (
         <AuthenticatedLayout header={<PageHeader title={`Welcome back, ${auth.user.name}`} subtitle="Your courts, reservations, and next game" actions={null} showSearch={false} liveNotifications notificationsFooterHref={route('player.bookings')} />}>
@@ -12,7 +13,7 @@ export default function Dashboard({ stats, nextBooking, recentBookings, timezone
             <div className="space-y-6">
                 <div className="flex flex-wrap gap-3">
                     <Link href={route('player.bookings')} className="rounded-lg bg-[#101F1A] px-5 py-3 text-sm font-bold text-white hover:bg-[#1a382d]">View My Bookings</Link>
-                    <Link href="/" className="rounded-lg bg-[#D6FF3F] px-5 py-3 text-sm font-bold text-[#101F1A] hover:bg-[#c4ec36]">Explore Facilities</Link>
+                    <Link href={bookHref} className="rounded-lg bg-[#D6FF3F] px-5 py-3 text-sm font-bold text-[#101F1A] hover:bg-[#c4ec36]">{bookFacility ? 'Book Court' : 'Explore Facilities'}</Link>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                     {[
@@ -29,7 +30,7 @@ export default function Dashboard({ stats, nextBooking, recentBookings, timezone
                 <p className="text-xs text-[#101F1A]/60">Booking times and reservation categories use {timezone}. Upcoming includes reservations currently in progress.</p>
                 <section aria-labelledby="next-reservation">
                     <h2 id="next-reservation" className="mb-3 text-lg font-bold text-[#101F1A]">Your Next Reservation</h2>
-                    {nextBooking ? <PlayerBookingCard booking={nextBooking} /> : <EmptyPlayerBookings message="No upcoming reservations." />}
+                    {nextBooking ? <PlayerBookingCard booking={nextBooking} /> : <EmptyPlayerBookings message="No upcoming reservations." bookFacility={bookFacility} />}
                 </section>
                 <section aria-labelledby="recent-bookings">
                     <div className="mb-3 flex items-center justify-between gap-3">
@@ -37,7 +38,7 @@ export default function Dashboard({ stats, nextBooking, recentBookings, timezone
                         <Link href={route('player.bookings', { filter: 'all' })} className="text-sm font-bold text-[#101F1A] underline underline-offset-4">View All</Link>
                     </div>
                     <div className="space-y-3">
-                        {recentBookings.length ? recentBookings.map((booking) => <PlayerBookingCard key={booking.id} booking={booking} />) : <EmptyPlayerBookings />}
+                        {recentBookings.length ? recentBookings.map((booking) => <PlayerBookingCard key={booking.id} booking={booking} />) : <EmptyPlayerBookings bookFacility={bookFacility} />}
                     </div>
                 </section>
             </div>

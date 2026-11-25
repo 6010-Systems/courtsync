@@ -56,15 +56,14 @@ class BookingRequestedNotificationTest extends TestCase
         $this->assertNull($notification->read_at);
     }
 
-    public function test_staff_receives_a_notification_for_a_guest_booking(): void
+    public function test_owner_is_notified_when_staff_logs_a_walk_in(): void
     {
         $facility = Facility::factory()->create();
         $court = Court::factory()->create(['facility_id' => $facility->id]);
         $owner = $facility->owner;
         $staff = User::factory()->facilityStaff()->create(['facility_id' => $facility->id]);
-        $player = User::factory()->player()->create();
 
-        $this->actingAs($player)
+        $this->actingAs($staff)
             ->post(route('bookings.store'), [
                 'facility_id' => $facility->id,
                 'court_id' => $court->id,
@@ -73,11 +72,12 @@ class BookingRequestedNotificationTest extends TestCase
                 'end_time' => '11:00',
                 'total_price' => 500,
                 'guest_name' => 'Walk-in player',
+                'booking_type' => 'walk_in',
             ])
             ->assertRedirect();
 
         $this->assertSame(1, $owner->fresh()->notifications()->where('type', BookingRequested::class)->count());
-        $this->assertSame(1, $staff->fresh()->notifications()->where('type', BookingRequested::class)->count());
+        $this->assertSame(0, $staff->fresh()->notifications()->where('type', BookingRequested::class)->count());
     }
 
     public function test_an_unrelated_owner_does_not_receive_a_notification(): void

@@ -39,6 +39,18 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
                 'status' => $request->session()->get('status'),
             ],
+            'notifications' => function () use ($request): ?array {
+                $user = $request->user();
+
+                if (! $user) {
+                    return null;
+                }
+
+                return [
+                    'unread_count' => $user->unreadNotifications()->count(),
+                    'has_push_subscription' => $user->pushSubscriptions()->exists(),
+                ];
+            },
             'vapidPublicKey' => config('webpush.vapid.public_key'),
         ];
     }

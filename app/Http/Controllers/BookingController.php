@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Facility;
+use App\Models\FacilityBilling;
 use App\Models\RatePlan;
 use App\Notifications\BookingConfirmed;
 use App\Notifications\BookingRequested;
@@ -153,6 +154,9 @@ class BookingController extends Controller
      */
     public function store(Request $request)
     {
+        $user = $request->user();
+        $isDeskBooking = in_array($user->role, ['FACILITY_OWNER', 'FACILITY_STAFF'], true);
+
         //  Validate the incoming data
         $validated = $request->validate([
             'facility_id' => 'required|exists:facilities,id',
@@ -163,14 +167,14 @@ class BookingController extends Controller
             'end_time' => 'required|date_format:H:i|different:start_time',
             // Kept for older clients; the amount is always recalculated server-side.
             'total_price' => 'required|numeric|min:0',
-            'guest_name' => 'nullable|string|max:255',
+            // Only owners/staff logging a desk booking may name a walk-in player.
+            'guest_name' => ['nullable', 'string', 'max:255', Rule::prohibitedIf(! $isDeskBooking)],
+            'booking_type' => ['nullable', Rule::in(['walk_in', 'staff_block']), Rule::prohibitedIf(! $isDeskBooking)],
             'rate_plan_id' => 'nullable|integer|exists:rate_plans,id',
             'addons' => 'nullable|array',
             'addons.*.rate_plan_id' => 'required|integer|exists:rate_plans,id',
             'addons.*.quantity' => 'required|integer|min:0|max:50',
         ]);
-
-        $user = $request->user();
 
         // Resolve the session into real datetimes (an end before the start means
         // the booking runs past midnight, e.g. 10:00 PM → 12:00 AM).
@@ -181,11 +185,31 @@ class BookingController extends Controller
             return back()->withErrors(['conflict' => 'Sorry, this court is already booked for that time.']);
         }
 
-        // Determine user_id based on whether a guest name is provided
-        $userId = ! empty($validated['guest_name']) ? null : $user->id;
-
         $court = Court::findOrFail($validated['court_id']);
         $facility = $court->facility()->firstOrFail();
+
+        // The booking channel decides which system fee applies. Players always
+        // book online; owners/staff log walk-ins or fee-free court blocks.
+        if ($isDeskBooking) {
+            $managedFacilityIds = $user->role === 'FACILITY_OWNER'
+                ? $user->facilities()->pluck('id')
+                : collect([$user->facility_id]);
+
+            if (! $managedFacilityIds->contains($facility->id)) {
+                abort(403, 'You can only log walk-ins for your own facility.');
+            }
+
+            $bookingType = $validated['booking_type']
+                ?? (! empty($validated['guest_name']) ? 'walk_in' : 'staff_block');
+
+            $source = $bookingType === 'staff_block' ? 'staff_block' : 'walk_in';
+            $userId = null;
+            $guestName = ($validated['guest_name'] ?? null) ?: ($source === 'staff_block' ? 'Court block' : 'Walk-in');
+        } else {
+            $source = 'online';
+            $userId = $user->id;
+            $guestName = null;
+        }
 
         // The court's operating schedule is authoritative: sessions must finish
         // inside its window (always at least until midnight, up to 2:00 AM).
@@ -219,15 +243,16 @@ class BookingController extends Controller
         }
 
         $addonsTotal = $quote['addons_total'];
-        // The platform fee is charged on the full booking value (package + add-ons).
-        $bookingFee = $facility->calculateBookingFee($subtotal + $addonsTotal);
+        // The platform fee is charged on the full booking value (package + add-ons)
+        // and depends on the channel: online, walk-in, or a fee-free court block.
+        $bookingFee = $facility->calculateBookingFee($subtotal + $addonsTotal, $source);
         $finalPrice = round($subtotal + $addonsTotal + $bookingFee, 2);
 
         // Create the booking
         $booking = Booking::create([
             'facility_id' => $facility->id,
             'user_id' => $userId,
-            'guest_name' => $validated['guest_name'] ?? null,
+            'guest_name' => $guestName,
             'court_id' => $validated['court_id'],
             'rate_plan_id' => $quote['rate_plan_id'],
             'rate_plan_name' => $quote['rate_plan_name'],
@@ -241,6 +266,7 @@ class BookingController extends Controller
             'total_price' => $finalPrice,
             'price_breakdown' => $quote,
             'status' => 'pending',
+            'source' => $source,
         ]);
 
         // Handle Payment if present
@@ -259,18 +285,21 @@ class BookingController extends Controller
             ]);
         }
 
-        //  Register the player to the facility's player list
-        $facility->players()->syncWithoutDetaching([
-            $user->id => ['status' => 'ACTIVE'],
-        ]);
+        //  Register the player to the facility's player list (online bookings only)
+        if (! $isDeskBooking) {
+            $facility->players()->syncWithoutDetaching([
+                $user->id => ['status' => 'ACTIVE'],
+            ]);
+        }
 
-        //  Notify the facility owner and staff that a new booking awaits confirmation
+        //  Notify the facility's owner and staff (not the person logging it)
         $notifiables = collect([$facility->owner])
             ->merge($facility->staff->where('role', 'FACILITY_STAFF'))
             ->unique('id')
-            ->filter();
+            ->filter()
+            ->reject(fn ($notifiable) => $notifiable->id === $user->id);
 
-        $notifiables->each(fn ($user) => $user->notify(new BookingRequested($booking)));
+        $notifiables->each(fn ($notifiable) => $notifiable->notify(new BookingRequested($booking)));
 
         //  Return success
         return back()->with('success', 'Booking submitted successfully. Awaiting confirmation.');
@@ -360,6 +389,8 @@ class BookingController extends Controller
             'payment_method' => ['nullable', 'string', 'max:50'],
             'payment_amount' => ['nullable', 'numeric', 'min:0'],
             'payment_status' => ['nullable', Rule::in(['pending', 'verified', 'rejected'])],
+            // Owners may correct the system fee on a walk-in (including 0).
+            'booking_fee' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ]);
 
         $range = $this->resolveTimeRange($validated['date'], $validated['start_time'], $validated['end_time']);
@@ -374,6 +405,25 @@ class BookingController extends Controller
         $this->assertWithinOperatingHours($booking->court, $range);
 
         $previousTotal = round((float) $booking->total_price, 2);
+        $previousFee = round((float) $booking->booking_fee, 2);
+
+        $feeOverride = ($booking->source ?? 'online') !== 'online'
+            && array_key_exists('booking_fee', $validated) && $validated['booking_fee'] !== null
+            ? round((float) $validated['booking_fee'], 2)
+            : null;
+
+        // Re-saving the same amount is not an override — keep the fee's origin.
+        if ($feeOverride !== null && $feeOverride === $previousFee) {
+            $feeOverride = null;
+        }
+
+        // Booked amounts are frozen once the facility's month is billed.
+        if ($feeOverride !== null && $feeOverride !== $previousFee
+            && $this->monthIsBilled($booking)) {
+            return back()->withErrors([
+                'booking_fee' => 'This booking belongs to a month that is already billed; its system fee can no longer be changed.',
+            ]);
+        }
 
         try {
             $booking = DB::transaction(fn () => $this->applyReschedule(
@@ -384,6 +434,7 @@ class BookingController extends Controller
                 $validated['end_time'],
                 $validated['rate_plan_id'] ?? null,
                 $validated['addons'] ?? null,
+                $feeOverride,
             ));
         } catch (InvalidArgumentException $exception) {
             return back()->withErrors(['start_time' => $exception->getMessage()]);
@@ -420,18 +471,22 @@ class BookingController extends Controller
             $message = 'Booking updated successfully.';
         }
 
+        if ($feeOverride !== null && $feeOverride !== $previousFee) {
+            $message .= ' The system fee is now ₱'.number_format($feeOverride, 2).'.';
+        }
+
         return redirect()->back()->with('success', $message);
     }
 
     /**
-     * Store a rescheduled date/time (and, optionally, a new rate plan / add-ons)
-     * on the booking and re-quote its price.
+     * Store a rescheduled date/time (and, optionally, a new rate plan / add-ons,
+     * or a corrected system fee) on the booking and re-quote its price.
      *
      * @param  array<int, array{rate_plan_id?: mixed, quantity?: mixed}>|null  $addons
      *
      * @throws InvalidArgumentException when the chosen rate plan is no longer offered by the court
      */
-    private function applyReschedule(Booking $booking, string $date, ?string $endDate, string $startTime, string $endTime, ?int $ratePlanId = null, ?array $addons = null): Booking
+    private function applyReschedule(Booking $booking, string $date, ?string $endDate, string $startTime, string $endTime, ?int $ratePlanId = null, ?array $addons = null, ?float $feeOverride = null): Booking
     {
         $startTime = strlen($startTime) === 5 ? $startTime.':00' : $startTime;
         $endTime = strlen($endTime) === 5 ? $endTime.':00' : $endTime;
@@ -468,8 +523,30 @@ class BookingController extends Controller
         }
 
         $addonsTotal = $quote['addons_total'];
-        $bookingFee = $booking->facility->calculateBookingFee($subtotal + $addonsTotal);
+        $previousFee = round((float) $booking->booking_fee, 2);
+        $channel = $booking->source ?: 'online';
+
+        if ($feeOverride !== null) {
+            // The owner explicitly corrected the fee for this booking.
+            $bookingFee = $feeOverride;
+            $feeSource = 'manual_override';
+        } elseif ($channel !== 'online') {
+            // Walk-ins keep the fee they were logged with; changing the fee is an
+            // explicit action from the Edit Booking screen.
+            $bookingFee = $previousFee;
+            $feeSource = $channel;
+        } else {
+            $bookingFee = $booking->facility->calculateBookingFee($subtotal + $addonsTotal, 'online');
+            $feeSource = 'online';
+        }
+
         $totalPrice = round($subtotal + $addonsTotal + $bookingFee, 2);
+
+        // Keep an audit trail of fee changes inside the existing price snapshot.
+        $quote['fee'] = ['amount' => $bookingFee, 'source' => $feeSource];
+        if ($feeOverride !== null && $bookingFee !== $previousFee) {
+            $quote['fee']['previous'] = $previousFee;
+        }
 
         $booking->update([
             'date' => $date,
@@ -671,6 +748,19 @@ class BookingController extends Controller
         return (float) ($court->hourly_rate ?? 0) <= 0
             && (float) ($court->day_rate ?? 0) <= 0
             && (float) ($court->night_rate ?? 0) <= 0;
+    }
+
+    /**
+     * Whether the facility's monthly booking-fee collection for this booking's
+     * month has already been marked as billed.
+     */
+    private function monthIsBilled(Booking $booking): bool
+    {
+        return FacilityBilling::query()
+            ->where('facility_id', $booking->facility_id)
+            ->where('period', Carbon::parse($booking->date)->format('Y-m'))
+            ->where('status', 'BILLED')
+            ->exists();
     }
 
     public function lockSlot(Request $request)

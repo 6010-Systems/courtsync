@@ -20,7 +20,7 @@ function isIosDevice() {
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-export default function InstallPwaPrompt() {
+export default function InstallPwaPrompt({ suppress = false }) {
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [visible, setVisible] = useState(false);
     const [mode, setMode] = useState('install');
@@ -94,7 +94,7 @@ export default function InstallPwaPrompt() {
         }
     };
 
-    if (!visible) {
+    if (suppress || !visible) {
         return null;
     }
 

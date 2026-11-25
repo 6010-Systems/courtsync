@@ -68,13 +68,22 @@ export default function PlayerBookingCard({ booking }) {
     );
 }
 
-export function EmptyPlayerBookings({ message = 'You have no bookings yet.' }) {
+export function EmptyPlayerBookings({ message = 'You have no bookings yet.', bookFacility = null }) {
     return (
         <div className="rounded-xl border border-dashed border-[#101F1A]/20 bg-white p-8 text-center">
             <CalendarCheck size={32} className="mx-auto text-[#101F1A]/40" aria-hidden="true" />
             <p className="mt-3 font-bold text-[#101F1A]">{message}</p>
-            <p className="mt-2 text-sm text-[#101F1A]/60">Find a facility and reserve a court for your next game.</p>
-            <Link href="/" className="mt-5 inline-block rounded-lg bg-[#D6FF3F] px-5 py-3 text-sm font-bold text-[#101F1A] hover:bg-[#c4ec36]">Explore Facilities</Link>
+            <p className="mt-2 text-sm text-[#101F1A]/60">
+                {bookFacility
+                    ? `Book a court at ${bookFacility.name} for your next game.`
+                    : 'Find a facility and reserve a court for your next game.'}
+            </p>
+            <Link
+                href={bookFacility ? route('facility.book', bookFacility.slug) : '/'}
+                className="mt-5 inline-block rounded-lg bg-[#D6FF3F] px-5 py-3 text-sm font-bold text-[#101F1A] hover:bg-[#c4ec36]"
+            >
+                {bookFacility ? 'Book Court' : 'Explore Facilities'}
+            </Link>
         </div>
     );
 }

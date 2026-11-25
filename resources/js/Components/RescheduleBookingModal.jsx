@@ -7,7 +7,7 @@ import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import BookingReviewCard from '@/Components/BookingReviewCard';
 import { formatPeso } from '@/Components/MetricCard';
-import { estimateBookingFee, offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
+import { estimateBookingFee, estimateWalkInFee, offeredAddons, offeredCourtPlans, planRates, quoteBooking } from '@/Utils/rateQuote';
 import {
     addDays,
     buildHourOptions,
@@ -78,7 +78,13 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
         payment_method: '',
         payment_amount: '',
         payment_status: '',
+        booking_fee: '',
     });
+
+    // The channel decides which fee applies and whether the owner can edit it.
+    const bookingChannel = booking?.source || 'online';
+    const isWalkIn = bookingChannel === 'walk_in';
+    const isStaffBlock = bookingChannel === 'staff_block';
 
     // The booking's own `court` relation is a lightweight snapshot; the full
     // court (with its rate card) lives on the `facilities` prop.
@@ -124,6 +130,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
             payment_method: '',
             payment_amount: booking.payment?.amount ?? booking.total_price ?? '',
             payment_status: '',
+            booking_fee: booking.booking_fee ?? 0,
         });
         clearErrors();
         setAmountTouched(false);
@@ -161,10 +168,25 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
         endTime: data.end_time,
     }), [fullCourt, selectedRatePlan, addonSelection, data.start_time, data.end_time]);
 
-    const bookingFeeEstimate = useMemo(
-        () => estimateBookingFee(fullCourt.facility, pricingQuote.total),
+    const bookingFeeEstimate = useMemo(() => {
+        if (isWalkIn) {
+            // Defaults to the fee the booking was logged with; the owner can
+            // change it (including 0) from this screen.
+            return Math.max(0, Number(data.booking_fee) || 0);
+        }
+
+        if (isStaffBlock) {
+            return 0;
+        }
+
+        return estimateBookingFee(fullCourt.facility, pricingQuote.total);
+    }, [isWalkIn, isStaffBlock, data.booking_fee, fullCourt.facility, pricingQuote.total]);
+
+    const suggestedWalkInFee = useMemo(
+        () => estimateWalkInFee(fullCourt.facility, pricingQuote.total),
         [fullCourt.facility, pricingQuote.total],
     );
+
     const grandTotal = pricingQuote.total + bookingFeeEstimate;
 
     // The amount follows the recalculated total until the owner types their own
@@ -190,6 +212,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
             addons: addonSelection.map(({ plan, quantity }) => ({ rate_plan_id: plan.id, quantity })),
             payment_method: formData.payment_method || undefined,
             payment_status: formData.payment_status || undefined,
+            booking_fee: isWalkIn ? Number(formData.booking_fee || 0) : undefined,
         };
     });
 
@@ -488,6 +511,43 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                                 Payment
                             </span>
 
+                            {isWalkIn && (
+                                <div className="mt-3 rounded-xl border border-[#10221C]/10 bg-white p-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <InputLabel htmlFor="reschedule_booking_fee" value="System fee (₱)" />
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('booking_fee', 0)}
+                                                className="rounded-md border border-gray-200 px-2 py-1 text-[10px] font-bold text-[#10221C]/70 hover:bg-gray-50"
+                                            >
+                                                Waive (₱0)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setData('booking_fee', suggestedWalkInFee)}
+                                                className="rounded-md border border-gray-200 px-2 py-1 text-[10px] font-bold text-[#10221C]/70 hover:bg-gray-50"
+                                            >
+                                                Use ₱{suggestedWalkInFee.toFixed(2)}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input
+                                        id="reschedule_booking_fee"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={data.booking_fee}
+                                        onChange={(event) => setData('booking_fee', event.target.value)}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#D6FF3F] focus:ring-[#D6FF3F] text-sm"
+                                    />
+                                    <p className="mt-1 text-[10px] text-gray-400">
+                                        Facility walk-in fee: ₱{suggestedWalkInFee.toFixed(2)}. Changes affect CourtSync billing for this booking.
+                                    </p>
+                                    <InputError message={errors.booking_fee} className="mt-2" />
+                                </div>
+                            )}
+
                             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
                                 <div>
                                     <div className="flex items-center justify-between">
@@ -588,6 +648,7 @@ export default function RescheduleBookingModal({ show, booking, courtBookings = 
                             subtotal={pricingQuote.subtotal}
                             addonsTotal={pricingQuote.addonsTotal}
                             bookingFee={bookingFeeEstimate}
+                            bookingFeeLabel={isWalkIn ? 'Walk-in system fee' : 'Booking fee'}
                             total={grandTotal}
                             extraRows={extraRows}
                         />
